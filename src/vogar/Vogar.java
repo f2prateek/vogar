@@ -304,8 +304,10 @@ public final class Vogar {
     private Vogar() {}
 
     private void run() {
-        Console console = new Console(options.stream, options.indent, options.color);
-        console.configureJavaLogging(options.verbose);
+        Console.getInstance().setStream(options.stream);
+        Console.getInstance().setIndent(options.indent);
+        Console.getInstance().setColor(options.color);
+        Console.getInstance().configureJavaLogging(options.verbose);
 
         int monitorPort;
         Mode mode;
@@ -387,7 +389,6 @@ public final class Vogar {
                 expectationStore,
                 runnerSpecs,
                 xmlReportPrinter,
-                console,
                 monitor,
                 monitorPort,
                 options.timeoutSeconds);

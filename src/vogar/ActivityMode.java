@@ -25,7 +25,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
 import java.util.Properties;
-import java.util.logging.Logger;
 import vogar.commands.AndroidSdk;
 import vogar.commands.Command;
 
@@ -33,9 +32,6 @@ import vogar.commands.Command;
  * Runs an action in the context of an android.app.Activity on a device
  */
 final class ActivityMode extends Mode {
-
-    private static final Logger logger = Logger.getLogger(ActivityMode.class.getName());
-
     private static final String TEST_ACTIVITY_CLASS = "vogar.target.TestActivity";
 
     private AndroidSdk androidSdk;
@@ -63,7 +59,7 @@ final class ActivityMode extends Mode {
         try {
             keystore = environment.file("activity", "vogar.keystore");
             keystore.getParentFile().mkdirs();
-            logger.fine("extracting keystore to " + keystore);
+            Console.getInstance().verbose("extracting keystore to " + keystore);
             InputStream in = new BufferedInputStream(
                     getClass().getResourceAsStream("/vogar/vogar.keystore"));
             OutputStream out = new BufferedOutputStream(new FileOutputStream(keystore));
@@ -80,7 +76,7 @@ final class ActivityMode extends Mode {
     }
 
     @Override protected void postCompile(Action action, File jar) {
-        logger.fine("aapt and push " + action.getName());
+        Console.getInstance().verbose("aapt and push " + action.getName());
 
         // We can't put multiple dex files in one apk.
         // We can't just give dex multiple jars with conflicting class names

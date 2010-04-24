@@ -22,8 +22,6 @@ import java.io.InputStream;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.util.Collections;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
@@ -36,9 +34,6 @@ import org.xml.sax.helpers.DefaultHandler;
  * Connects to a target process to monitor its action.
  */
 class HostMonitor {
-
-    private static final Logger logger = Logger.getLogger(HostMonitor.class.getName());
-
     private final long monitorTimeoutSeconds;
 
     HostMonitor(long monitorTimeoutSeconds) {
@@ -64,17 +59,17 @@ class HostMonitor {
                 socket.close();
             } catch (ConnectException recoverable) {
             } catch (IOException e) {
-                logger.log(Level.WARNING, "Failed to connect to localhost:" + port, e);
+                Console.getInstance().warning("Failed to connect to localhost:" + port, e);
                 return false;
             }
 
             if (attempt++ == monitorTimeoutSeconds) {
-                logger.warning("Exceeded " + monitorTimeoutSeconds
+                Console.getInstance().warning("Exceeded " + monitorTimeoutSeconds
                         + " attempts to connect to localhost:" + port);
                 return false;
             }
 
-            logger.fine("connection " + attempt + " to localhost:" + port
+            Console.getInstance().verbose("connection " + attempt + " to localhost:" + port
                     + " failed; retrying in 1s");
             try {
                 Thread.sleep(1000);
@@ -82,7 +77,7 @@ class HostMonitor {
             }
         } while (true);
 
-        logger.fine("action monitor connected to " + socket.getRemoteSocketAddress());
+        Console.getInstance().verbose("action monitor connected to " + socket.getRemoteSocketAddress());
 
         try {
             SAXParser parser = SAXParserFactory.newInstance().newSAXParser();
@@ -91,10 +86,10 @@ class HostMonitor {
         } catch (ParserConfigurationException e) {
             throw new RuntimeException(e);
         } catch (IOException e) {
-            logger.log(Level.WARNING, "Connection error from localhost:" + port, e);
+            Console.getInstance().warning("Connection error from localhost:" + port, e);
             return false;
         } catch (SAXException e) {
-            logger.log(Level.WARNING, "Received bad XML from localhost:" + port + " " + e);
+            Console.getInstance().warning("Received bad XML from localhost:" + port + " " + e);
             return false;
         }
 

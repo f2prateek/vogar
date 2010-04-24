@@ -20,15 +20,12 @@ import java.io.File;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.logging.Logger;
 import vogar.commands.AndroidSdk;
 
 /**
  * Execute actions on a Dalvik VM using an Android device or emulator.
  */
 final class DeviceDalvikVm extends Vm {
-    private static final Logger logger = Logger.getLogger(DeviceDalvikVm.class.getName());
-
     /** A list of generic names that we avoid when naming generated files. */
     private static final Set<String> BANNED_NAMES = new HashSet<String>();
     static {
@@ -73,7 +70,7 @@ final class DeviceDalvikVm extends Vm {
     }
 
     private void dexAndPush(String name, File jar) {
-        logger.fine("dex and push " + name);
+        Console.getInstance().verbose("dex and push " + name);
 
         // make the local dex (inside a jar)
         File localDex = environment.file(name, name + ".dx.jar");

@@ -19,7 +19,6 @@ package vogar;
 import java.io.File;
 import java.io.FileInputStream;
 import java.security.MessageDigest;
-import java.util.logging.Logger;
 import vogar.commands.Command;
 import vogar.commands.Mkdir;
 
@@ -27,7 +26,6 @@ import vogar.commands.Mkdir;
  * Caches content by MD5.
  */
 public final class Md5Cache {
-    private static final Logger logger = Logger.getLogger(Md5Cache.class.getName());
     private static final File CACHE_ROOT = new File("/tmp/vogar-md5-cache/");
 
     private final String keyPrefix;
@@ -102,7 +100,7 @@ public final class Md5Cache {
         if (key == null) {
             return;
         }
-        logger.fine("inserting " + key);
+        Console.getInstance().verbose("inserting " + key);
         if (!key.toString().startsWith(CACHE_ROOT.toString())) {
             throw new IllegalArgumentException("key '" + key + "' not a valid cache key");
         }

@@ -33,7 +33,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.logging.Logger;
+import vogar.Console;
 import vogar.Strings;
 import vogar.Threads;
 
@@ -41,9 +41,6 @@ import vogar.Threads;
  * An out of process executable.
  */
 public final class Command {
-
-    private final Logger logger = Logger.getLogger(Command.class.getName());
-
     private final List<String> args;
     private final File workingDirectory;
     private final boolean permitNonZeroExitStatus;
@@ -77,7 +74,7 @@ public final class Command {
             throw new IllegalStateException("Already started!");
         }
 
-        logger.fine("executing " + Strings.join(args, " "));
+        Console.getInstance().verbose("executing " + Strings.join(args, " "));
 
         ProcessBuilder processBuilder = new ProcessBuilder()
                 .command(args)

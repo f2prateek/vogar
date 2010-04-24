@@ -27,7 +27,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.Set;
-import java.util.logging.Logger;
 import vogar.commands.Mkdir;
 import vogar.target.JtregRunner;
 import vogar.target.Runner;
@@ -39,8 +38,6 @@ class JtregSpec implements RunnerSpec {
 
     // TODO: add support for the  @library directive, as seen in
     //   test/com/sun/crypto/provider/Cipher/AES/TestKATForECB_VT.java
-
-    private static final Logger logger = Logger.getLogger(JtregSpec.class.getName());
 
     /**
      * The subpath of a platform implementation under which tests live. Used to
@@ -65,7 +62,7 @@ class JtregSpec implements RunnerSpec {
         }
 
         try {
-            logger.fine("scanning " + directoryToScan + " for jtreg tests");
+            Console.getInstance().verbose("scanning " + directoryToScan + " for jtreg tests");
             File workDirectory = new File(localTemp, "JTwork");
             new Mkdir().mkdirs(workDirectory);
 

@@ -17,15 +17,12 @@
 package vogar;
 
 import java.io.File;
-import java.util.logging.Logger;
 import vogar.commands.Rm;
 
 /**
  * A target runtime environment such as a remote device or the local host
  */
 abstract class Environment {
-    private static final Logger logger = Logger.getLogger(Environment.class.getName());
-
     final boolean cleanBefore;
     final boolean cleanAfter;
     final Integer debugPort;
@@ -57,7 +54,7 @@ abstract class Environment {
      */
     void cleanup(Action action) {
         if (cleanAfter) {
-            logger.fine("clean " + action.getName());
+            Console.getInstance().verbose("clean " + action.getName());
             new Rm().directoryTree(file(action));
         }
     }

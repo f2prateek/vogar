@@ -25,7 +25,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
-import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import vogar.commands.Command;
 import vogar.commands.CommandFailedException;
@@ -39,8 +38,6 @@ import vogar.commands.Mkdir;
 abstract class Mode {
 
     private static final Pattern JAVA_SOURCE_PATTERN = Pattern.compile("\\/(\\w)+\\.java$");
-
-    private static final Logger logger = Logger.getLogger(Mode.class.getName());
 
     protected final Environment environment;
     protected final Classpath buildClasspath;
@@ -104,7 +101,7 @@ abstract class Mode {
      *      failure otherwise.
      */
     public Outcome buildAndInstall(Action action) {
-        logger.fine("build " + action.getName());
+        Console.getInstance().verbose("build " + action.getName());
 
         try {
             File jar = compile(action);

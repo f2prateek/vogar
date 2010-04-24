@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -42,9 +41,6 @@ import java.util.regex.Pattern;
  * expectation, the outcome expectation will be returned.
  */
 final class ExpectationStore {
-
-    private static final Logger logger = Logger.getLogger(ExpectationStore.class.getName());
-
     /** Matches lines in the file containing a key and value pair. */
     private static final Pattern KEY_VALUE_PAIR_PATTERN = Pattern.compile("(\\w+)\\s+(.+)");
 
@@ -109,7 +105,7 @@ final class ExpectationStore {
     }
 
     public void parse(File expectationsFile) throws IOException {
-        logger.fine("loading expectations file " + expectationsFile);
+        Console.getInstance().verbose("loading expectations file " + expectationsFile);
 
         BufferedReader reader = new BufferedReader(new FileReader(expectationsFile));
         int count = 0;
@@ -168,7 +164,7 @@ final class ExpectationStore {
                 put(type, qualifiedName, result, pattern);
             }
 
-            logger.fine("loaded " + count + " expectations from " + expectationsFile);
+            Console.getInstance().verbose("loaded " + count + " expectations from " + expectationsFile);
         } finally {
             reader.close();
         }

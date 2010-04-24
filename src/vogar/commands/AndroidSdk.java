@@ -22,8 +22,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
-import java.util.logging.Logger;
 import vogar.Classpath;
+import vogar.Console;
 import vogar.Md5Cache;
 import vogar.Strings;
 
@@ -31,8 +31,6 @@ import vogar.Strings;
  * Android SDK commands such as adb, aapt and dx.
  */
 public class AndroidSdk {
-
-    private static final Logger logger = Logger.getLogger(AndroidSdk.class.getName());
     private static final Md5Cache DEX_CACHE = new Md5Cache("dex");
 
     private static final Comparator<File> ORDER_BY_NAME = new Comparator<File>() {
@@ -73,19 +71,19 @@ public class AndroidSdk {
 
         if ("tools".equals(parentFileName)) {
             File sdkRoot = adb.getParentFile().getParentFile();
-            logger.fine("using android sdk: " + sdkRoot);
+            Console.getInstance().verbose("using android sdk: " + sdkRoot);
 
             List<File> platforms = Arrays.asList(new File(sdkRoot, "platforms").listFiles());
             Collections.sort(platforms, ORDER_BY_NAME);
             File newestPlatform = platforms.get(platforms.size() - 1);
-            logger.fine("using android platform: " + newestPlatform);
+            Console.getInstance().verbose("using android platform: " + newestPlatform);
 
             return new AndroidSdk(new File(newestPlatform, "android.jar"), new File(newestPlatform, "tools"));
 
         } else if ("bin".equals(parentFileName)) {
             File sourceRoot = adb.getParentFile().getParentFile()
                     .getParentFile().getParentFile().getParentFile();
-            logger.fine("using android build tree: " + sourceRoot);
+            Console.getInstance().verbose("using android build tree: " + sourceRoot);
             File coreClasses = new File(sourceRoot
                     + "/out/target/common/obj/JAVA_LIBRARIES/core_intermediates/classes.jar");
             return new AndroidSdk(coreClasses, null);
@@ -118,7 +116,7 @@ public class AndroidSdk {
         output.getParentFile().mkdirs();
         File key = DEX_CACHE.makeKey(classpath);
         if (key != null && key.exists()) {
-            logger.fine("dex cache hit for " + classpath);
+            Console.getInstance().verbose("dex cache hit for " + classpath);
             new Command.Builder().args("cp", key, output).execute();
             return;
         }

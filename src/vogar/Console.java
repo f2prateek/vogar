@@ -30,18 +30,32 @@ import java.util.logging.Logger;
  * can be generated both by java.util.logging and by direct calls to this class.
  */
 public class Console {
+    private static final Console INSTANCE = new Console();
 
-    private final boolean stream;
-    private final boolean color;
-    private final String indent;
+    private boolean stream;
+    private boolean color;
+    private String indent;
 
     private String currentName;
     private CurrentLine currentLine = CurrentLine.NEW;
     private final StringBuilder bufferedOutput = new StringBuilder();
 
-    public Console(boolean stream, String indent, boolean color) {
+    private Console() {
+    }
+
+    public static Console getInstance() {
+        return INSTANCE;
+    }
+
+    public void setStream(boolean stream) {
         this.stream = stream;
+    }
+
+    public void setIndent(String indent) {
         this.indent = indent;
+    }
+
+    public void setColor(boolean color) {
         this.color = color;
     }
 
@@ -58,6 +72,22 @@ public class Console {
         logger.setLevel(verbose ? Level.FINE : Level.INFO);
         logger.addHandler(handler);
         logger.setUseParentHandlers(false);
+    }
+
+    public void info(String s) {
+        Logger.getLogger("vogar").info(s);
+    }
+
+    public void verbose(String s) {
+        Logger.getLogger("vogar").fine("verbose: " + s);
+    }
+
+    public void warning(String s) {
+        Logger.getLogger("vogar").warning("warning: " + s);
+    }
+
+    public void warning(String s, Throwable th) {
+        Logger.getLogger("vogar").log(Level.WARNING, "warning: " + s, th);
     }
 
     /**

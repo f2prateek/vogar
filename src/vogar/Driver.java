@@ -32,7 +32,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.logging.Logger;
 import vogar.commands.Command;
 import vogar.commands.CommandFailedException;
 import vogar.commands.Mkdir;
@@ -41,15 +40,11 @@ import vogar.commands.Mkdir;
  * Compiles, installs, runs and reports on actions.
  */
 final class Driver implements HostMonitor.Handler {
-
-    private static final Logger logger = Logger.getLogger(Driver.class.getName());
-
     private final File localTemp;
     private final ExpectationStore expectationStore;
     private final List<RunnerSpec> runnerSpecs;
     private final Mode mode;
     private final XmlReportPrinter reportPrinter;
-    private final Console console;
     private final int monitorPort;
     private final HostMonitor monitor;
     private final long timeoutSeconds;
@@ -72,11 +67,10 @@ final class Driver implements HostMonitor.Handler {
 
     public Driver(File localTemp, Mode mode, ExpectationStore expectationStore,
             List<RunnerSpec> runnerSpecs, XmlReportPrinter reportPrinter,
-            Console console, HostMonitor monitor, int monitorPort, long timeoutSeconds) {
+            HostMonitor monitor, int monitorPort, long timeoutSeconds) {
         this.localTemp = localTemp;
         this.expectationStore = expectationStore;
         this.mode = mode;
-        this.console = console;
         this.runnerSpecs = runnerSpecs;
         this.reportPrinter = reportPrinter;
         this.monitor = monitor;
@@ -98,11 +92,11 @@ final class Driver implements HostMonitor.Handler {
         classesToActions(classes);
 
         if (actions.isEmpty()) {
-            logger.info("Nothing to do.");
+            Console.getInstance().info("Nothing to do.");
             return;
         }
 
-        logger.info("Actions: " + actions.size());
+        Console.getInstance().info("Actions: " + actions.size());
         final long t0 = System.currentTimeMillis();
 
         // mode.prepare before mode.buildAndInstall to ensure the runner is
@@ -123,7 +117,7 @@ final class Driver implements HostMonitor.Handler {
             builders.submit(new Runnable() {
                 public void run() {
                     try {
-                        logger.fine("installing action " + runIndex + "; "
+                        Console.getInstance().verbose("installing action " + runIndex + "; "
                                 + readyToRun.size() + " are runnable");
 
                         if (expectationStore.get(name).getResult() == Result.UNSUPPORTED) {
@@ -147,7 +141,7 @@ final class Driver implements HostMonitor.Handler {
         builders.shutdown();
 
         for (int i = 0; i < actions.size(); i++) {
-            logger.fine("executing action " + i + "; "
+            Console.getInstance().verbose("executing action " + i + "; "
                     + readyToRun.size() + " are ready to run");
 
             // if it takes 5 minutes for build and install, something is broken
@@ -169,9 +163,9 @@ final class Driver implements HostMonitor.Handler {
         }
 
         if (reportPrinter != null) {
-            logger.info("Printing XML Reports... ");
+            Console.getInstance().info("Printing XML Reports... ");
             int numFiles = reportPrinter.generateReports(outcomes.values());
-            logger.info(numFiles + " XML files written.");
+            Console.getInstance().info(numFiles + " XML files written.");
         }
 
         mode.shutdown();
@@ -179,12 +173,12 @@ final class Driver implements HostMonitor.Handler {
 
         if (failures > 0 || unsupportedActions > 0) {
             Collections.sort(failureNames);
-            console.summarizeFailures(failureNames);
-            logger.info(String.format("Outcomes: %s. Passed: %d, Failed: %d, Skipped: %d. Took %s.",
+            Console.getInstance().summarizeFailures(failureNames);
+            Console.getInstance().info(String.format("Outcomes: %s. Passed: %d, Failed: %d, Skipped: %d. Took %s.",
                     (successes + failures), successes, failures, unsupportedActions,
                     TimeUtilities.msToString(t1 - t0)));
         } else {
-            logger.info(String.format("Outcomes: %s. All successful. Took %s.", 
+            Console.getInstance().info(String.format("Outcomes: %s. All successful. Took %s.",
                     (successes + failures), TimeUtilities.msToString(t1 - t0)));
         }
     }
@@ -225,7 +219,7 @@ final class Driver implements HostMonitor.Handler {
      * Executes a single action and then prints the result.
      */
     private void execute(final Action action) {
-        console.action(action.getName());
+        Console.getInstance().action(action.getName());
 
         Outcome earlyFailure = outcomes.get(action.getName());
         if (earlyFailure == null) {
@@ -237,7 +231,7 @@ final class Driver implements HostMonitor.Handler {
                 actionTimeoutTimer.schedule(new TimerTask() {
                     @Override public void run() {
                         if (result.compareAndSet(null, Result.EXEC_TIMEOUT)) {
-                            logger.fine("killing " + action.getName() + " because it "
+                            Console.getInstance().verbose("killing " + action.getName() + " because it "
                                     + "timed out after " + timeoutSeconds + " seconds");
                             command.destroy();
                         }
@@ -254,7 +248,7 @@ final class Driver implements HostMonitor.Handler {
             }
 
             if (result.compareAndSet(null, Result.ERROR)) {
-                logger.fine("killing " + action.getName() + " because it could not be monitored.");
+                Console.getInstance().verbose("killing " + action.getName() + " because it could not be monitored.");
                 command.destroy();
             }
             try {
@@ -271,11 +265,11 @@ final class Driver implements HostMonitor.Handler {
         }
 
         if (earlyFailure.getResult() == Result.UNSUPPORTED) {
-            logger.fine("skipping " + action.getName());
+            Console.getInstance().verbose("skipping " + action.getName());
             unsupportedActions++;
         } else {
             for (String line : earlyFailure.getOutputLines()) {
-                console.streamOutput(line + "\n");
+                Console.getInstance().streamOutput(line + "\n");
             }
             outcome(earlyFailure);
         }
@@ -291,12 +285,12 @@ final class Driver implements HostMonitor.Handler {
             failures++;
             failureNames.add(outcome.getName());
         }
-        console.outcome(outcome.getName());
-        console.printResult(outcome.getResult(), ok);
+        Console.getInstance().outcome(outcome.getName());
+        Console.getInstance().printResult(outcome.getResult(), ok);
     }
 
     public void output(String outcomeName, String output) {
-        console.outcome(outcomeName);
-        console.streamOutput(output);
+        Console.getInstance().outcome(outcomeName);
+        Console.getInstance().streamOutput(output);
     }
 }
