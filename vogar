@@ -8,10 +8,12 @@ if [ -n "${ANDROID_BUILD_TOP}" ]; then
 else
     # See if there's an Android SDK on the path.
     adb_path=`which adb`
-    android_tools_dir=`dirname ${adb_path}`
-    android_platforms_dir=${android_tools_dir}/../platforms
-    latest_android_platform=`ls -1 ${android_platforms_dir} | sort -n | tail -1`
-    android_platform_dir=${android_platforms_dir}/${latest_android_platform}
+    if [ -n "${adb_path}" ]; then
+        android_tools_dir=`dirname ${adb_path}`
+        android_platforms_dir=${android_tools_dir}/../platforms
+        latest_android_platform=`ls -1 ${android_platforms_dir} | sort -n | tail -1`
+        android_platform_dir=${android_platforms_dir}/${latest_android_platform}
+    fi
 fi
 
 if [ ! -d "${android_platform_dir}" ]; then
