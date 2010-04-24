@@ -18,9 +18,8 @@ package vogar;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.FilenameFilter;
 import java.io.IOException;
-import java.util.Arrays;
+import java.net.URL;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -49,13 +48,6 @@ abstract class Mode {
     protected final int monitorPort;
 
     /**
-     * Set of Java files needed to built to tun the currently selected set of
-     * actions. We build a subset rather than all the files all the time to
-     * reduce dex packaging costs in the activity mode case.
-     */
-    protected final Set<File> runnerJava = new HashSet<File>();
-
-    /**
      * User classes that need to be included in the classpath for both
      * compilation and execution. Also includes dependencies of all active
      * runners.
@@ -77,33 +69,35 @@ abstract class Mode {
      */
     protected void prepare(Set<RunnerSpec> runners) {
         for (RunnerSpec runnerSpec : runners) {
-            runnerJava.add(runnerSpec.getSource());
             classpath.addAll(runnerSpec.getClasspath());
         }
-        runnerJava.add(new File(Vogar.HOME_JAVA, "vogar/target/TestRunner.java"));
         environment.prepare();
-        classpath.addAll(compileRunner());
+        classpath.addAll(vogarJar());
         installRunner();
     }
 
     /**
-     * Returns a .jar file containing the compiled runner .java files.
+     * Returns the .jar file containing Vogar.
      */
-    private File compileRunner() {
-        logger.fine("build runner");
-        File classes = environment.file("runner", "classes");
-        File jar = environment.hostJar("runner");
-        new Mkdir().mkdirs(classes);
-        new Javac()
-                .bootClasspath(sdkJar)
-                .classpath(classpath)
-                .sourcepath(Vogar.HOME_JAVA)
-                .destination(classes)
-                .extra(javacArgs)
-                .compile(runnerJava);
-        new Command("jar", "cvfM", jar.getPath(),
-                 "-C", classes.getPath(), "./").execute();
-        return jar;
+    private File vogarJar() {
+        URL jarUrl = Vogar.class.getResource("/vogar/Vogar.class");
+        if (jarUrl == null) {
+            // should we add an option for IDE users, to use a user-specified vogar.jar?
+            throw new IllegalStateException("Vogar cannot find its own .jar");
+        }
+
+        /*
+         * Parse a URI like jar:file:/Users/jessewilson/vogar/vogar.jar!/vogar/Vogar.class
+         * to yield a .jar file like /Users/jessewilson/vogar/vogar.jar.
+         */
+        String url = jarUrl.toString();
+        int bang = url.indexOf("!");
+        String JAR_URI_PREFIX = "jar:file:";
+        if (url.startsWith(JAR_URI_PREFIX) && bang != -1) {
+            return new File(url.substring(JAR_URI_PREFIX.length(), bang));
+        } else {
+            throw new IllegalStateException("Vogar cannot find the .jar file in " + jarUrl);
+        }
     }
 
     /**

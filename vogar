@@ -3,4 +3,4 @@
 # before this script will work, you must build:
 #   ant jar
 
-exec java -jar `dirname $0`/build/vogar.jar
+exec java -jar `dirname $0`/build/vogar.jar $*

@@ -20,16 +20,14 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.TextView;
-import vogar.Threads;
-
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import vogar.Threads;
 
 /**
- * Runs a user-supplied {@code main(String[] args)} method
- * in the context of an Android activity. The result of the method
- * (success or exception) is reported to a file where Dalvik
- * Runner can pick it up.
+ * Runs a user-supplied {@code main(String[] args)} method in the context of an
+ * Android activity. The result of the method (success or exception) is reported
+ * to a file where vogar can pick it up.
  */
 public class TestActivity extends Activity {
 

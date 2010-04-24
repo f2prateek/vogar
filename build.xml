@@ -1,6 +1,8 @@
 <?xml version="1.0"?>
 
 <project name="vogar" default="jar">
+    <property file="local.properties" />
+
     <!-- can be overridden at the command line with -Dversion=
          or in IDEA, in the ant properties dialog -->
     <property name="version" value="0.0"/> <!-- subversion revision? -->
@@ -15,6 +17,7 @@
     <property name="jtreg" value="lib/jtreg.jar"/>
     <property name="junit" value="lib/junit.jar"/>
     <property name="kxml2" value="lib/kxml2-2.3.0.jar"/>
+    <property name="android" value="${android.platform.dir}/android.jar"/>
 
     <path id="dependencies">
         <pathelement location="${caliper}"/>
@@ -25,10 +28,7 @@
         <pathelement location="${jtreg}"/>
         <pathelement location="${junit}"/>
         <pathelement location="${kxml2}"/>
-    </path>
-
-    <path id="testdependencies">
-        <path refid="dependencies"/>
+        <pathelement location="${android}"/>
     </path>
 
     <target name="compile"
@@ -59,6 +59,9 @@
             <zipfileset src="${jtreg}"/>
             <zipfileset src="${junit}"/>
             <zipfileset src="${kxml2}"/>
+            <fileset dir="src">
+                <exclude name="**/*.java"/>
+            </fileset>
             <manifest>
                 <attribute name="Main-Class" value="vogar.Vogar"/>
             </manifest>

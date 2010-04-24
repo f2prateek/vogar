@@ -42,10 +42,6 @@ class JUnitSpec extends NamingPatternRunnerSpec {
         return JUnitRunner.class;
     }
 
-    public File getSource() {
-        return new File(Vogar.HOME_JAVA, "vogar/target/JUnitRunner.java");
-    }
-
     public Classpath getClasspath() {
         return Classpath.of(new File("lib/junit.jar").getAbsoluteFile());
     }

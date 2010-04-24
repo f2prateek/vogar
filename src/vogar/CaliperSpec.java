@@ -38,10 +38,6 @@ class CaliperSpec extends NamingPatternRunnerSpec {
         return CaliperRunner.class;
     }
 
-    public File getSource() {
-        return new File(Vogar.HOME_JAVA, "vogar/target/CaliperRunner.java");
-    }
-
     public Classpath getClasspath() {
         return Classpath.of(
                 new File("lib/jsr305.jar").getAbsoluteFile(),

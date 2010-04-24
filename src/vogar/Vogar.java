@@ -31,14 +31,12 @@ import java.util.regex.Pattern;
  */
 public final class Vogar {
 
-    static final File HOME_JAVA = new File("src");
-
     static final Pattern CLASS_NAME_PATTERN
             = Pattern.compile("(\\w+)(\\.\\w+)*\\.[A-Z]\\w*");
 
     private static class Options {
 
-        private final Classpath classpath = Classpath.of(new File("lib/kxml2-2.3.0.jar").getAbsoluteFile());
+        private final Classpath classpath = Classpath.of();
 
         private final List<File> actionFiles = new ArrayList<File>();
         private final List<String> actionClasses = new ArrayList<String>();
@@ -105,7 +103,7 @@ public final class Vogar {
         private List<String> javacArgs = new ArrayList<String>();
 
         @Option(names = { "--sdk" })
-        private File sdkJar = new File("/home/dalvik-prebuild/android-sdk-linux/platforms/android-2.0/android.jar");
+        private File androidStubsJar = new File("/home/dalvik-prebuild/android-sdk-linux/platforms/android-2.0/android.jar");
 
         private void printUsage() {
             System.out.println("Usage: Vogar [options]... <actions>... [target args]...");
@@ -145,7 +143,7 @@ public final class Vogar {
             System.out.println("      To test against APIs added since the latest SDK, use");
             System.out.println("      out/target/common/obj/JAVA_LIBRARIES/core_intermediates/classes.jar");
             System.out.println();
-            System.out.println("      Default is: " + sdkJar);
+            System.out.println("      Default is: " + androidStubsJar);
             System.out.println();
             System.out.println("  --verbose: turn on verbose output");
             System.out.println();
@@ -247,8 +245,8 @@ public final class Vogar {
                 }
             }
 
-            if (!sdkJar.exists()) {
-                System.out.println("Could not find SDK jar: " + sdkJar);
+            if (!androidStubsJar.exists()) {
+                System.out.println("Could not find SDK jar: " + androidStubsJar);
                 return false;
             }
 
@@ -322,10 +320,10 @@ public final class Vogar {
         int monitorPort;
         Mode mode;
         if (options.mode.equals(Options.MODE_DEVICE)) {
-            monitorPort = 8787;
+            monitorPort = 8785;
             mode = new DeviceDalvikVm(
                     options.debugPort,
-                    options.sdkJar,
+                    options.androidStubsJar,
                     options.javacArgs,
                     monitorPort,
                     localTemp,
@@ -339,7 +337,7 @@ public final class Vogar {
             monitorPort = 8788;
             mode = new JavaVm(
                     options.debugPort,
-                    options.sdkJar,
+                    options.androidStubsJar,
                     options.javacArgs,
                     monitorPort,
                     localTemp,
@@ -350,17 +348,18 @@ public final class Vogar {
                     options.cleanAfter,
                     options.classpath);
         } else if (options.mode.equals(Options.MODE_ACTIVITY)) {
-            monitorPort = 8787;
+            monitorPort = 8786;
             mode = new ActivityMode(
                     options.debugPort,
-                    options.sdkJar,
+                    options.androidStubsJar,
                     options.javacArgs,
                     monitorPort,
                     localTemp,
                     options.cleanBefore,
                     options.cleanAfter,
                     options.deviceRunnerDir,
-                    options.classpath);
+                    options.classpath,
+                    options.androidStubsJar);
         } else {
             System.out.println("Unknown mode mode " + options.mode + ".");
             return;

@@ -16,9 +16,13 @@
 
 package vogar;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -26,7 +30,6 @@ import java.util.logging.Logger;
 import vogar.commands.Aapt;
 import vogar.commands.Command;
 import vogar.commands.Dx;
-import vogar.commands.Rm;
 
 /**
  * Runs an action in the context of an android.app.Activity on a device
@@ -35,14 +38,18 @@ final class ActivityMode extends Mode {
 
     private static final Logger logger = Logger.getLogger(ActivityMode.class.getName());
 
-    private static final String TEST_ACTIVITY_CLASS   = "vogar.target.TestActivity";
+    private static final String TEST_ACTIVITY_CLASS = "vogar.target.TestActivity";
+
+    private final File androidStubsJar;
+    private File keystore;
 
     ActivityMode(Integer debugPort, File sdkJar, List<String> javacArgs,
             int monitorPort, File localTemp, boolean cleanBefore, boolean cleanAfter,
-            File deviceRunnerDir, Classpath classpath) {
+            File deviceRunnerDir, Classpath classpath, File androidStubsJar) {
         super(new EnvironmentDevice(cleanBefore, cleanAfter,
                 debugPort, monitorPort, localTemp, deviceRunnerDir),
                 sdkJar, javacArgs, monitorPort, classpath);
+        this.androidStubsJar = androidStubsJar;
     }
 
     private EnvironmentDevice getEnvironmentDevice() {
@@ -50,8 +57,28 @@ final class ActivityMode extends Mode {
     }
 
     @Override protected void prepare(Set<RunnerSpec> runners) {
-        runnerJava.add(new File("lib/TestActivity.java"));
         super.prepare(runners);
+        extractKeystoreToFile();
+    }
+
+    private void extractKeystoreToFile() {
+        try {
+            keystore = environment.file("activity", "vogar.keystore");
+            keystore.getParentFile().mkdirs();
+            logger.fine("extracting keystore to " + keystore);
+            InputStream in = new BufferedInputStream(
+                    getClass().getResourceAsStream("/vogar/vogar.keystore"));
+            OutputStream out = new BufferedOutputStream(new FileOutputStream(keystore));
+            byte[] buf = new byte[1024];
+            int count;
+            while ((count = in.read(buf)) != -1) {
+                out.write(buf, 0, count);
+            }
+            out.close();
+            in.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override protected void postCompile(Action action, File jar) {
@@ -66,9 +93,9 @@ final class ActivityMode extends Mode {
         // 3. sign the apk
         // 4. install the apk
         File dex = createDex(action, jar);
-        File apkUnsigned = createApk(action, dex);
-        File apkSigned = signApk(action, apkUnsigned);
-        installApk(action, apkSigned);
+        File apk = createApk(action, dex);
+        signApk(apk);
+        installApk(action, apk);
     }
 
     /**
@@ -118,27 +145,26 @@ final class ActivityMode extends Mode {
             throw new RuntimeException("Problem writing " + androidManifestFile, e);
         }
 
-        File apkUnsigned = environment.file(action, action + ".apk.unsigned");
-        new Aapt().apk(apkUnsigned, androidManifestFile);
-        new Aapt().add(apkUnsigned, dex);
-        new Aapt().add(apkUnsigned, environment.file(action, "classes", TestProperties.FILE));
-        return apkUnsigned;
+        Aapt aapt = new Aapt(androidStubsJar);
+        File apk = environment.file(action, action + ".apk");
+        aapt.apk(apk, androidManifestFile);
+        aapt.add(apk, dex);
+        aapt.add(apk, environment.file(action, "classes", TestProperties.FILE));
+        return apk;
     }
 
-    private File signApk(Action action, File apkUnsigned) {
-        File apkSigned = environment.file(action, action + ".apk");
-        // TODO: we should be able to work with a shipping SDK, not depend on out/...
-        // TODO: we should be able to work without hardwired keys, not depend on build/...
-        new Command.Builder()
-                .args("java")
-                .args("-jar")
-                .args("out/host/linux-x86/framework/signapk.jar")
-                .args("build/target/product/security/testkey.x509.pem")
-                .args("build/target/product/security/testkey.pk8")
-                .args(apkUnsigned)
-                .args(apkSigned).execute();
-        new Rm().file(apkUnsigned);
-        return apkSigned;
+    private void signApk(File apkUnsigned) {
+        /*
+         * key generated with this command, using "password" for the key and keystore passwords:
+         *     keytool -genkey -v -keystore src/vogar/vogar.keystore \
+         *         -keyalg RSA -validity 10000 -alias vogar
+         */
+        new Command("jarsigner",
+                "--storepass", "password",
+                "-keystore", keystore.getPath(),
+                apkUnsigned.getPath(),
+                "vogar")
+                .execute();
     }
 
     private void installApk(Action action, File apkSigned) {

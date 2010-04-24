@@ -22,10 +22,13 @@ import java.io.File;
  * An aapt (Android Asset Packaging Tool) command.
  */
 public final class Aapt {
+    private final File androidStubsJar;
+
+    public Aapt(File androidStubsJar) {
+        this.androidStubsJar = androidStubsJar;
+    }
 
     public void apk(File apk, File manifest) {
-
-        // TODO: we should be able to work with a shipping SDK, not depend on out/...
         new Command.Builder()
                 .args("aapt")
                 .args("package")
@@ -34,7 +37,7 @@ public final class Aapt {
                 .args("-M")
                 .args(manifest)
                 .args("-I")
-                .args("out/target/common/obj/APPS/framework-res_intermediates/package-export.apk")
+                .args(androidStubsJar)
                 .execute();
     }
     public void add(File apk, File dex) {

@@ -116,7 +116,7 @@ class JtregSpec implements RunnerSpec {
         int separatorIndex = dir.indexOf(TEST_ROOT);
         return separatorIndex != -1
                 ? escape(dir.substring(separatorIndex + TEST_ROOT.length()))
-                : escape(dir);
+                : escape(dir.substring(1)); // drop the leading '/'
     }
 
     /**
@@ -129,10 +129,6 @@ class JtregSpec implements RunnerSpec {
 
     public Class<? extends Runner> getRunnerClass() {
         return JtregRunner.class;
-    }
-
-    public File getSource() {
-        return new File(Vogar.HOME_JAVA, "vogar/target/JtregRunner.java");
     }
 
     public Classpath getClasspath() {

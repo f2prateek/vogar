@@ -16,7 +16,6 @@
 
 package vogar;
 
-import java.io.File;
 import vogar.target.MainRunner;
 import vogar.target.Runner;
 
@@ -31,10 +30,6 @@ class MainSpec extends NamingPatternRunnerSpec {
 
     public Class<? extends Runner> getRunnerClass() {
         return MainRunner.class;
-    }
-
-    public File getSource() {
-        return new File(Vogar.HOME_JAVA, "vogar/target/MainRunner.java");
     }
 
     public Classpath getClasspath() {

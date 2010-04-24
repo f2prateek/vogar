@@ -23,6 +23,15 @@
         <SOURCES />
       </library>
     </orderEntry>
+    <orderEntry type="module-library">
+      <library name="android">
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/../android-sdk-mac_86/platforms/android-7/android.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
   </component>
 </module>
 
