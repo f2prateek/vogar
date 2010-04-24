@@ -33,8 +33,8 @@ final class Javac {
         builder.args("javac");
     }
 
-    public Javac bootClasspath(File... path) {
-        builder.args("-bootclasspath", Classpath.of(path).toString());
+    public Javac bootClasspath(Classpath classpath) {
+        builder.args("-bootclasspath", classpath.toString());
         return this;
     }
 

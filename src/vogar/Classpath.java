@@ -55,6 +55,10 @@ public final class Classpath {
         return elements;
     }
 
+    public boolean isEmpty() {
+        return elements.isEmpty();
+    }
+
     @Override public String toString() {
         return Strings.join(elements, ":");
     }

@@ -43,7 +43,7 @@ abstract class Mode {
     private static final Logger logger = Logger.getLogger(Mode.class.getName());
 
     protected final Environment environment;
-    protected final File sdkJar;
+    protected final Classpath buildClasspath;
     protected final List<String> javacArgs;
     protected final int monitorPort;
 
@@ -54,10 +54,10 @@ abstract class Mode {
      */
     protected final Classpath classpath = new Classpath();
 
-    Mode(Environment environment, File sdkJar, List<String> javacArgs,
+    Mode(Environment environment, Classpath buildClasspath, List<String> javacArgs,
             int monitorPort, Classpath classpath) {
         this.environment = environment;
-        this.sdkJar = sdkJar;
+        this.buildClasspath = buildClasspath;
         this.javacArgs = javacArgs;
         this.monitorPort = monitorPort;
         this.classpath.addAll(classpath);
@@ -146,8 +146,10 @@ abstract class Mode {
             javac.sourcepath(javaFile.getParentFile());
         }
         if (!sourceFiles.isEmpty()) {
-            javac.bootClasspath(sdkJar)
-                    .classpath(classpath)
+            if (!buildClasspath.isEmpty()) {
+                javac.bootClasspath(buildClasspath);
+            }
+            javac.classpath(classpath)
                     .destination(classesDir)
                     .extra(javacArgs)
                     .compile(sourceFiles);

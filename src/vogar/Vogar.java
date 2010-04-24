@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import vogar.commands.AndroidSdk;
 
 /**
  * Command line interface for running benchmarks and tests on dalvik.
@@ -102,8 +103,8 @@ public final class Vogar {
         @Option(names = { "--javac-arg" })
         private List<String> javacArgs = new ArrayList<String>();
 
-        @Option(names = { "--sdk" })
-        private File androidStubsJar = new File(System.getenv("VOGAR_ANDROID_PLATFORM_DIR"), "android.jar");
+        @Option(names = { "--build-classpath" })
+        private List<File> buildClasspath = new ArrayList<File>();
 
         private void printUsage() {
             System.out.println("Usage: Vogar [options]... <actions>... [target args]...");
@@ -135,15 +136,9 @@ public final class Vogar {
             System.out.println("  --xml-reports-directory <path>: directory to emit JUnit-style");
             System.out.println("      XML test results.");
             System.out.println();
-            System.out.println("  --sdk <android jar>: the API jar file to compile against.");
-            System.out.println("      Usually this is <SDK>/platforms/android-<X.X>/android.jar");
-            System.out.println("      where <SDK> is the path to an Android SDK path and <X.X> is");
-            System.out.println("      a release version like 1.5.");
-            System.out.println();
-            System.out.println("      To test against APIs added since the latest SDK, use");
-            System.out.println("      out/target/common/obj/JAVA_LIBRARIES/core_intermediates/classes.jar");
-            System.out.println();
-            System.out.println("      Default is: " + androidStubsJar);
+            System.out.println("  --build-classpath <element>: add the directory or .jar to the build");
+            System.out.println("      classpath. Such classes are available as build dependencies, but");
+            System.out.println("      not at runtime.");
             System.out.println();
             System.out.println("  --verbose: turn on verbose output");
             System.out.println();
@@ -245,11 +240,6 @@ public final class Vogar {
                 }
             }
 
-            if (!androidStubsJar.exists()) {
-                System.out.println("Could not find SDK jar: " + androidStubsJar);
-                return false;
-            }
-
             if (xmlReportsDirectory != null && !xmlReportsDirectory.isDirectory()) {
                 System.out.println("Invalid XML reports directory: " + xmlReportsDirectory);
                 return false;
@@ -281,7 +271,7 @@ public final class Vogar {
                 File file = new File(arg);
                 if (file.exists()) {
                     if (arg.endsWith(".jar")) {
-                        classpath.addAll(file);
+                        classpath.addAll(file.getAbsoluteFile());
                     } else {
                         actionFiles.add(file);
                     }
@@ -319,25 +309,12 @@ public final class Vogar {
 
         int monitorPort;
         Mode mode;
-        if (options.mode.equals(Options.MODE_DEVICE)) {
-            monitorPort = 8785;
-            mode = new DeviceDalvikVm(
-                    options.debugPort,
-                    options.androidStubsJar,
-                    options.javacArgs,
-                    monitorPort,
-                    localTemp,
-                    options.vmArgs,
-                    options.targetArgs,
-                    options.cleanBefore,
-                    options.cleanAfter,
-                    options.deviceRunnerDir,
-                    options.classpath);
-        } else if (options.mode.equals(Options.MODE_HOST)) {
+        Classpath buildClasspath = Classpath.of(options.buildClasspath);
+        if (options.mode.equals(Options.MODE_HOST)) {
             monitorPort = 8788;
             mode = new JavaVm(
                     options.debugPort,
-                    options.androidStubsJar,
+                    buildClasspath,
                     options.javacArgs,
                     monitorPort,
                     localTemp,
@@ -347,22 +324,41 @@ public final class Vogar {
                     options.cleanBefore,
                     options.cleanAfter,
                     options.classpath);
-        } else if (options.mode.equals(Options.MODE_ACTIVITY)) {
-            monitorPort = 8786;
-            mode = new ActivityMode(
-                    options.debugPort,
-                    options.androidStubsJar,
-                    options.javacArgs,
-                    monitorPort,
-                    localTemp,
-                    options.cleanBefore,
-                    options.cleanAfter,
-                    options.deviceRunnerDir,
-                    options.classpath,
-                    options.androidStubsJar);
         } else {
-            System.out.println("Unknown mode mode " + options.mode + ".");
-            return;
+            AndroidSdk androidSdk = AndroidSdk.getFromPath();
+            buildClasspath.addAll(androidSdk.getAndroidClasses());
+            monitorPort = 8787;
+
+            if (options.mode.equals(Options.MODE_DEVICE)) {
+                mode = new DeviceDalvikVm(
+                        options.debugPort,
+                        buildClasspath,
+                        options.javacArgs,
+                        monitorPort,
+                        localTemp,
+                        options.vmArgs,
+                        options.targetArgs,
+                        options.cleanBefore,
+                        options.cleanAfter,
+                        options.deviceRunnerDir,
+                        options.classpath,
+                        androidSdk);
+            } else if (options.mode.equals(Options.MODE_ACTIVITY)) {
+                mode = new ActivityMode(
+                        options.debugPort,
+                        buildClasspath,
+                        options.javacArgs,
+                        monitorPort,
+                        localTemp,
+                        options.cleanBefore,
+                        options.cleanAfter,
+                        options.deviceRunnerDir,
+                        options.classpath,
+                        androidSdk);
+            } else {
+                System.out.println("Unknown mode mode " + options.mode + ".");
+                return;
+            }
         }
 
         HostMonitor monitor = new HostMonitor(options.monitorTimeout);

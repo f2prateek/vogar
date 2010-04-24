@@ -24,18 +24,10 @@ import java.io.File;
 public final class Rm {
 
     public void file(File file) {
-        new Command.Builder()
-                .args("rm")
-                .args("-f")
-                .args(file)
-                .execute();
+        new Command("rm", "-f", file.getPath()).execute();
     }
 
     public void directoryTree(File directory) {
-        new Command.Builder()
-                .args("rm")
-                .args("-rf")
-                .args(directory)
-                .execute();
+        new Command("rm", "-rf", directory.getPath()).execute();
     }
 }

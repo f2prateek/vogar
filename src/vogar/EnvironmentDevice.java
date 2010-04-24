@@ -17,43 +17,44 @@
 package vogar;
 
 import java.io.File;
-import vogar.commands.Adb;
+import vogar.commands.AndroidSdk;
 
 class EnvironmentDevice extends Environment {
-    final Adb adb = new Adb();
+    final AndroidSdk androidSdk;
     final File runnerDir;
     final File vogarTemp;
     final int monitorPort;
 
-    EnvironmentDevice (boolean cleanBefore, boolean cleanAfter,
-            Integer debugPort, int monitorPort, File localTemp, File runnerDir) {
+    EnvironmentDevice(boolean cleanBefore, boolean cleanAfter, Integer debugPort, int monitorPort,
+            File localTemp, File runnerDir, AndroidSdk androidSdk) {
         super(cleanBefore, cleanAfter, debugPort, localTemp);
+        this.androidSdk = androidSdk;
         this.runnerDir = runnerDir;
         this.vogarTemp = new File(runnerDir, "/vogar.tmp");
         this.monitorPort = monitorPort;
     }
 
     @Override void prepare() {
-        adb.waitForDevice();
-        adb.waitForNonEmptyDirectory(runnerDir.getParentFile(), 5 * 60);
+        androidSdk.waitForDevice();
+        androidSdk.waitForNonEmptyDirectory(runnerDir.getParentFile(), 5 * 60);
         if (cleanBefore) {
-            adb.rm(runnerDir);
+            androidSdk.rm(runnerDir);
         }
-        adb.mkdir(runnerDir);
-        adb.mkdir(vogarTemp);
-        adb.mkdir(new File("/sdcard/dalvik-cache")); // TODO: only necessary on production devices.
-        adb.forwardTcp(monitorPort, monitorPort);
+        androidSdk.mkdir(runnerDir);
+        androidSdk.mkdir(vogarTemp);
+        androidSdk.mkdir(new File("/sdcard/dalvik-cache")); // TODO: only necessary on production devices.
+        androidSdk.forwardTcp(monitorPort, monitorPort);
         if (debugPort != null) {
-            adb.forwardTcp(debugPort, debugPort);
+            androidSdk.forwardTcp(debugPort, debugPort);
         }
     }
 
     @Override protected void prepareUserDir(Action action) {
         File actionClassesDirOnDevice = actionClassesDirOnDevice(action);
-        adb.mkdir(actionClassesDirOnDevice);
+        androidSdk.mkdir(actionClassesDirOnDevice);
         File resourcesDirectory = action.getResourcesDirectory();
         if (resourcesDirectory != null) {
-            adb.push(resourcesDirectory, actionClassesDirOnDevice);
+            androidSdk.push(resourcesDirectory, actionClassesDirOnDevice);
         }
         action.setUserDir(actionClassesDirOnDevice);
     }
@@ -65,14 +66,14 @@ class EnvironmentDevice extends Environment {
     @Override void cleanup(Action action) {
         super.cleanup(action);
         if (cleanAfter) {
-            adb.rm(actionClassesDirOnDevice(action));
+            androidSdk.rm(actionClassesDirOnDevice(action));
         }
     }
 
     @Override void shutdown() {
         super.shutdown();
         if (cleanAfter) {
-            adb.rm(runnerDir);
+            androidSdk.rm(runnerDir);
         }
     }
 }

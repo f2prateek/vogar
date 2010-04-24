@@ -26,9 +26,8 @@ import java.io.OutputStream;
 import java.util.List;
 import java.util.Properties;
 import java.util.logging.Logger;
-import vogar.commands.Aapt;
+import vogar.commands.AndroidSdk;
 import vogar.commands.Command;
-import vogar.commands.Dx;
 
 /**
  * Runs an action in the context of an android.app.Activity on a device
@@ -39,16 +38,16 @@ final class ActivityMode extends Mode {
 
     private static final String TEST_ACTIVITY_CLASS = "vogar.target.TestActivity";
 
-    private final File androidStubsJar;
+    private AndroidSdk androidSdk;
     private File keystore;
 
-    ActivityMode(Integer debugPort, File sdkJar, List<String> javacArgs,
+    ActivityMode(Integer debugPort, Classpath buildClasspath, List<String> javacArgs,
             int monitorPort, File localTemp, boolean cleanBefore, boolean cleanAfter,
-            File deviceRunnerDir, Classpath classpath, File androidStubsJar) {
+            File deviceRunnerDir, Classpath classpath, AndroidSdk androidSdk) {
         super(new EnvironmentDevice(cleanBefore, cleanAfter,
-                debugPort, monitorPort, localTemp, deviceRunnerDir),
-                sdkJar, javacArgs, monitorPort, classpath);
-        this.androidStubsJar = androidStubsJar;
+                debugPort, monitorPort, localTemp, deviceRunnerDir, androidSdk),
+                buildClasspath, javacArgs, monitorPort, classpath);
+        this.androidSdk = androidSdk;
     }
 
     private EnvironmentDevice getEnvironmentDevice() {
@@ -105,7 +104,7 @@ final class ActivityMode extends Mode {
         File dex = environment.file(action, "classes.dex");
         Classpath classesToDex = Classpath.of(actionJar);
         classesToDex.addAll(this.classpath);
-        new Dx().dex(dex, classesToDex);
+        androidSdk.dex(dex, classesToDex);
         return dex;
     }
 
@@ -144,11 +143,10 @@ final class ActivityMode extends Mode {
             throw new RuntimeException("Problem writing " + androidManifestFile, e);
         }
 
-        Aapt aapt = new Aapt(androidStubsJar);
         File apk = environment.file(action, action + ".apk");
-        aapt.apk(apk, androidManifestFile);
-        aapt.add(apk, dex);
-        aapt.add(apk, environment.file(action, "classes", TestProperties.FILE));
+        androidSdk.packageApk(apk, androidManifestFile);
+        androidSdk.addToApk(apk, dex);
+        androidSdk.addToApk(apk, environment.file(action, "classes", TestProperties.FILE));
         return apk;
     }
 
@@ -168,8 +166,8 @@ final class ActivityMode extends Mode {
 
     private void installApk(Action action, File apkSigned) {
         // install the local apk ona the device
-        getEnvironmentDevice().adb.uninstall(packageName(action));
-        getEnvironmentDevice().adb.install(apkSigned);
+        getEnvironmentDevice().androidSdk.uninstall(packageName(action));
+        getEnvironmentDevice().androidSdk.install(apkSigned);
     }
 
     @Override protected void fillInProperties(Properties properties, Action action) {
@@ -187,7 +185,7 @@ final class ActivityMode extends Mode {
     @Override void cleanup(Action action) {
         super.cleanup(action);
         if (environment.cleanAfter) {
-            getEnvironmentDevice().adb.uninstall(action.getName());
+            getEnvironmentDevice().androidSdk.uninstall(action.getName());
         }
     }
 }

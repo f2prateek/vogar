@@ -21,7 +21,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Logger;
-import vogar.commands.Dx;
+import vogar.commands.AndroidSdk;
 
 /**
  * Execute actions on a Dalvik VM using an Android device or emulator.
@@ -36,12 +36,16 @@ final class DeviceDalvikVm extends Vm {
         BANNED_NAMES.add("javalib");
     }
 
-    DeviceDalvikVm(Integer debugPort, File sdkJar, List<String> javacArgs,
+    private final AndroidSdk androidSdk;
+
+    DeviceDalvikVm(Integer debugPort, Classpath buildClasspath, List<String> javacArgs,
             int monitorPort, File localTemp, List<String> additionalVmArgs,
             List<String> targetArgs, boolean cleanBefore, boolean cleanAfter,
-            File runnerDir, Classpath classpath) {
+            File runnerDir, Classpath classpath, AndroidSdk androidSdk) {
         super(new EnvironmentDevice(cleanBefore, cleanAfter, debugPort, monitorPort, localTemp,
-                runnerDir), sdkJar, javacArgs, additionalVmArgs, targetArgs, monitorPort, classpath);
+                runnerDir, androidSdk), buildClasspath, javacArgs, additionalVmArgs, targetArgs,
+                monitorPort, classpath);
+        this.androidSdk = androidSdk;
     }
 
     private EnvironmentDevice getEnvironmentDevice() {
@@ -73,10 +77,10 @@ final class DeviceDalvikVm extends Vm {
 
         // make the local dex (inside a jar)
         File localDex = environment.file(name, name + ".dx.jar");
-        new Dx().dex(localDex, Classpath.of(jar));
+        androidSdk.dex(localDex, Classpath.of(jar));
 
         // post the local dex to the device
-        getEnvironmentDevice().adb.push(localDex, deviceDexFile(name));
+        getEnvironmentDevice().androidSdk.push(localDex, deviceDexFile(name));
     }
 
     private File deviceDexFile(String name) {
