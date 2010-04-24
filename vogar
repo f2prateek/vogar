@@ -13,6 +13,11 @@ else
         android_platforms_dir=${android_tools_dir}/../platforms
         latest_android_platform=`ls -1 ${android_platforms_dir} | sort -n | tail -1`
         android_platform_dir=${android_platforms_dir}/${latest_android_platform}
+
+        # Our normal mode of operation is to take tools from the path.
+        # An SDK user will have the platform-inependent tools on their path,
+        # but not the platform-specific ones like aapt and dx.
+        export PATH=${android_platform_dir}/tools:$PATH
     fi
 fi
 
