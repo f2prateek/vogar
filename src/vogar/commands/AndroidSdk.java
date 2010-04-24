@@ -70,19 +70,19 @@ public class AndroidSdk {
 
         if ("tools".equals(parentFileName)) {
             File sdkRoot = adb.getParentFile().getParentFile();
-            logger.info("using android sdk: " + sdkRoot);
+            logger.fine("using android sdk: " + sdkRoot);
 
             List<File> platforms = Arrays.asList(new File(sdkRoot, "platforms").listFiles());
             Collections.sort(platforms, ORDER_BY_NAME);
             File newestPlatform = platforms.get(platforms.size() - 1);
-            logger.info("using android platform: " + newestPlatform);
+            logger.fine("using android platform: " + newestPlatform);
 
             return new AndroidSdk(new File(newestPlatform, "android.jar"));
 
         } else if ("bin".equals(parentFileName)) {
             File sourceRoot = adb.getParentFile().getParentFile()
                     .getParentFile().getParentFile().getParentFile();
-            logger.info("using android build tree: " + sourceRoot);
+            logger.fine("using android build tree: " + sourceRoot);
             File coreClasses = new File(sourceRoot
                     + "/out/target/common/obj/JAVA_LIBRARIES/core_intermediates/classes.jar");
             return new AndroidSdk(coreClasses);
