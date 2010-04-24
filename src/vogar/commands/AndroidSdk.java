@@ -37,14 +37,17 @@ public class AndroidSdk {
 
     private static final Comparator<File> ORDER_BY_NAME = new Comparator<File>() {
         public int compare(File a, File b) {
+            // TODO: this should be a numeric comparison, but we don't need to worry until version 10.
             return a.getName().compareTo(b.getName());
         }
     };
 
     private final File androidClasses;
+    private final File androidToolsDir;
 
-    private AndroidSdk(File androidClasses) {
+    private AndroidSdk(File androidClasses, File androidToolsDir) {
         this.androidClasses = androidClasses;
+        this.androidToolsDir = androidToolsDir;
     }
 
     public static AndroidSdk getFromPath() {
@@ -77,7 +80,7 @@ public class AndroidSdk {
             File newestPlatform = platforms.get(platforms.size() - 1);
             logger.fine("using android platform: " + newestPlatform);
 
-            return new AndroidSdk(new File(newestPlatform, "android.jar"));
+            return new AndroidSdk(new File(newestPlatform, "android.jar"), new File(newestPlatform, "tools"));
 
         } else if ("bin".equals(parentFileName)) {
             File sourceRoot = adb.getParentFile().getParentFile()
@@ -85,7 +88,7 @@ public class AndroidSdk {
             logger.fine("using android build tree: " + sourceRoot);
             File coreClasses = new File(sourceRoot
                     + "/out/target/common/obj/JAVA_LIBRARIES/core_intermediates/classes.jar");
-            return new AndroidSdk(coreClasses);
+            return new AndroidSdk(coreClasses, null);
 
         } else {
             throw new RuntimeException("Couldn't derive Android home from " + adb);
@@ -94,6 +97,18 @@ public class AndroidSdk {
 
     public File getAndroidClasses() {
         return androidClasses;
+    }
+
+    /**
+     * Returns the path to a version-specific tool.
+     * 
+     * An SDK has two tools directories: a version-independent one containing "adb" and a few
+     * others, plus a version-specific one containing "dx" and a few others.
+     * 
+     * If you're running from an Android build tree, everything is already on your path.
+     */
+    private String toolPath(String tool) {
+        return (androidToolsDir != null) ? new File(androidToolsDir, tool).toString() : tool;
     }
 
     /**
@@ -119,7 +134,7 @@ public class AndroidSdk {
          * handle large dx input when building dex for APK.
          */
         new Command.Builder()
-                .args("dx")
+                .args(toolPath("dx"))
                 .args("-JXms16M")
                 .args("-JXmx1536M")
                 .args("--dex")
@@ -131,7 +146,8 @@ public class AndroidSdk {
     }
 
     public void packageApk(File apk, File manifest) {
-        new Command("aapt", "package",
+        new Command(toolPath("aapt"),
+                "package",
                 "-F", apk.getPath(),
                 "-M", manifest.getPath(),
                 "-I", androidClasses.getPath())
@@ -139,7 +155,7 @@ public class AndroidSdk {
     }
 
     public void addToApk(File apk, File dex) {
-        new Command("aapt", "add", "-k", apk.getPath(), dex.getPath()).execute();
+        new Command(toolPath("aapt"), "add", "-k", apk.getPath(), dex.getPath()).execute();
     }
 
     public void mkdir(File name) {
