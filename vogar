@@ -1,6 +1,16 @@
 #!/bin/bash
 
-# before this script will work, you must build:
-#   ant jar
+adb_path=`which adb`
+android_tools_dir=`dirname ${adb_path}`
+android_platforms_dir=${android_tools_dir}/../platforms
+latest_android_platform=`ls -1 ${android_platforms_dir} | sort -n | tail -1`
+android_platform_dir=${android_platforms_dir}/${latest_android_platform}
 
-exec java -jar `dirname $0`/build/vogar.jar $*
+vogar_jar=`dirname $0`/build/vogar.jar
+if [ ! -f ${vogar_jar} ]; then
+    echo "Couldn't find ${vogar_jar}; building ..."
+    ant -Dandroid.platform.dir=${android_platform_dir} jar
+fi
+
+export VOGAR_ANDROID_PLATFORM_DIR=${android_platform_dir}
+exec java -jar ${vogar_jar} "$@"

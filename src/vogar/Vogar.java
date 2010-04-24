@@ -103,7 +103,7 @@ public final class Vogar {
         private List<String> javacArgs = new ArrayList<String>();
 
         @Option(names = { "--sdk" })
-        private File androidStubsJar = new File("/home/dalvik-prebuild/android-sdk-linux/platforms/android-2.0/android.jar");
+        private File androidStubsJar = new File(System.getenv("VOGAR_ANDROID_PLATFORM_DIR"), "android.jar");
 
         private void printUsage() {
             System.out.println("Usage: Vogar [options]... <actions>... [target args]...");
