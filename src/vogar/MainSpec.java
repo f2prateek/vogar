@@ -31,8 +31,4 @@ class MainSpec extends NamingPatternRunnerSpec {
     public Class<? extends Runner> getRunnerClass() {
         return MainRunner.class;
     }
-
-    public Classpath getClasspath() {
-        return new Classpath();
-    }
 }

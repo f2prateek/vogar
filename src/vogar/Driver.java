@@ -20,7 +20,6 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,7 +59,6 @@ final class Driver implements HostMonitor.Handler {
 
     private Timer actionTimeoutTimer = new Timer("action timeout", true);
 
-    private final Set<RunnerSpec> runnerSpecsBearingActions = new HashSet<RunnerSpec>();
     private final Map<String, Action> actions = Collections.synchronizedMap(
             new LinkedHashMap<String, Action>());
     private final Map<String, Outcome> outcomes = Collections.synchronizedMap(
@@ -109,7 +107,7 @@ final class Driver implements HostMonitor.Handler {
         // mode.prepare before mode.buildAndInstall to ensure the runner is
         // built. packaging of activity APK files needs the runner along with
         // the action-specific files.
-        mode.prepare(runnerSpecsBearingActions);
+        mode.prepare();
 
         // build and install actions in a background thread. Using lots of
         // threads helps for packages that contain many unsupported actions
@@ -192,7 +190,6 @@ final class Driver implements HostMonitor.Handler {
         for (String clazz : classes) {
             for (RunnerSpec runnerSpec : runnerSpecs) {
                 if (runnerSpec.supports(clazz)) {
-                    runnerSpecsBearingActions.add(runnerSpec);
                     Action action = new Action(clazz, clazz, null, null, runnerSpec);
                     actions.put(action.getName(), action);
                     break;
@@ -211,7 +208,6 @@ final class Driver implements HostMonitor.Handler {
                 // break as soon as we find any match. We don't need multiple
                 // matches for the same file, since that would run it twice.
                 if (!actionsForFile.isEmpty()) {
-                    runnerSpecsBearingActions.add(runnerSpec);
                     break;
                 }
             }

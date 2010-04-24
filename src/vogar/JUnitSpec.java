@@ -41,8 +41,4 @@ class JUnitSpec extends NamingPatternRunnerSpec {
     public Class<? extends Runner> getRunnerClass() {
         return JUnitRunner.class;
     }
-
-    public Classpath getClasspath() {
-        return Classpath.of(new File("lib/junit.jar").getAbsoluteFile());
-    }
 }

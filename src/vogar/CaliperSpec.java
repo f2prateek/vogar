@@ -37,11 +37,4 @@ class CaliperSpec extends NamingPatternRunnerSpec {
     public Class<? extends Runner> getRunnerClass() {
         return CaliperRunner.class;
     }
-
-    public Classpath getClasspath() {
-        return Classpath.of(
-                new File("lib/jsr305.jar").getAbsoluteFile(),
-                new File("lib/guava.jar").getAbsoluteFile(),
-                new File("lib/caliper.jar").getAbsoluteFile());
-    }
 }

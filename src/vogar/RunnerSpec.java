@@ -43,9 +43,4 @@ public interface RunnerSpec {
      * Return the class for the TestRunner
      */
     Class<? extends Runner> getRunnerClass();
-
-    /**
-     * Return the compile classpath for the TestRunner
-     */
-    Classpath getClasspath();
 }

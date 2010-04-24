@@ -67,10 +67,7 @@ abstract class Mode {
      * Initializes the temporary directories and harness necessary to run
      * actions.
      */
-    protected void prepare(Set<RunnerSpec> runners) {
-        for (RunnerSpec runnerSpec : runners) {
-            classpath.addAll(runnerSpec.getClasspath());
-        }
+    protected void prepare() {
         environment.prepare();
         classpath.addAll(vogarJar());
         installRunner();

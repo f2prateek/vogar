@@ -25,7 +25,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
 import java.util.Properties;
-import java.util.Set;
 import java.util.logging.Logger;
 import vogar.commands.Aapt;
 import vogar.commands.Command;
@@ -56,8 +55,8 @@ final class ActivityMode extends Mode {
         return (EnvironmentDevice) environment;
     }
 
-    @Override protected void prepare(Set<RunnerSpec> runners) {
-        super.prepare(runners);
+    @Override protected void prepare() {
+        super.prepare();
         extractKeystoreToFile();
     }
 

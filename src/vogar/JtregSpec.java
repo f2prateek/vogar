@@ -130,8 +130,4 @@ class JtregSpec implements RunnerSpec {
     public Class<? extends Runner> getRunnerClass() {
         return JtregRunner.class;
     }
-
-    public Classpath getClasspath() {
-        return new Classpath();
-    }
 }
