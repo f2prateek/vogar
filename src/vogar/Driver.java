@@ -103,6 +103,7 @@ final class Driver implements HostMonitor.Handler {
         }
 
         logger.info("Actions: " + actions.size());
+        final long t0 = System.currentTimeMillis();
 
         // mode.prepare before mode.buildAndInstall to ensure the runner is
         // built. packaging of activity APK files needs the runner along with
@@ -174,15 +175,17 @@ final class Driver implements HostMonitor.Handler {
         }
 
         mode.shutdown();
+        final long t1 = System.currentTimeMillis();
 
         if (failures > 0 || unsupportedActions > 0) {
             Collections.sort(failureNames);
             console.summarizeFailures(failureNames);
-            logger.info(String.format("Outcomes: %s. Passed: %d, Failed: %d, Skipped: %d",
-                    (successes + failures), successes, failures, unsupportedActions));
+            logger.info(String.format("Outcomes: %s. Passed: %d, Failed: %d, Skipped: %d. Took %s.",
+                    (successes + failures), successes, failures, unsupportedActions,
+                    TimeUtilities.msToString(t1 - t0)));
         } else {
-            logger.info(String.format("Outcomes: %s. All successful.", 
-                    (successes + failures)));
+            logger.info(String.format("Outcomes: %s. All successful. Took %s.", 
+                    (successes + failures), TimeUtilities.msToString(t1 - t0)));
         }
     }
 
