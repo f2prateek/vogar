@@ -140,7 +140,7 @@ public final class Vogar {
             System.out.println("      classpath. Such classes are available as build dependencies, but");
             System.out.println("      not at runtime.");
             System.out.println();
-            System.out.println("  --verbose: turn on verbose output");
+            System.out.println("  --verbose: turn on persistent verbose output.");
             System.out.println();
             System.out.println("TARGET OPTIONS");
             System.out.println();
@@ -304,10 +304,11 @@ public final class Vogar {
     private Vogar() {}
 
     private void run() {
-        Console.getInstance().setStream(options.stream);
-        Console.getInstance().setIndent(options.indent);
+        Console.getInstance().configureJavaLogging();
         Console.getInstance().setColor(options.color);
-        Console.getInstance().configureJavaLogging(options.verbose);
+        Console.getInstance().setIndent(options.indent);
+        Console.getInstance().setStream(options.stream);
+        Console.getInstance().setVerbose(options.verbose);
 
         int monitorPort;
         Mode mode;

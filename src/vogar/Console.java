@@ -34,6 +34,7 @@ public class Console {
 
     private boolean stream;
     private boolean color;
+    private boolean verbose;
     private String indent;
 
     private String currentName;
@@ -59,7 +60,11 @@ public class Console {
         this.color = color;
     }
 
-    public void configureJavaLogging(boolean verbose) {
+    public void setVerbose(boolean verbose) {
+        this.verbose = verbose;
+    }
+
+    public void configureJavaLogging() {
         ConsoleHandler handler = new ConsoleHandler();
         handler.setLevel(Level.ALL);
         handler.setFormatter(new Formatter() {
@@ -69,7 +74,7 @@ public class Console {
         });
 
         Logger logger = Logger.getLogger("vogar");
-        logger.setLevel(verbose ? Level.FINE : Level.INFO);
+        logger.setLevel(Level.INFO);
         logger.addHandler(handler);
         logger.setUseParentHandlers(false);
     }
@@ -79,7 +84,10 @@ public class Console {
     }
 
     public void verbose(String s) {
-        Logger.getLogger("vogar").fine("verbose: " + s);
+        newLine();
+        System.out.print(s);
+        System.out.flush();
+        currentLine = CurrentLine.VERBOSE;
     }
 
     public void warning(String s) {
@@ -205,6 +213,14 @@ public class Console {
     private void newLine() {
         if (currentLine == CurrentLine.NEW) {
             return;
+        } else if (currentLine == CurrentLine.VERBOSE) {
+            // --verbose means "leave all the verbose output on the screen".
+            if (!verbose) {
+                // Otherwise we overwrite verbose output whenever something new arrives.
+                eraseCurrentLine();
+                currentLine = CurrentLine.NEW;
+                return;
+            }
         }
 
         System.out.println();
@@ -234,6 +250,11 @@ public class Console {
          * separators or indentation.
          */
         NAME,
+
+        /**
+         * The line contains verbose output, and may be overwritten.
+         */
+        VERBOSE,
     }
 
     /**
@@ -250,5 +271,10 @@ public class Console {
 
     private String red(String message) {
         return color ? ("\u001b[31;1m" + message + "\u001b[0m") : message;
+    }
+
+    private void eraseCurrentLine() {
+        System.out.print(color ? "\u001b[2K\r" : "\n");
+        System.out.flush();
     }
 }
