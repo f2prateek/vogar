@@ -8,7 +8,7 @@ if [ ! -f "${vogar_jar}" ]; then
         # We're in an Android build tree, so pull the latest sdk from there.
         android_sdks_dir=${ANDROID_BUILD_TOP}/prebuilt/sdk/
         latest_android_sdk=`ls -1 ${android_sdks_dir} | sort -n | tail -1`
-        android_platform_dir=${latest_android_sdk}
+        android_platform_dir=${android_sdks_dir}/${latest_android_sdk}
     else
         # See if there's an Android SDK on the path.
         adb_path=`which adb`
