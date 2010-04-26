@@ -1,6 +1,6 @@
 #!/bin/bash
 
-vogar_jar=`dirname $0`/build/vogar.jar
+vogar_jar=`dirname $0`/../build/vogar.jar
 if [ ! -f "${vogar_jar}" ]; then
     echo "vogar: info: couldn't find prebuilt ${vogar_jar}; building ..."
     
@@ -25,7 +25,7 @@ if [ ! -f "${vogar_jar}" ]; then
         exit 1
     fi
     
-    ant -Dandroid.platform.dir=${android_platform_dir} jar
+    ( cd `dirname $0`/.. ; ant -Dandroid.platform.dir=${android_platform_dir} jar ) || exit 1
 fi
 
 exec java -jar ${vogar_jar} "$@"
