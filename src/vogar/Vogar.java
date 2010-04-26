@@ -83,7 +83,7 @@ public final class Vogar {
         private boolean verbose;
 
         @Option(names = { "--stream" })
-        private boolean stream;
+        private boolean stream = true;
 
         @Option(names = { "--color" })
         private boolean color = true;
