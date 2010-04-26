@@ -61,7 +61,8 @@ abstract class NamingPatternRunnerSpec implements RunnerSpec {
         }
 
         String className = fileToClass(file);
-        sink.add(new Action(className, className, null, file, this));
+        File sourcePath = fileAndClassToSourcePath(file, className);
+        sink.add(new Action(className, className, null, sourcePath, file, this));
     }
 
     /**
@@ -100,5 +101,24 @@ abstract class NamingPatternRunnerSpec implements RunnerSpec {
         } catch (IOException ex) {
             throw new IllegalArgumentException("Couldn't read '" + file + "': " + ex.getMessage());
         }
+    }
+
+    /**
+     * Returns the Java source path for given a class name found in the given file. For example, given the
+     * inputs {@code luni/src/test/java/org/apache/harmony/luni/tests/java/util/ArrayListTest.java} 
+     * and {@code org.apache.harmony.luni.tests.java.util.ArrayListTest}, this returns
+     * {@code luni/src}.
+     */
+    private File fileAndClassToSourcePath(File file, String className) {
+        String longPath = file.getPath();
+        String shortPath = className.replace('.', File.separatorChar) + ".java";
+
+        if (!longPath.endsWith(shortPath)) {
+            throw new IllegalArgumentException("Class " + className
+                                               + " expected to be in file ending in " + shortPath
+                                               + " but instead found in " + longPath);
+        }
+        String sourcePath = longPath.substring(0, longPath.length() - shortPath.length());
+        return new File(sourcePath);
     }
 }

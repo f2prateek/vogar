@@ -82,7 +82,9 @@ class JtregSpec implements RunnerSpec {
                 TestDescription description = testResult.getDescription();
                 String qualifiedName = qualifiedName(description);
                 String testClass = description.getName();
-                result.add(new Action(qualifiedName, testClass, description.getDir(), description.getFile(), this));
+                File javaFile = description.getFile();
+                File sourcePath = javaFile.getParentFile();
+                result.add(new Action(qualifiedName, testClass, description.getDir(), sourcePath, javaFile, this));
             }
             return result;
         } catch (Exception jtregFailure) {

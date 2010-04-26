@@ -187,7 +187,7 @@ final class Driver implements HostMonitor.Handler {
         for (String clazz : classes) {
             for (RunnerSpec runnerSpec : runnerSpecs) {
                 if (runnerSpec.supports(clazz)) {
-                    Action action = new Action(clazz, clazz, null, null, runnerSpec);
+                    Action action = new Action(clazz, clazz, null, null, null, runnerSpec);
                     actions.put(action.getName(), action);
                     break;
                 }

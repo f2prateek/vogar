@@ -27,15 +27,17 @@ public final class Action {
     private final String name;
     private final String actionClass;
     private final File resourcesDirectory;
+    private final File sourcePath;
     private final File javaFile;
     private final RunnerSpec runnerSpec;
     private File userDir = new File(System.getProperty("user.dir"));
 
     public Action(String name, String actionClass, File resourcesDirectory,
-            File javaFile, RunnerSpec runnerSpec) {
+            File sourcePath, File javaFile, RunnerSpec runnerSpec) {
         this.name = name;
         this.actionClass = actionClass;
         this.resourcesDirectory = resourcesDirectory;
+        this.sourcePath = sourcePath;
         this.javaFile = javaFile;
         this.runnerSpec = runnerSpec;
     }
@@ -46,6 +48,14 @@ public final class Action {
      */
     public File getResourcesDirectory() {
         return resourcesDirectory;
+    }
+
+    /**
+     * Returns this action's source path, or {@code null} if this file wasn't
+     * built from source.
+     */
+    public File getSourcePath() {
+        return sourcePath;
     }
 
     /**

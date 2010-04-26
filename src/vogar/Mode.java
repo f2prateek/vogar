@@ -140,7 +140,7 @@ abstract class Mode {
                         Collections.singletonList("Cannot compile: " + javaFile));
             }
             sourceFiles.add(javaFile);
-            javac.sourcepath(javaFile.getParentFile());
+            javac.sourcepath(action.getSourcePath());
         }
         if (!sourceFiles.isEmpty()) {
             if (!buildClasspath.isEmpty()) {
