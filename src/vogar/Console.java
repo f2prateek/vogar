@@ -76,6 +76,7 @@ public class Console {
     public void action(String name) {
         newLine();
         System.out.print("Action " + name);
+        System.out.flush();
         currentName = name;
         currentLine = CurrentLine.NAME;
     }
@@ -92,6 +93,7 @@ public class Console {
         currentName = name;
         newLine();
         System.out.print(indent + name);
+        System.out.flush();
         currentLine = CurrentLine.NAME;
     }
 
