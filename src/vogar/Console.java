@@ -143,6 +143,10 @@ public class Console {
      * Prints the action output with appropriate indentation.
      */
     private void printOutput(String streamedOutput) {
+        if (streamedOutput.length() == 0) {
+            return;
+        }
+
         String[] lines = messageToLines(streamedOutput);
 
         if (currentLine != CurrentLine.STREAMED_OUTPUT) {

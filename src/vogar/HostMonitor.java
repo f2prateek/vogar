@@ -168,6 +168,7 @@ class HostMonitor {
 
                 currentOutcomeName = attributes.getValue("name");
                 currentActionName = attributes.getValue("action");
+                handler.output(currentOutcomeName, "");
                 return;
 
             } else if (qName.equals("result")) {
