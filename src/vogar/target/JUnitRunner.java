@@ -19,9 +19,15 @@ package vogar.target;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import junit.framework.AssertionFailedError;
+import junit.framework.Protectable;
 import junit.framework.Test;
 import junit.framework.TestResult;
 import junit.framework.TestSuite;
@@ -55,6 +61,10 @@ public final class JUnitRunner implements Runner {
                 new MonitoringResultPrinter(monitor, actionName)) {
             @Override public TestSuiteLoader getLoader() {
                 return testSuiteLoader;
+            }
+
+            @Override protected TestResult createTestResult() {
+                return new TimoutTestResult();
             }
         };
 
@@ -123,8 +133,7 @@ public final class JUnitRunner implements Runner {
         private Test current;
         private Throwable failure;
 
-        public MonitoringResultPrinter(TargetMonitor monitor,
-                String actionName) {
+        public MonitoringResultPrinter(TargetMonitor monitor, String actionName) {
             super(System.out);
             this.monitor = monitor;
             this.actionName = actionName;
@@ -162,5 +171,38 @@ public final class JUnitRunner implements Runner {
         @Override protected void printErrors(TestResult result) {}
         @Override protected void printFailures(TestResult result) {}
         @Override protected void printFooter(TestResult result) {}
+    }
+
+    private static class TimoutTestResult extends TestResult {
+        final ExecutorService executor = Executors.newCachedThreadPool();
+
+        @Override public void runProtected(Test test, final Protectable p) {
+            Future<Throwable> result = executor.submit(new Callable<Throwable>() {
+                public Throwable call() throws Exception {
+                    try {
+                        p.protect();
+                        return null;
+                    } catch (Throwable throwable) {
+                        return throwable;
+                    }
+                }
+            });
+
+            Throwable thrown;
+            try {
+                thrown = result.get(60, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                thrown = e;
+            }
+
+            if (thrown != null) {
+                final Throwable finalThrown = thrown;
+                super.runProtected(test, new Protectable() {
+                    public void protect() throws Throwable {
+                        throw finalThrown;
+                    }
+                });
+            }
+        }
     }
 }
