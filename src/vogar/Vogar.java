@@ -107,7 +107,7 @@ public final class Vogar {
         private List<File> buildClasspath = new ArrayList<File>();
 
         private void printUsage() {
-            System.out.println("Usage: Vogar [options]... <actions>... [target args]...");
+            System.out.println("Usage: Vogar [options]... <actions>... [-- target args]...");
             System.out.println();
             System.out.println("  <actions>: .java files, .jar files, directories, or class names.");
             System.out.println("      These should be JUnit tests, jtreg tests, Caliper benchmarks");
@@ -275,14 +275,14 @@ public final class Vogar {
                     } else if (arg.endsWith(".java") || file.isDirectory()) {
                         actionFiles.add(file);
                     } else {
-                        System.out.println("Expected a .jar file, .java file, directory,"
+                        System.out.println("Expected a .jar file, .java file, directory, "
                                 + "package name or classname, but was: " + arg);
                         return false;
                     }
                 } else if (PACKAGE_OR_CLASS_NAME_PATTERN.matcher(arg).matches()) {
                     actionClassesAndPackages.add(arg);
                 } else {
-                    System.out.println("Expected a .jar file, .java file, directory,"
+                    System.out.println("Expected a .jar file, .java file, directory, "
                             + "package name or classname, but was: " + arg);
                     return false;
                 }
