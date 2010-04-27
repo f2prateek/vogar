@@ -203,7 +203,7 @@ public final class JUnitRunner implements Runner {
 
             Throwable thrown;
             try {
-                thrown = result.get(60, TimeUnit.SECONDS);
+                thrown = result.get(60000000, TimeUnit.SECONDS);
             } catch (Exception e) {
                 thrown = e;
             }
