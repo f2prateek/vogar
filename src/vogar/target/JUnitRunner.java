@@ -29,6 +29,7 @@ import java.util.regex.Pattern;
 import junit.framework.AssertionFailedError;
 import junit.framework.Protectable;
 import junit.framework.Test;
+import junit.framework.TestCase;
 import junit.framework.TestResult;
 import junit.framework.TestSuite;
 import junit.runner.BaseTestRunner;
@@ -104,6 +105,18 @@ public final class JUnitRunner implements Runner {
     }
 
     public void run(String actionName, String className, String[] args) {
+        // if target args were specified, perhaps only a few tests should be run?
+        try {
+            Class clazz = Class.forName(className);
+            if (args != null && args.length > 0 && TestCase.class.isAssignableFrom(clazz)) {
+                TestSuite testSuite = new TestSuite();
+                for (String arg : args) {
+                    testSuite.addTest(TestSuite.createTest(clazz, arg));
+                }
+                this.junitTest = testSuite;
+            }
+        } catch (ClassNotFoundException e) {
+        }
         testRunner.doRun(junitTest);
     }
 
