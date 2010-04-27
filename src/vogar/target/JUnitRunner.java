@@ -16,11 +16,15 @@
 
 package vogar.target;
 
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import junit.framework.AssertionFailedError;
 import junit.framework.Test;
 import junit.framework.TestResult;
+import junit.framework.TestSuite;
 import junit.runner.BaseTestRunner;
 import junit.runner.TestSuiteLoader;
 import junit.textui.ResultPrinter;
@@ -36,7 +40,7 @@ public final class JUnitRunner implements Runner {
     private junit.textui.TestRunner testRunner;
     private Test junitTest;
 
-    public void init(TargetMonitor monitor, String actionName, Class<?> testClass) {
+    public void init(TargetMonitor monitor, String actionName, String className) throws Exception {
         final TestSuiteLoader testSuiteLoader = new TestSuiteLoader() {
             public Class load(String suiteClassName) throws ClassNotFoundException {
                 return JUnitRunner.class.getClassLoader().loadClass(suiteClassName);
@@ -54,10 +58,42 @@ public final class JUnitRunner implements Runner {
             }
         };
 
-        this.junitTest = testRunner.getTest(testClass.getName());
+        // perhaps a test name was specified?
+        try {
+            Class.forName(className);
+            this.junitTest = testRunner.getTest(className);
+            return;
+        } catch (ClassNotFoundException e) {
+        }
+
+        // probably a package name. Scan all the classes on the classpath
+        this.junitTest = allTestsInPackage(className);
     }
 
-    public void run(String actionName, Class<?> testClass, String[] args) {
+    private TestSuite allTestsInPackage(String className) throws IOException {
+        ClassPathScanner classpathScanner = new ClassPathScanner();
+        Package aPackage = classpathScanner.scan(className);
+        Set<Class<?>> classes = aPackage.getTopLevelClassesRecursive();
+        if (classes.isEmpty()) {
+            throw new RuntimeException("No classes in package: " + className + "; classpath is "
+                    + Arrays.toString(ClassPathScanner.getClassPath()));
+        }
+        int count = 0;
+        TestSuite suite = new TestSuite(className);
+        for (Class<?> claz : classes) {
+            if (claz.getName().endsWith("Test")) {
+                suite.addTestSuite(claz);
+                count++;
+            }
+        }
+        if (count == 0) {
+            throw new RuntimeException("No classes in package: " + className
+                    + "; classes are " + classes);
+        }
+        return suite;
+    }
+
+    public void run(String actionName, String className, String[] args) {
         testRunner.doRun(junitTest);
     }
 

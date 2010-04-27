@@ -26,13 +26,14 @@ import vogar.Result;
 public final class CaliperRunner implements vogar.target.Runner {
 
     private TargetMonitor monitor;
+    private Class<?> testClass;
 
-    public void init(TargetMonitor monitor, String actionName,
-            Class<?> testClass) {
+    public void init(TargetMonitor monitor, String actionName, String className) throws Exception {
         this.monitor = monitor;
+        testClass = Class.forName(className);
     }
 
-    public void run(String actionName, Class<?> testClass, String[] args) {
+    public void run(String actionName, String className, String[] args) {
         monitor.outcomeStarted(actionName, actionName);
         try {
             Runner.main(testClass.asSubclass(Benchmark.class), args);

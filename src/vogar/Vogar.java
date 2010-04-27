@@ -32,15 +32,15 @@ import vogar.commands.AndroidSdk;
  */
 public final class Vogar {
 
-    static final Pattern CLASS_NAME_PATTERN
-            = Pattern.compile("(\\w+)(\\.\\w+)*\\.[A-Z]\\w*");
+    static final Pattern PACKAGE_OR_CLASS_NAME_PATTERN
+            = Pattern.compile("(\\w+)(\\.\\w+)+");
 
     private static class Options {
 
         private final Classpath classpath = Classpath.of();
 
         private final List<File> actionFiles = new ArrayList<File>();
-        private final List<String> actionClasses = new ArrayList<String>();
+        private final List<String> actionClassesAndPackages = new ArrayList<String>();
         private final List<String> targetArgs = new ArrayList<String>();
 
         @Option(names = { "--expectations" })
@@ -272,19 +272,25 @@ public final class Vogar {
                 if (file.exists()) {
                     if (arg.endsWith(".jar")) {
                         classpath.addAll(file.getAbsoluteFile());
-                    } else {
+                    } else if (arg.endsWith(".java") || file.isDirectory()) {
                         actionFiles.add(file);
+                    } else {
+                        System.out.println("Expected a .jar file, .java file, directory,"
+                                + "package name or classname, but was: " + arg);
+                        return false;
                     }
-                } else if (CLASS_NAME_PATTERN.matcher(arg).matches()) {
-                    actionClasses.add(arg);
+                } else if (PACKAGE_OR_CLASS_NAME_PATTERN.matcher(arg).matches()) {
+                    actionClassesAndPackages.add(arg);
                 } else {
-                    break;
+                    System.out.println("Expected a .jar file, .java file, directory,"
+                            + "package name or classname, but was: " + arg);
+                    return false;
                 }
             }
 
             targetArgs.addAll(actionsAndTargetArgs.subList(index, actionsAndTargetArgs.size()));
 
-            if (actionFiles.isEmpty() && actionClasses.isEmpty()) {
+            if (actionFiles.isEmpty() && actionClassesAndPackages.isEmpty()) {
                 System.out.println("No actions provided.");
                 return false;
             }
@@ -304,7 +310,6 @@ public final class Vogar {
     private Vogar() {}
 
     private void run() {
-        Console.getInstance().configureJavaLogging();
         Console.getInstance().setColor(options.color);
         Console.getInstance().setIndent(options.indent);
         Console.getInstance().setStream(options.stream);
@@ -394,7 +399,7 @@ public final class Vogar {
                 monitorPort,
                 options.timeoutSeconds);
 
-        driver.buildAndRun(options.actionFiles, options.actionClasses);
+        driver.buildAndRun(options.actionFiles, options.actionClassesAndPackages);
     }
 
     public static void main(String[] args) {

@@ -16,18 +16,10 @@
 
 package vogar;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.util.List;
-import java.util.logging.ConsoleHandler;
-import java.util.logging.Formatter;
-import java.util.logging.Level;
-import java.util.logging.LogRecord;
-import java.util.logging.Logger;
 
 /**
- * Controls, formats and emits output to the command line. Command line output
- * can be generated both by java.util.logging and by direct calls to this class.
+ * Controls, formats and emits output to the command line.
  */
 public class Console {
     private static final Console INSTANCE = new Console();
@@ -41,8 +33,7 @@ public class Console {
     private CurrentLine currentLine = CurrentLine.NEW;
     private final StringBuilder bufferedOutput = new StringBuilder();
 
-    private Console() {
-    }
+    private Console() {}
 
     public static Console getInstance() {
         return INSTANCE;
@@ -64,25 +55,6 @@ public class Console {
         this.verbose = verbose;
     }
 
-    public void configureJavaLogging() {
-        ConsoleHandler handler = new ConsoleHandler();
-        handler.setLevel(Level.ALL);
-        handler.setFormatter(new Formatter() {
-            @Override public String format(LogRecord r) {
-                return logRecordToString(r);
-            }
-        });
-
-        Logger logger = Logger.getLogger("vogar");
-        logger.setLevel(Level.INFO);
-        logger.addHandler(handler);
-        logger.setUseParentHandlers(false);
-    }
-
-    public void info(String s) {
-        Logger.getLogger("vogar").info(s);
-    }
-
     public void verbose(String s) {
         newLine();
         System.out.print(s);
@@ -90,31 +62,15 @@ public class Console {
         currentLine = CurrentLine.VERBOSE;
     }
 
-    public void warning(String s) {
-        Logger.getLogger("vogar").warning("warning: " + s);
-    }
-
-    public void warning(String s, Throwable th) {
-        Logger.getLogger("vogar").log(Level.WARNING, "warning: " + s, th);
-    }
-
-    /**
-     * Formats a sequence of regular log messages with the output streamed from
-     * a foreign process.
-     */
-    private String logRecordToString(LogRecord logRecord) {
-        String message = logRecord.getMessage();
-
-        if (logRecord.getThrown() != null) {
-            StringWriter writer = new StringWriter();
-            writer.write(message);
-            writer.write("\n");
-            logRecord.getThrown().printStackTrace(new PrintWriter(writer));
-            message = writer.toString();
-        }
-
+    public void info(String s) {
         newLine();
-        return message + "\n";
+        System.out.println(s);
+    }
+
+    public void info(String message, Throwable throwable) {
+        newLine();
+        System.out.println(message);
+        throwable.printStackTrace(System.out);
     }
 
     public void action(String name) {

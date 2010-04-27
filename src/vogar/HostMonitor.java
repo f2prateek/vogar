@@ -59,12 +59,12 @@ class HostMonitor {
                 socket.close();
             } catch (ConnectException recoverable) {
             } catch (IOException e) {
-                Console.getInstance().warning("Failed to connect to localhost:" + port, e);
+                Console.getInstance().info("Failed to connect to localhost:" + port, e);
                 return false;
             }
 
             if (attempt++ == monitorTimeoutSeconds) {
-                Console.getInstance().warning("Exceeded " + monitorTimeoutSeconds
+                Console.getInstance().info("Exceeded " + monitorTimeoutSeconds
                         + " attempts to connect to localhost:" + port);
                 return false;
             }
@@ -86,10 +86,10 @@ class HostMonitor {
         } catch (ParserConfigurationException e) {
             throw new RuntimeException(e);
         } catch (IOException e) {
-            Console.getInstance().warning("Connection error from localhost:" + port, e);
+            Console.getInstance().info("Connection error from localhost:" + port, e);
             return false;
         } catch (SAXException e) {
-            Console.getInstance().warning("Received bad XML from localhost:" + port + " " + e);
+            Console.getInstance().info("Received bad XML from localhost:" + port + " " + e);
             return false;
         }
 

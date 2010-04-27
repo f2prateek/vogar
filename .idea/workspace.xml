@@ -1,24 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager" verified="true">
-    <list default="true" readonly="true" id="9d9056d4-f556-4b4e-b4f5-7a312005e72f" name="Default" comment="Detect the">
+    <list default="true" readonly="true" id="9d9056d4-f556-4b4e-b4f5-7a312005e72f" name="Default" comment="">
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/vogar/ActivityMode.java" afterPath="$PROJECT_DIR$/src/vogar/ActivityMode.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/projectCodeStyle.xml" afterPath="$PROJECT_DIR$/.idea/projectCodeStyle.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/vogar/EnvironmentDevice.java" afterPath="$PROJECT_DIR$/src/vogar/EnvironmentDevice.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/vogar/commands/Rm.java" afterPath="$PROJECT_DIR$/src/vogar/commands/Rm.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/vogar/target/JUnitRunner.java" afterPath="$PROJECT_DIR$/src/vogar/target/JUnitRunner.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/vogar/HostMonitor.java" afterPath="$PROJECT_DIR$/src/vogar/HostMonitor.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/vogar/target/TestRunner.java" afterPath="$PROJECT_DIR$/src/vogar/target/TestRunner.java" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/src/vogar/target/ClassPathScanner.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/vogar/target/CaliperRunner.java" afterPath="$PROJECT_DIR$/src/vogar/target/CaliperRunner.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/vogar/Console.java" afterPath="$PROJECT_DIR$/src/vogar/Console.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/vogar/target/Runner.java" afterPath="$PROJECT_DIR$/src/vogar/target/Runner.java" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/vogar/Vogar.java" afterPath="$PROJECT_DIR$/src/vogar/Vogar.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/vogar/DeviceDalvikVm.java" afterPath="$PROJECT_DIR$/src/vogar/DeviceDalvikVm.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/vogar/Javac.java" afterPath="$PROJECT_DIR$/src/vogar/Javac.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/vogar/Vm.java" afterPath="$PROJECT_DIR$/src/vogar/Vm.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/vogar/JavaVm.java" afterPath="$PROJECT_DIR$/src/vogar/JavaVm.java" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/src/vogar/commands/Dx.java" afterPath="" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/misc.xml" afterPath="$PROJECT_DIR$/.idea/misc.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/vogar/Classpath.java" afterPath="$PROJECT_DIR$/src/vogar/Classpath.java" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/src/vogar/commands/AndroidSdk.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/vogar/Mode.java" afterPath="$PROJECT_DIR$/src/vogar/Mode.java" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/src/vogar/commands/Adb.java" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/src/vogar/commands/Aapt.java" afterPath="" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/vogar/target/MainRunner.java" afterPath="$PROJECT_DIR$/src/vogar/target/MainRunner.java" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/src/vogar/target/Package.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/vogar/JUnitSpec.java" afterPath="$PROJECT_DIR$/src/vogar/JUnitSpec.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/vogar/target/JtregRunner.java" afterPath="$PROJECT_DIR$/src/vogar/target/JtregRunner.java" />
     </list>
     <ignored path="vogar.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -78,73 +74,98 @@
   <component name="FileColors" enabled="true" enabledForTabs="true" />
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="AndroidSdk.java" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/vogar/commands/AndroidSdk.java">
+      <file leaf-file-name="ClassPathScanner.java" pinned="false" current="true" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/src/vogar/target/ClassPathScanner.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="59" column="38" selection-start="1946" selection-end="1946" vertical-scroll-proportion="0.0">
+            <state line="170" column="44" selection-start="7105" selection-end="7105" vertical-scroll-proportion="0.3809524">
+              <folding>
+                <element signature="imports" expanded="true" />
+                <marker date="1272329369000" expanded="true" signature="5207:6000" placeholder="..." />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="File.class" pinned="false" current="false" current-in-tab="false">
+        <entry file="jar:///System/Library/Frameworks/JavaVM.framework/Versions/1.6.0/Classes/classes.jar!/java/io/File.class">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="61" column="19" selection-start="2266" selection-end="2266" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="vogar" pinned="false" current="true" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/vogar">
+      <file leaf-file-name="Enumeration.class" pinned="false" current="false" current-in-tab="false">
+        <entry file="jar:///System/Library/Frameworks/JavaVM.framework/Versions/1.6.0/Classes/classes.jar!/java/util/Enumeration.class">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="28" column="0" selection-start="1075" selection-end="1075" vertical-scroll-proportion="0.44444445">
+            <state line="9" column="6" selection-start="217" selection-end="217" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="Dx.java" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/vogar/commands/Dx.java">
+      <file leaf-file-name="DexFile.class" pinned="false" current="false" current-in-tab="false">
+        <entry file="jar://$PROJECT_DIR$/../android-sdk-mac_86/platforms/android-7/android.jar!/dalvik/system/DexFile.class">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="22" column="0" selection-start="695" selection-end="695" vertical-scroll-proportion="0.0">
+            <state line="24" column="1" selection-start="1120" selection-end="1120" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="Mkdir.java" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/vogar/commands/Mkdir.java">
+      <file leaf-file-name="JUnitRunner.java" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/vogar/target/JUnitRunner.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="23" column="19" selection-start="715" selection-end="715" vertical-scroll-proportion="0.0">
+            <state line="74" column="0" selection-start="2546" selection-end="2546" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="Rm.java" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/vogar/commands/Rm.java">
+      <file leaf-file-name="Package.java" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/vogar/target/Package.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="31" column="5" selection-start="936" selection-end="936" vertical-scroll-proportion="0.0">
+            <state line="34" column="36" selection-start="1060" selection-end="1060" vertical-scroll-proportion="0.0">
+              <folding>
+                <element signature="imports" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="TestSuite.class" pinned="false" current="false" current-in-tab="false">
+        <entry file="jar://$PROJECT_DIR$/lib/junit.jar!/junit/framework/TestSuite.class">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="56" column="1" selection-start="2410" selection-end="2410" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="Adb.java" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/vogar/commands/Adb.java">
+      <file leaf-file-name="TestRunner.java" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/vogar/target/TestRunner.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="21" column="19" selection-start="692" selection-end="692" vertical-scroll-proportion="0.0">
+            <state line="108" column="0" selection-start="3740" selection-end="3740" vertical-scroll-proportion="0.0">
+              <folding>
+                <element signature="imports" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="JUnitSpec.java" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/vogar/JUnitSpec.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="29" column="9" selection-start="959" selection-end="959" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="ActivityMode.java" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/vogar/ActivityMode.java">
+      <file leaf-file-name="Runner.java" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/vogar/target/Runner.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="145" column="0" selection-start="5582" selection-end="5582" vertical-scroll-proportion="0.0">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="Vogar.java" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/vogar/Vogar.java">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="139" column="0" selection-start="5682" selection-end="5682" vertical-scroll-proportion="0.0">
+            <state line="26" column="0" selection-start="906" selection-end="906" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
@@ -160,22 +181,22 @@
   <component name="IdeDocumentHistory">
     <option name="changedFiles">
       <list>
-        <option value="$PROJECT_DIR$/src/vogar/Driver.java" />
-        <option value="$PROJECT_DIR$/src/vogar/JavaVm.java" />
-        <option value="$PROJECT_DIR$/src/vogar/Vm.java" />
-        <option value="$PROJECT_DIR$/src/vogar/Javac.java" />
-        <option value="$PROJECT_DIR$/src/vogar/Classpath.java" />
-        <option value="$PROJECT_DIR$/src/vogar/Mode.java" />
-        <option value="$PROJECT_DIR$/src/vogar/commands/Aapt.java" />
-        <option value="$PROJECT_DIR$/src/vogar/commands/Adb.java" />
-        <option value="$PROJECT_DIR$/src/vogar/commands/Dx.java" />
-        <option value="$PROJECT_DIR$/src/vogar/ActivityMode.java" />
-        <option value="$PROJECT_DIR$/src/vogar/DeviceDalvikVm.java" />
-        <option value="$PROJECT_DIR$/src/vogar/commands/Rm.java" />
-        <option value="$PROJECT_DIR$/src/vogar/AndroidSdk.java" />
-        <option value="$PROJECT_DIR$/src/vogar/EnvironmentDevice.java" />
-        <option value="$PROJECT_DIR$/src/vogar/commands/AndroidSdk.java" />
         <option value="$PROJECT_DIR$/src/vogar/Vogar.java" />
+        <option value="$PROJECT_DIR$/src/vogar/Console.java" />
+        <option value="$PROJECT_DIR$/src/vogar/suitebuilder/TestSuiteBuilder.java" />
+        <option value="$PROJECT_DIR$/src/vogar/suitebuilder/ClassPathPackageInfo.java" />
+        <option value="$PROJECT_DIR$/src/vogar/suitebuilder/ClassPathPackageInfoSource.java" />
+        <option value="$PROJECT_DIR$/src/vogar/target/CaliperRunner.java" />
+        <option value="$PROJECT_DIR$/src/vogar/target/Runner.java" />
+        <option value="$PROJECT_DIR$/src/vogar/target/JtregRunner.java" />
+        <option value="$PROJECT_DIR$/src/vogar/target/MainRunner.java" />
+        <option value="$PROJECT_DIR$/src/vogar/target/TestRunner.java" />
+        <option value="$PROJECT_DIR$/src/vogar/JUnitSpec.java" />
+        <option value="$PROJECT_DIR$/src/vogar/target/ClassPathPackageInfo.java" />
+        <option value="$PROJECT_DIR$/src/vogar/target/JUnitRunner.java" />
+        <option value="$PROJECT_DIR$/src/vogar/target/ClassPathPackageInfoSource.java" />
+        <option value="$PROJECT_DIR$/src/vogar/target/Package.java" />
+        <option value="$PROJECT_DIR$/src/vogar/target/ClassPathScanner.java" />
       </list>
     </option>
   </component>
@@ -214,12 +235,69 @@
       <sortByType />
     </navigator>
     <panes>
+      <pane id="Favorites" />
       <pane id="PackagesPane" />
       <pane id="ProjectPane">
-        <subPane />
+        <subPane>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="vogar" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="vogar" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="vogar" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="vogar" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="vogar" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="src" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="vogar" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="vogar" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="vogar" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="src" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="vogar" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="target" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+        </subPane>
       </pane>
       <pane id="Scope" />
-      <pane id="Favorites" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -240,6 +318,137 @@
     <property name="options.lastSelected" value="preferences.sourceCode.General" />
     <property name="GoToClass.toSaveIncludeLibraries" value="false" />
     <property name="OverrideImplement.combined" value="true" />
+  </component>
+  <component name="RestoreUpdateTree">
+    <UpdateInfo date="4/26/10 3:13 PM" ActionInfo="_Update">
+      <UpdatedFiles>
+        <FILE-GROUP>
+          <option name="myUpdateName" value="Updated from server" />
+          <option name="myStatusName" value="Changed on server" />
+          <option name="mySupportsDeletion" value="false" />
+          <option name="myCanBeAbsent" value="false" />
+          <option name="myId" value="CHANGED_ON_SERVER" />
+          <FILE-GROUP>
+            <option name="myUpdateName" value="Updated" />
+            <option name="myStatusName" value="Changed" />
+            <option name="mySupportsDeletion" value="false" />
+            <option name="myCanBeAbsent" value="false" />
+            <option name="myId" value="UPDATED" />
+            <PATH vcs="svn" revision="30">$PROJECT_DIR$/src/vogar/ExpectationStore.java</PATH>
+            <PATH vcs="svn" revision="30">$PROJECT_DIR$/src/vogar/Console.java</PATH>
+            <PATH vcs="svn" revision="30">$PROJECT_DIR$/src/vogar/NamingPatternRunnerSpec.java</PATH>
+            <PATH vcs="svn" revision="30">$PROJECT_DIR$/src/vogar/Mode.java</PATH>
+            <PATH vcs="svn" revision="30">$PROJECT_DIR$/src/vogar/HostMonitor.java</PATH>
+            <PATH vcs="svn" revision="30">$PROJECT_DIR$/src/vogar/JtregSpec.java</PATH>
+            <PATH vcs="svn" revision="30">$PROJECT_DIR$/src/vogar/Environment.java</PATH>
+            <PATH vcs="svn" revision="30">$PROJECT_DIR$/src/vogar/Md5Cache.java</PATH>
+            <PATH vcs="svn" revision="30">$PROJECT_DIR$/src/vogar/Action.java</PATH>
+            <PATH vcs="svn" revision="30">$PROJECT_DIR$/src/vogar/commands/AndroidSdk.java</PATH>
+            <PATH vcs="svn" revision="30">$PROJECT_DIR$/src/vogar/commands/Command.java</PATH>
+            <PATH vcs="svn" revision="30">$PROJECT_DIR$/src/vogar/Driver.java</PATH>
+            <PATH vcs="svn" revision="30">$PROJECT_DIR$/src/vogar/DeviceDalvikVm.java</PATH>
+            <PATH vcs="svn" revision="30">$PROJECT_DIR$</PATH>
+          </FILE-GROUP>
+          <FILE-GROUP>
+            <option name="myUpdateName" value="Created" />
+            <option name="myStatusName" value="Created" />
+            <option name="mySupportsDeletion" value="false" />
+            <option name="myCanBeAbsent" value="false" />
+            <option name="myId" value="CREATED" />
+            <PATH vcs="svn" revision="30">$PROJECT_DIR$/src/vogar/TimeUtilities.java</PATH>
+            <PATH vcs="svn" revision="30">$PROJECT_DIR$/bin</PATH>
+            <PATH vcs="svn" revision="30">$PROJECT_DIR$/bin/vogar</PATH>
+          </FILE-GROUP>
+          <FILE-GROUP>
+            <option name="myUpdateName" value="Deleted" />
+            <option name="myStatusName" value="Deleted" />
+            <option name="mySupportsDeletion" value="false" />
+            <option name="myCanBeAbsent" value="true" />
+            <option name="myId" value="REMOVED_FROM_REPOSITORY" />
+            <PATH vcs="svn" revision="30">$PROJECT_DIR$/vogar</PATH>
+          </FILE-GROUP>
+          <FILE-GROUP>
+            <option name="myUpdateName" value="Restored" />
+            <option name="myStatusName" value="Will be restored" />
+            <option name="mySupportsDeletion" value="false" />
+            <option name="myCanBeAbsent" value="false" />
+            <option name="myId" value="RESTORED" />
+          </FILE-GROUP>
+        </FILE-GROUP>
+        <FILE-GROUP>
+          <option name="myUpdateName" value="Modified" />
+          <option name="myStatusName" value="Modified" />
+          <option name="mySupportsDeletion" value="false" />
+          <option name="myCanBeAbsent" value="false" />
+          <option name="myId" value="MODIFIED" />
+        </FILE-GROUP>
+        <FILE-GROUP>
+          <option name="myUpdateName" value="Skipped" />
+          <option name="myStatusName" value="Skipped" />
+          <option name="mySupportsDeletion" value="false" />
+          <option name="myCanBeAbsent" value="false" />
+          <option name="myId" value="SKIPPED" />
+        </FILE-GROUP>
+        <FILE-GROUP>
+          <option name="myUpdateName" value="Merged with conflicts" />
+          <option name="myStatusName" value="Will be merged with conflicts" />
+          <option name="mySupportsDeletion" value="false" />
+          <option name="myCanBeAbsent" value="false" />
+          <option name="myId" value="MERGED_WITH_CONFLICTS" />
+        </FILE-GROUP>
+        <FILE-GROUP>
+          <option name="myUpdateName" value="Merged" />
+          <option name="myStatusName" value="Will be merged" />
+          <option name="mySupportsDeletion" value="false" />
+          <option name="myCanBeAbsent" value="false" />
+          <option name="myId" value="MERGED" />
+          <PATH vcs="svn" revision="30">$PROJECT_DIR$/src/vogar/Vogar.java</PATH>
+          <PATH vcs="svn" revision="30">$PROJECT_DIR$/src/vogar/ActivityMode.java</PATH>
+        </FILE-GROUP>
+        <FILE-GROUP>
+          <option name="myUpdateName" value="Not in repository" />
+          <option name="myStatusName" value="Not in repository" />
+          <option name="mySupportsDeletion" value="true" />
+          <option name="myCanBeAbsent" value="false" />
+          <option name="myId" value="UNKNOWN" />
+        </FILE-GROUP>
+        <FILE-GROUP>
+          <option name="myUpdateName" value="Locally added" />
+          <option name="myStatusName" value="Locally added" />
+          <option name="mySupportsDeletion" value="false" />
+          <option name="myCanBeAbsent" value="false" />
+          <option name="myId" value="LOCALLY_ADDED" />
+        </FILE-GROUP>
+        <FILE-GROUP>
+          <option name="myUpdateName" value="Locally removed" />
+          <option name="myStatusName" value="Locally removed" />
+          <option name="mySupportsDeletion" value="false" />
+          <option name="myCanBeAbsent" value="false" />
+          <option name="myId" value="LOCALLY_REMOVED" />
+        </FILE-GROUP>
+        <FILE-GROUP>
+          <option name="myUpdateName" value="Switched" />
+          <option name="myStatusName" value="Switched" />
+          <option name="mySupportsDeletion" value="false" />
+          <option name="myCanBeAbsent" value="false" />
+          <option name="myId" value="SWITCHED" />
+        </FILE-GROUP>
+        <FILE-GROUP>
+          <option name="myUpdateName" value="Merged with property conflicts" />
+          <option name="myStatusName" value="Will be merged with property conflicts" />
+          <option name="mySupportsDeletion" value="false" />
+          <option name="myCanBeAbsent" value="false" />
+          <option name="myId" value="MERGED_WITH_PROPERTY_CONFLICT" />
+        </FILE-GROUP>
+        <FILE-GROUP>
+          <option name="myUpdateName" value="Merged with tree conflicts" />
+          <option name="myStatusName" value="Will be merged with tree conflicts" />
+          <option name="mySupportsDeletion" value="false" />
+          <option name="myCanBeAbsent" value="false" />
+          <option name="myId" value="MERGED_WITH_TREE_CONFLICT" />
+        </FILE-GROUP>
+      </UpdatedFiles>
+    </UpdateInfo>
   </component>
   <component name="RunManager" selected="Application.Vogar">
     <configuration default="true" type="Remote" factoryName="Remote">
@@ -394,18 +603,18 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="2" y="22" width="1430" height="878" extended-state="0" />
+    <frame x="4" y="22" width="1436" height="878" extended-state="6" />
     <editor active="true" />
     <layout>
       <window_info id="Dependency Viewer" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
-      <window_info id="Changes" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.33357453" sideWeight="0.6619898" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Changes" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33357453" sideWeight="0.6619898" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32908162" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25253257" sideWeight="0.6619898" order="0" side_tool="false" content_ui="tabs" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.25648415" sideWeight="0.6619898" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.50127554" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
-      <window_info id="Find" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.34515196" sideWeight="0.6619898" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Find" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.3443804" sideWeight="0.6619898" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="true" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32908162" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
@@ -427,7 +636,7 @@
     <option name="PERFORM_ROLLBACK_IN_BACKGROUND" value="false" />
     <option name="CHECK_LOCALLY_CHANGED_CONFLICTS_IN_BACKGROUND" value="true" />
     <option name="FORCE_NON_EMPTY_COMMENT" value="false" />
-    <option name="LAST_COMMIT_MESSAGE" value="Fixing caliper support in opensource. We no longer need classpaths for each spec." />
+    <option name="LAST_COMMIT_MESSAGE" value="Detect where the Android SDK is automagically.&#10;&#10;Combine Aapt, Adb and Dx classes into one, AndroidSdk." />
     <option name="MAKE_NEW_CHANGELIST_ACTIVE" value="true" />
     <option name="OPTIMIZE_IMPORTS_BEFORE_PROJECT_COMMIT" value="false" />
     <option name="CHECK_FILES_UP_TO_DATE_BEFORE_COMMIT" value="false" />
@@ -444,6 +653,7 @@
     <MESSAGE value="Making vogar SVN executable" />
     <MESSAGE value="Fix activity mode in open source vogar:&#10; - include a sample key&#10; - copy it out to /tmp at runtime&#10; - use jarsigner rather than signjar.jar&#10;" />
     <MESSAGE value="Fixing caliper support in opensource. We no longer need classpaths for each spec." />
+    <MESSAGE value="Detect where the Android SDK is automagically.&#10;&#10;Combine Aapt, Adb and Dx classes into one, AndroidSdk." />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager />
@@ -465,89 +675,122 @@
     <option name="FILTER_TARGETS" value="false" />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/src/vogar/Classpath.java">
+    <entry file="file://$PROJECT_DIR$/src/vogar/Console.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="58" column="34" selection-start="1626" selection-end="1626" vertical-scroll-proportion="0.0" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/vogar/Javac.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="36" column="49" selection-start="1039" selection-end="1039" vertical-scroll-proportion="0.0" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/vogar/CaliperSpec.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="26" column="6" selection-start="822" selection-end="822" vertical-scroll-proportion="0.0" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/vogar/JavaVm.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="24" column="28" selection-start="774" selection-end="774" vertical-scroll-proportion="0.0" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/vogar/Vm.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="31" column="35" selection-start="992" selection-end="992" vertical-scroll-proportion="0.0" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/vogar/Mode.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="38" column="0" selection-start="1223" selection-end="1223" vertical-scroll-proportion="0.0" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/vogar/DeviceDalvikVm.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="44" column="29" selection-start="1642" selection-end="1642" vertical-scroll-proportion="0.0" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/vogar/EnvironmentDevice.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="27" column="4" selection-start="856" selection-end="856" vertical-scroll-proportion="0.20634921" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/vogar/commands/Dx.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="22" column="0" selection-start="695" selection-end="695" vertical-scroll-proportion="0.0" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/vogar/commands/Mkdir.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="23" column="19" selection-start="715" selection-end="715" vertical-scroll-proportion="0.0" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/vogar/commands/Rm.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="31" column="5" selection-start="936" selection-end="936" vertical-scroll-proportion="0.0" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/vogar/commands/Adb.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="21" column="19" selection-start="692" selection-end="692" vertical-scroll-proportion="0.0" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/vogar/ActivityMode.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="145" column="0" selection-start="5582" selection-end="5582" vertical-scroll-proportion="0.0" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/vogar/commands/AndroidSdk.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="59" column="38" selection-start="1946" selection-end="1946" vertical-scroll-proportion="0.0">
+        <state line="194" column="0" selection-start="5342" selection-end="5342" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/vogar/Vogar.java">
+    <entry file="file://$PROJECT_DIR$/src/vogar/target/CaliperRunner.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="139" column="0" selection-start="5682" selection-end="5682" vertical-scroll-proportion="0.0">
+        <state line="30" column="0" selection-start="957" selection-end="957" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/vogar">
+    <entry file="jar:///System/Library/Frameworks/JavaVM.framework/Versions/1.6.0/Classes/classes.jar!/java/lang/Class.class">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="28" column="0" selection-start="1075" selection-end="1075" vertical-scroll-proportion="0.44444445">
+        <state line="41" column="105" selection-start="2469" selection-end="2492" vertical-scroll-proportion="0.0">
           <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/vogar/target/TargetMonitor.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="29" column="6" selection-start="956" selection-end="956" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/vogar/target/JtregRunner.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="34" column="16" selection-start="1077" selection-end="1077" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/vogar/target/MainRunner.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="31" column="0" selection-start="992" selection-end="992" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/vogar/JUnitSpec.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="29" column="9" selection-start="959" selection-end="959" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar://$PROJECT_DIR$/lib/junit.jar!/junit/framework/TestSuite.class">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="56" column="1" selection-start="2410" selection-end="2410" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/vogar/target/Runner.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="26" column="0" selection-start="906" selection-end="906" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/vogar/target/TestRunner.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="108" column="0" selection-start="3740" selection-end="3740" vertical-scroll-proportion="0.0">
+          <folding>
+            <element signature="imports" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar://$PROJECT_DIR$/../android-sdk-mac_86/platforms/android-7/android.jar!/dalvik/system/DexFile.class">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="24" column="1" selection-start="1120" selection-end="1120" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/vogar/target/JUnitRunner.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="74" column="0" selection-start="2546" selection-end="2546" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar:///System/Library/Frameworks/JavaVM.framework/Versions/1.6.0/Classes/classes.jar!/java/util/Enumeration.class">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="9" column="6" selection-start="217" selection-end="217" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar:///System/Library/Frameworks/JavaVM.framework/Versions/1.6.0/Classes/classes.jar!/java/io/File.class">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="61" column="19" selection-start="2266" selection-end="2266" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/vogar/target/Package.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="34" column="36" selection-start="1060" selection-end="1060" vertical-scroll-proportion="0.0">
+          <folding>
+            <element signature="imports" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/vogar/target/ClassPathScanner.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="170" column="44" selection-start="7105" selection-end="7105" vertical-scroll-proportion="0.3809524">
+          <folding>
+            <element signature="imports" expanded="true" />
+            <marker date="1272329369000" expanded="true" signature="5207:6000" placeholder="..." />
+          </folding>
         </state>
       </provider>
     </entry>

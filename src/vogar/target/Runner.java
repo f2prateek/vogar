@@ -22,8 +22,7 @@ package vogar.target;
  */
 public interface Runner {
 
-    public void init(TargetMonitor monitor, String actionName,
-            Class<?> testClass);
+    void init(TargetMonitor monitor, String actionName, String className) throws Exception;
 
-    public void run(String actionName, Class<?> testClass, String[] args);
+    void run(String actionName, String className, String[] args);
 }

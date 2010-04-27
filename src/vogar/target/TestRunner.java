@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.util.Properties;
+import vogar.Result;
 import vogar.TestProperties;
 
 /**
@@ -30,14 +31,14 @@ public class TestRunner {
     protected final Properties properties;
 
     protected final String qualifiedName;
-    protected final Class<?> testClass;
+    protected final String className;
     protected final Class<?> runnerClass;
     protected final int monitorPort;
 
     protected TestRunner() {
         properties = loadProperties();
         qualifiedName = properties.getProperty(TestProperties.QUALIFIED_NAME);
-        testClass = classProperty(TestProperties.TEST_CLASS, Object.class);
+        className = properties.getProperty(TestProperties.TEST_CLASS);
         runnerClass = classProperty(TestProperties.RUNNER_CLASS, Runner.class);
         monitorPort = Integer.parseInt(properties.getProperty(TestProperties.MONITOR_PORT));
     }
@@ -91,18 +92,18 @@ public class TestRunner {
         Runner runner;
         try {
             runner = (Runner) runnerClass.newInstance();
-        } catch (InstantiationException e) {
-            throw new RuntimeException(e);
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
+            runner.init(monitor, qualifiedName, className);
+        } catch (Exception e) {
+            monitor.outcomeStarted(qualifiedName, qualifiedName);
+            e.printStackTrace();
+            monitor.outcomeFinished(Result.ERROR);
+            monitor.close();
+            return;
         }
-        runner.init(monitor, qualifiedName, testClass);
-        runner.run(qualifiedName, testClass, args);
 
+        runner.run(qualifiedName, className, args);
         monitor.close();
     }
-
-
 
     public static void main(String[] args) {
         new TestRunner().run(args);

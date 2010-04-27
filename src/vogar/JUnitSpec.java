@@ -35,7 +35,8 @@ class JUnitSpec extends NamingPatternRunnerSpec {
     public boolean supports(String className) {
         return className.endsWith("Test")
                 || className.endsWith("TestSuite")
-                || className.contains("Tests");
+                || className.contains("Tests")
+                || className.toLowerCase().equals(className); // ie. packages
     }
 
     public Class<? extends Runner> getRunnerClass() {
