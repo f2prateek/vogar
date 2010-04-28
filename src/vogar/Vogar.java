@@ -24,7 +24,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.regex.Pattern;
 import vogar.commands.AndroidSdk;
 
 /**
@@ -32,12 +31,7 @@ import vogar.commands.AndroidSdk;
  */
 public final class Vogar {
 
-    static final Pattern PACKAGE_OR_CLASS_NAME_PATTERN
-            = Pattern.compile("(\\w+)(\\.\\w+)+");
-
     private static class Options {
-
-        private final Classpath classpath = Classpath.of();
 
         private final List<File> actionFiles = new ArrayList<File>();
         private final List<String> actionClassesAndPackages = new ArrayList<String>();
@@ -106,10 +100,13 @@ public final class Vogar {
         @Option(names = { "--build-classpath" })
         private List<File> buildClasspath = new ArrayList<File>();
 
+        @Option(names = { "--classpath", "-cp" })
+        private List<File> classpath = new ArrayList<File>();
+
         private void printUsage() {
             System.out.println("Usage: Vogar [options]... <actions>... [-- target args]...");
             System.out.println();
-            System.out.println("  <actions>: .java files, .jar files, directories, or class names.");
+            System.out.println("  <actions>: .java files, directories, or class names.");
             System.out.println("      These should be JUnit tests, jtreg tests, Caliper benchmarks");
             System.out.println("      or executable Java classes.");
             System.out.println();
@@ -135,6 +132,8 @@ public final class Vogar {
             System.out.println();
             System.out.println("  --xml-reports-directory <path>: directory to emit JUnit-style");
             System.out.println("      XML test results.");
+            System.out.println();
+            System.out.println("  --classpath <jar file>: add the .jar to both build and execute classpaths.");
             System.out.println();
             System.out.println("  --build-classpath <element>: add the directory or .jar to the build");
             System.out.println("      classpath. Such classes are available as build dependencies, but");
@@ -270,21 +269,15 @@ public final class Vogar {
 
                 File file = new File(arg);
                 if (file.exists()) {
-                    if (arg.endsWith(".jar")) {
-                        classpath.addAll(file.getAbsoluteFile());
-                    } else if (arg.endsWith(".java") || file.isDirectory()) {
+                    if (arg.endsWith(".java") || file.isDirectory()) {
                         actionFiles.add(file);
                     } else {
                         System.out.println("Expected a .jar file, .java file, directory, "
                                 + "package name or classname, but was: " + arg);
                         return false;
                     }
-                } else if (PACKAGE_OR_CLASS_NAME_PATTERN.matcher(arg).matches()) {
-                    actionClassesAndPackages.add(arg);
                 } else {
-                    System.out.println("Expected a .jar file, .java file, directory, "
-                            + "package name or classname, but was: " + arg);
-                    return false;
+                    actionClassesAndPackages.add(arg);
                 }
             }
 
@@ -331,7 +324,7 @@ public final class Vogar {
                     options.targetArgs,
                     options.cleanBefore,
                     options.cleanAfter,
-                    options.classpath);
+                    Classpath.of(options.classpath));
         } else {
             AndroidSdk androidSdk = AndroidSdk.getFromPath();
             buildClasspath.addAll(androidSdk.getAndroidClasses());
@@ -349,7 +342,7 @@ public final class Vogar {
                         options.cleanBefore,
                         options.cleanAfter,
                         options.deviceRunnerDir,
-                        options.classpath,
+                        Classpath.of(options.classpath),
                         androidSdk);
             } else if (options.mode.equals(Options.MODE_ACTIVITY)) {
                 mode = new ActivityMode(
@@ -361,7 +354,7 @@ public final class Vogar {
                         options.cleanBefore,
                         options.cleanAfter,
                         options.deviceRunnerDir,
-                        options.classpath,
+                        Classpath.of(options.classpath),
                         androidSdk);
             } else {
                 System.out.println("Unknown mode mode " + options.mode + ".");
