@@ -26,7 +26,6 @@ import java.util.TreeSet;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
-import vogar.Console;
 
 /**
  * Inspects the classpath to return the classes in a requested package. This
@@ -49,6 +48,10 @@ final class ClassPathScanner {
                 : new JarClassFinder();
     }
 
+    /**
+     * Returns a package describing the loadable classes whose package name is
+     * {@code packageName}.
+     */
     public Package scan(String packageName) throws IOException {
         Set<String> subpackageNames = new TreeSet<String>();
         Set<String> classNames = new TreeSet<String>();
@@ -58,7 +61,7 @@ final class ClassPathScanner {
             try {
                 topLevelClasses.add(Class.forName(className));
             } catch (ClassNotFoundException e) {
-                Console.getInstance().info("Failed to load " + className, e);
+                throw new RuntimeException(e);
             }
         }
         return new Package(this, subpackageNames, topLevelClasses);
