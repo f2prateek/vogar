@@ -83,7 +83,7 @@ public class TestRunner {
         PrintStream monitorPrintStream = new PrintStream(System.out) {
             @Override public void print(String str) {
                 super.print(str);
-                monitor.output(str);
+                monitor.output(str != null ? str : "null");
             }
         };
         System.setOut(monitorPrintStream);
