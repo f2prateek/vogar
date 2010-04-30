@@ -56,7 +56,7 @@ public final class Vogar {
         private long timeoutSeconds = 10 * 60; // default is ten minutes;
 
         @Option(names = { "--monitor-timeout" })
-        private long monitorTimeout = 10;
+        private long monitorTimeout = 30;
 
         @Option(names = { "--clean-before" })
         private boolean cleanBefore = true;
