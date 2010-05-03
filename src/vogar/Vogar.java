@@ -103,6 +103,9 @@ public final class Vogar {
         @Option(names = { "--classpath", "-cp" })
         private List<File> classpath = new ArrayList<File>();
 
+        @Option(names = { "--sourcepath" })
+        private List<File> sourcepath = new ArrayList<File>();
+
         private void printUsage() {
             System.out.println("Usage: Vogar [options]... <actions>... [-- target args]...");
             System.out.println();
@@ -138,6 +141,8 @@ public final class Vogar {
             System.out.println("  --build-classpath <element>: add the directory or .jar to the build");
             System.out.println("      classpath. Such classes are available as build dependencies, but");
             System.out.println("      not at runtime.");
+            System.out.println();
+            System.out.println("  --sourcepath <directory>: add the directory to the build sourcepath.");
             System.out.println();
             System.out.println("  --verbose: turn on persistent verbose output.");
             System.out.println();
@@ -316,6 +321,7 @@ public final class Vogar {
             mode = new JavaVm(
                     options.debugPort,
                     buildClasspath,
+                    options.sourcepath,
                     options.javacArgs,
                     monitorPort,
                     localTemp,
@@ -334,6 +340,7 @@ public final class Vogar {
                 mode = new DeviceDalvikVm(
                         options.debugPort,
                         buildClasspath,
+                        options.sourcepath,
                         options.javacArgs,
                         monitorPort,
                         localTemp,
@@ -348,6 +355,7 @@ public final class Vogar {
                 mode = new ActivityMode(
                         options.debugPort,
                         buildClasspath,
+                        options.sourcepath,
                         options.javacArgs,
                         monitorPort,
                         localTemp,

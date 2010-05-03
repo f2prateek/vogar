@@ -35,13 +35,13 @@ final class DeviceDalvikVm extends Vm {
 
     private final AndroidSdk androidSdk;
 
-    DeviceDalvikVm(Integer debugPort, Classpath buildClasspath, List<String> javacArgs,
-            int monitorPort, File localTemp, List<String> additionalVmArgs,
+    DeviceDalvikVm(Integer debugPort, Classpath buildClasspath, List<File> sourcepath,
+            List<String> javacArgs, int monitorPort, File localTemp, List<String> additionalVmArgs,
             List<String> targetArgs, boolean cleanBefore, boolean cleanAfter,
             File runnerDir, Classpath classpath, AndroidSdk androidSdk) {
         super(new EnvironmentDevice(cleanBefore, cleanAfter, debugPort, monitorPort, localTemp,
-                runnerDir, androidSdk), buildClasspath, javacArgs, additionalVmArgs, targetArgs,
-                monitorPort, classpath);
+                runnerDir, androidSdk), buildClasspath, sourcepath, javacArgs, additionalVmArgs,
+                targetArgs, monitorPort, classpath);
         this.androidSdk = androidSdk;
     }
 

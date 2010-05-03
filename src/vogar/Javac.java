@@ -52,6 +52,11 @@ final class Javac {
         return this;
     }
 
+    public Javac sourcepath(Collection<File> path) {
+        builder.args("-sourcepath", Classpath.of(path).toString());
+        return this;
+    }
+
     public Javac destination(File directory) {
         builder.args("-d", directory.toString());
         return this;

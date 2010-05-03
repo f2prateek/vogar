@@ -34,10 +34,10 @@ public abstract class Vm extends Mode {
     protected final List<String> additionalVmArgs;
     protected final List<String> targetArgs;
 
-    Vm(Environment environment, Classpath buildClasspath, List<String> javacArgs,
-            List<String> additionalVmArgs, List<String> targetArgs, int monitorPort,
-            Classpath classpath) {
-        super(environment, buildClasspath, javacArgs, monitorPort, classpath);
+    Vm(Environment environment, Classpath buildClasspath, List<File> sourcepath,
+            List<String> javacArgs, List<String> additionalVmArgs, List<String> targetArgs,
+            int monitorPort, Classpath classpath) {
+        super(environment, buildClasspath, sourcepath, javacArgs, monitorPort, classpath);
         this.additionalVmArgs = additionalVmArgs;
         this.targetArgs = targetArgs;
     }

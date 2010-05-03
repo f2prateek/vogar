@@ -37,12 +37,12 @@ final class ActivityMode extends Mode {
     private AndroidSdk androidSdk;
     private File keystore;
 
-    ActivityMode(Integer debugPort, Classpath buildClasspath, List<String> javacArgs,
-            int monitorPort, File localTemp, boolean cleanBefore, boolean cleanAfter,
-            File deviceRunnerDir, Classpath classpath, AndroidSdk androidSdk) {
+    ActivityMode(Integer debugPort, Classpath buildClasspath, List<File> sourcepath,
+            List<String> javacArgs, int monitorPort, File localTemp, boolean cleanBefore,
+            boolean cleanAfter, File deviceRunnerDir, Classpath classpath, AndroidSdk androidSdk) {
         super(new EnvironmentDevice(cleanBefore, cleanAfter,
                 debugPort, monitorPort, localTemp, deviceRunnerDir, androidSdk),
-                buildClasspath, javacArgs, monitorPort, classpath);
+                buildClasspath, sourcepath, javacArgs, monitorPort, classpath);
         this.androidSdk = androidSdk;
     }
 

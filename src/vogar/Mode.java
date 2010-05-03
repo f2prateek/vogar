@@ -41,6 +41,7 @@ abstract class Mode {
 
     protected final Environment environment;
     protected final Classpath buildClasspath;
+    protected final List<File> sourcepath;
     protected final List<String> javacArgs;
     protected final int monitorPort;
 
@@ -51,10 +52,11 @@ abstract class Mode {
      */
     protected final Classpath classpath = new Classpath();
 
-    Mode(Environment environment, Classpath buildClasspath, List<String> javacArgs,
-            int monitorPort, Classpath classpath) {
+    Mode(Environment environment, Classpath buildClasspath, List<File> sourcepath,
+            List<String> javacArgs, int monitorPort, Classpath classpath) {
         this.environment = environment;
         this.buildClasspath = buildClasspath;
+        this.sourcepath = sourcepath;
         this.javacArgs = javacArgs;
         this.monitorPort = monitorPort;
         this.classpath.addAll(classpath);
@@ -140,7 +142,9 @@ abstract class Mode {
                         Collections.singletonList("Cannot compile: " + javaFile));
             }
             sourceFiles.add(javaFile);
-            javac.sourcepath(action.getSourcePath());
+            Classpath sourceDirs = Classpath.of(action.getSourcePath());
+            sourceDirs.addAll(sourcepath);
+            javac.sourcepath(sourceDirs.getElements());
         }
         if (!sourceFiles.isEmpty()) {
             if (!buildClasspath.isEmpty()) {

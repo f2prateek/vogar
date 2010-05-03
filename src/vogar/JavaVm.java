@@ -26,12 +26,13 @@ final class JavaVm extends Vm {
 
     private final File javaHome;
 
-    JavaVm(Integer debugPort, Classpath buildClasspath, List<String> javacArgs, int monitorPort,
-            File localTemp, File javaHome, List<String> additionalVmArgs,
-            List<String> targetArgs, boolean cleanBefore, boolean cleanAfter,
-            Classpath classpath) {
+    JavaVm(Integer debugPort, Classpath buildClasspath, List<File> sourcepath,
+            List<String> javacArgs, int monitorPort, File localTemp, File javaHome,
+            List<String> additionalVmArgs, List<String> targetArgs, boolean cleanBefore,
+            boolean cleanAfter, Classpath classpath) {
         super(new EnvironmentHost(cleanBefore, cleanAfter, debugPort, localTemp),
-                buildClasspath, javacArgs, additionalVmArgs, targetArgs, monitorPort, classpath);
+              buildClasspath, sourcepath, javacArgs,
+              additionalVmArgs, targetArgs, monitorPort, classpath);
         this.javaHome = javaHome;
     }
 
