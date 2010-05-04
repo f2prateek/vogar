@@ -60,10 +60,12 @@ class TargetMonitor {
 
     public void outcomeStarted(String outcomeName, String actionName) {
         try {
-            serializer.startTag(ns, "outcome");
-            serializer.attribute(ns, "name", outcomeName);
-            serializer.attribute(ns, "action", actionName);
-            serializer.flush();
+            synchronized (serializer) {
+                serializer.startTag(ns, "outcome");
+                serializer.attribute(ns, "name", outcomeName);
+                serializer.attribute(ns, "action", actionName);
+                serializer.flush();
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -71,8 +73,10 @@ class TargetMonitor {
 
     public void output(String text) {
         try {
-            serializer.text(text);
-            serializer.flush();
+            synchronized (serializer) {
+                serializer.text(text);
+                serializer.flush();
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -80,11 +84,13 @@ class TargetMonitor {
 
     public void outcomeFinished(Result result) {
         try {
-            serializer.startTag(ns, "result");
-            serializer.attribute(ns, "value", result.name());
-            serializer.endTag(ns, "result");
-            serializer.endTag(ns, "outcome");
-            serializer.flush();
+            synchronized (serializer) {
+                serializer.startTag(ns, "result");
+                serializer.attribute(ns, "value", result.name());
+                serializer.endTag(ns, "result");
+                serializer.endTag(ns, "outcome");
+                serializer.flush();
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -92,8 +98,10 @@ class TargetMonitor {
 
     public void close() {
         try {
-            serializer.endTag(ns, "vogar-monitor");
-            serializer.endDocument();
+            synchronized (serializer) {
+                serializer.endTag(ns, "vogar-monitor");
+                serializer.endDocument();
+            }
             socket.close();
             serverSocket.close();
         } catch (IOException e) {
