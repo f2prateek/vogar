@@ -34,16 +34,10 @@ import vogar.commands.Command;
 final class ActivityMode extends Mode {
     private static final String TEST_ACTIVITY_CLASS = "vogar.target.TestActivity";
 
-    private AndroidSdk androidSdk;
     private File keystore;
 
-    ActivityMode(Integer debugPort, Classpath buildClasspath, List<File> sourcepath,
-            List<String> javacArgs, int monitorPort, File localTemp, boolean cleanBefore,
-            boolean cleanAfter, File deviceRunnerDir, Classpath classpath, AndroidSdk androidSdk) {
-        super(new EnvironmentDevice(cleanBefore, cleanAfter,
-                debugPort, monitorPort, localTemp, deviceRunnerDir, androidSdk),
-                buildClasspath, sourcepath, javacArgs, monitorPort, classpath);
-        this.androidSdk = androidSdk;
+    ActivityMode(EnvironmentDevice environment, Options options) {
+        super(environment, options);
     }
 
     private EnvironmentDevice getEnvironmentDevice() {
@@ -100,7 +94,7 @@ final class ActivityMode extends Mode {
         File dex = environment.file(action, "classes.dex");
         Classpath classesToDex = Classpath.of(actionJar);
         classesToDex.addAll(this.classpath);
-        androidSdk.dex(dex, classesToDex);
+        getEnvironmentDevice().androidSdk.dex(dex, classesToDex);
         return dex;
     }
 
@@ -140,9 +134,9 @@ final class ActivityMode extends Mode {
         }
 
         File apk = environment.file(action, action + ".apk");
-        androidSdk.packageApk(apk, androidManifestFile);
-        androidSdk.addToApk(apk, dex);
-        androidSdk.addToApk(apk, environment.file(action, "classes", TestProperties.FILE));
+        getEnvironmentDevice().androidSdk.packageApk(apk, androidManifestFile);
+        getEnvironmentDevice().androidSdk.addToApk(apk, dex);
+        getEnvironmentDevice().androidSdk.addToApk(apk, environment.file(action, "classes", TestProperties.FILE));
         return apk;
     }
 

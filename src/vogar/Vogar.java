@@ -223,17 +223,9 @@ public final class Vogar {
             }
 
 
-            if (device) { // check device option consistency
-                if (javaHome != null) {
-                    System.out.println("java home " + javaHome + " should not be specified for mode " + mode);
-                    return false;
-                }
-
-            } else { // check host (!device) option consistency
-                if (javaHome != null && !new File(javaHome, "/bin/java").exists()) {
-                    System.out.println("Invalid java home: " + javaHome);
-                    return false;
-                }
+            if (javaHome != null && !new File(javaHome, "/bin/java").exists()) {
+                System.out.println("Invalid java home: " + javaHome);
+                return false;
             }
 
             // check vm option consistency
@@ -313,57 +305,41 @@ public final class Vogar {
         Console.getInstance().setStream(options.stream);
         Console.getInstance().setVerbose(options.verbose);
 
-        int monitorPort;
+        boolean hostMode = options.mode.equals(Options.MODE_HOST);
+        int monitorPort = (hostMode) ? 8788 : 8787;
+        Mode.Options modeOptions = new Mode.Options(Classpath.of(options.buildClasspath),
+                                                    options.sourcepath,
+                                                    options.javacArgs,
+                                                    options.javaHome,
+                                                    monitorPort,
+                                                    Classpath.of(options.classpath));
+
+        boolean vmMode = hostMode || options.mode.equals(Options.MODE_DEVICE);
+        Vm.Options vmOptions = (vmMode) ? new Vm.Options(options.vmArgs, options.targetArgs) : null;
+
         Mode mode;
-        Classpath buildClasspath = Classpath.of(options.buildClasspath);
-        if (options.mode.equals(Options.MODE_HOST)) {
-            monitorPort = 8788;
-            mode = new JavaVm(
-                    options.debugPort,
-                    buildClasspath,
-                    options.sourcepath,
-                    options.javacArgs,
-                    monitorPort,
-                    localTemp,
-                    options.javaHome,
-                    options.vmArgs,
-                    options.targetArgs,
-                    options.cleanBefore,
-                    options.cleanAfter,
-                    Classpath.of(options.classpath));
+        if (hostMode) {
+            mode = new JavaVm(new EnvironmentHost(options.cleanBefore,
+                                                  options.cleanAfter,
+                                                  options.debugPort,
+                                                  localTemp),
+                              modeOptions,
+                              vmOptions);
         } else {
             AndroidSdk androidSdk = AndroidSdk.getFromPath();
-            buildClasspath.addAll(androidSdk.getAndroidClasses());
-            monitorPort = 8787;
+            modeOptions.buildClasspath.addAll(androidSdk.getAndroidClasses());
 
-            if (options.mode.equals(Options.MODE_DEVICE)) {
-                mode = new DeviceDalvikVm(
-                        options.debugPort,
-                        buildClasspath,
-                        options.sourcepath,
-                        options.javacArgs,
-                        monitorPort,
-                        localTemp,
-                        options.vmArgs,
-                        options.targetArgs,
-                        options.cleanBefore,
-                        options.cleanAfter,
-                        options.deviceRunnerDir,
-                        Classpath.of(options.classpath),
-                        androidSdk);
+            EnvironmentDevice environment = new EnvironmentDevice(options.cleanBefore,
+                                                                  options.cleanAfter,
+                                                                  options.debugPort,
+                                                                  monitorPort,
+                                                                  localTemp,
+                                                                  options.deviceRunnerDir,
+                                                                  androidSdk);
+            if (vmMode) {
+                mode = new DeviceDalvikVm(environment, modeOptions, vmOptions);
             } else if (options.mode.equals(Options.MODE_ACTIVITY)) {
-                mode = new ActivityMode(
-                        options.debugPort,
-                        buildClasspath,
-                        options.sourcepath,
-                        options.javacArgs,
-                        monitorPort,
-                        localTemp,
-                        options.cleanBefore,
-                        options.cleanAfter,
-                        options.deviceRunnerDir,
-                        Classpath.of(options.classpath),
-                        androidSdk);
+                mode = new ActivityMode(environment, modeOptions);
             } else {
                 System.out.println("Unknown mode mode " + options.mode + ".");
                 return;

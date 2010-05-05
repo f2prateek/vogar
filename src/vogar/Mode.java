@@ -40,10 +40,31 @@ abstract class Mode {
     private static final Pattern JAVA_SOURCE_PATTERN = Pattern.compile("\\/(\\w)+\\.java$");
 
     protected final Environment environment;
-    protected final Classpath buildClasspath;
-    protected final List<File> sourcepath;
-    protected final List<String> javacArgs;
-    protected final int monitorPort;
+
+    protected static class Options {
+        protected final Classpath buildClasspath;
+        protected final List<File> sourcepath;
+        protected final List<String> javacArgs;
+        protected final File javaHome;
+        protected final int monitorPort;
+        protected final Classpath classpath;
+
+        Options(Classpath buildClasspath,
+                List<File> sourcepath,
+                List<String> javacArgs,
+                File javaHome,
+                int monitorPort,
+                Classpath classpath) {
+            this.buildClasspath = buildClasspath;
+            this.sourcepath = sourcepath;
+            this.javacArgs = javacArgs;
+            this.javaHome = javaHome;
+            this.monitorPort = monitorPort;
+            this.classpath = classpath;
+        }
+    }
+
+    final Options modeOptions;
 
     /**
      * User classes that need to be included in the classpath for both
@@ -52,14 +73,21 @@ abstract class Mode {
      */
     protected final Classpath classpath = new Classpath();
 
-    Mode(Environment environment, Classpath buildClasspath, List<File> sourcepath,
-            List<String> javacArgs, int monitorPort, Classpath classpath) {
+    Mode(Environment environment, Options modeOptions) {
         this.environment = environment;
-        this.buildClasspath = buildClasspath;
-        this.sourcepath = sourcepath;
-        this.javacArgs = javacArgs;
-        this.monitorPort = monitorPort;
-        this.classpath.addAll(classpath);
+        this.modeOptions = modeOptions;
+        this.classpath.addAll(modeOptions.classpath);
+    }
+
+    /**
+     * Returns a path for a Java tool such as java, javac, jar where
+     * the Java home is used if present, otherwise assumes it will
+     * come from the path.
+     */
+    String javaPath (String tool) {
+        return (modeOptions.javaHome == null)
+            ? tool
+            : new File(new File(modeOptions.javaHome, "bin"), tool).getPath();
     }
 
     /**
@@ -135,7 +163,7 @@ abstract class Mode {
 
         Set<File> sourceFiles = new HashSet<File>();
         File javaFile = action.getJavaFile();
-        Javac javac = new Javac();
+        Javac javac = new Javac(javaPath("javac"));
         if (javaFile != null) {
             if (!JAVA_SOURCE_PATTERN.matcher(javaFile.toString()).find()) {
                 throw new CommandFailedException(Collections.<String>emptyList(),
@@ -143,21 +171,21 @@ abstract class Mode {
             }
             sourceFiles.add(javaFile);
             Classpath sourceDirs = Classpath.of(action.getSourcePath());
-            sourceDirs.addAll(sourcepath);
+            sourceDirs.addAll(modeOptions.sourcepath);
             javac.sourcepath(sourceDirs.getElements());
         }
         if (!sourceFiles.isEmpty()) {
-            if (!buildClasspath.isEmpty()) {
-                javac.bootClasspath(buildClasspath);
+            if (!modeOptions.buildClasspath.isEmpty()) {
+                javac.bootClasspath(modeOptions.buildClasspath);
             }
             javac.classpath(classpath)
                     .destination(classesDir)
-                    .extra(javacArgs)
+                    .extra(modeOptions.javacArgs)
                     .compile(sourceFiles);
         }
 
         File jar = environment.hostJar(action);
-        new Command("jar", "cvfM", jar.getPath(),
+        new Command(javaPath("jar"), "cvfM", jar.getPath(),
                 "-C", classesDir.getPath(), "./").execute();
         return jar;
     }
@@ -169,7 +197,7 @@ abstract class Mode {
         properties.setProperty(TestProperties.TEST_CLASS, action.getTargetClass());
         properties.setProperty(TestProperties.QUALIFIED_NAME, action.getName());
         properties.setProperty(TestProperties.RUNNER_CLASS, action.getRunnerSpec().getRunnerClass().getName());
-        properties.setProperty(TestProperties.MONITOR_PORT, String.valueOf(monitorPort));
+        properties.setProperty(TestProperties.MONITOR_PORT, String.valueOf(modeOptions.monitorPort));
     }
 
     /**

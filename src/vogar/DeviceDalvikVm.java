@@ -33,16 +33,8 @@ final class DeviceDalvikVm extends Vm {
         BANNED_NAMES.add("javalib");
     }
 
-    private final AndroidSdk androidSdk;
-
-    DeviceDalvikVm(Integer debugPort, Classpath buildClasspath, List<File> sourcepath,
-            List<String> javacArgs, int monitorPort, File localTemp, List<String> additionalVmArgs,
-            List<String> targetArgs, boolean cleanBefore, boolean cleanAfter,
-            File runnerDir, Classpath classpath, AndroidSdk androidSdk) {
-        super(new EnvironmentDevice(cleanBefore, cleanAfter, debugPort, monitorPort, localTemp,
-                runnerDir, androidSdk), buildClasspath, sourcepath, javacArgs, additionalVmArgs,
-                targetArgs, monitorPort, classpath);
-        this.androidSdk = androidSdk;
+    DeviceDalvikVm(EnvironmentDevice environment, Mode.Options options, Vm.Options vmOptions) {
+        super(environment, options, vmOptions);
     }
 
     private EnvironmentDevice getEnvironmentDevice() {
@@ -74,7 +66,7 @@ final class DeviceDalvikVm extends Vm {
 
         // make the local dex (inside a jar)
         File localDex = environment.file(name, name + ".dx.jar");
-        androidSdk.dex(localDex, Classpath.of(jar));
+        getEnvironmentDevice().androidSdk.dex(localDex, Classpath.of(jar));
 
         // post the local dex to the device
         getEnvironmentDevice().androidSdk.push(localDex, deviceDexFile(name));

@@ -29,8 +29,8 @@ final class Javac {
 
     private final Command.Builder builder = new Command.Builder();
 
-    Javac() {
-        builder.args("javac");
+    Javac(String javac) {
+        builder.args(javac);
     }
 
     public Javac bootClasspath(Classpath classpath) {

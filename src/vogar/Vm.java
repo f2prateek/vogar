@@ -31,15 +31,21 @@ import vogar.target.TestRunner;
  */
 public abstract class Vm extends Mode {
 
-    protected final List<String> additionalVmArgs;
-    protected final List<String> targetArgs;
+    protected static class Options {
+        protected final List<String> additionalVmArgs;
+        protected final List<String> targetArgs;
 
-    Vm(Environment environment, Classpath buildClasspath, List<File> sourcepath,
-            List<String> javacArgs, List<String> additionalVmArgs, List<String> targetArgs,
-            int monitorPort, Classpath classpath) {
-        super(environment, buildClasspath, sourcepath, javacArgs, monitorPort, classpath);
-        this.additionalVmArgs = additionalVmArgs;
-        this.targetArgs = targetArgs;
+        Options(List<String> additionalVmArgs,
+                List<String> targetArgs) {
+            this.additionalVmArgs = additionalVmArgs;
+            this.targetArgs = targetArgs;
+        }
+    }
+    final Options vmOptions;
+
+    Vm(Environment environment, Mode.Options options, Vm.Options vmOptions) {
+        super(environment, options);
+        this.vmOptions = vmOptions;
     }
 
     /**
@@ -50,9 +56,9 @@ public abstract class Vm extends Mode {
                 .classpath(getRuntimeClasspath(action))
                 .userDir(action.getUserDir())
                 .debugPort(environment.debugPort)
-                .vmArgs(additionalVmArgs)
+                .vmArgs(vmOptions.additionalVmArgs)
                 .mainClass(TestRunner.class.getName())
-                .args(targetArgs)
+                .args(vmOptions.targetArgs)
                 .build();
     }
 

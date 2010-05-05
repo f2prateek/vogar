@@ -24,22 +24,13 @@ import java.util.List;
  */
 final class JavaVm extends Vm {
 
-    private final File javaHome;
-
-    JavaVm(Integer debugPort, Classpath buildClasspath, List<File> sourcepath,
-            List<String> javacArgs, int monitorPort, File localTemp, File javaHome,
-            List<String> additionalVmArgs, List<String> targetArgs, boolean cleanBefore,
-            boolean cleanAfter, Classpath classpath) {
-        super(new EnvironmentHost(cleanBefore, cleanAfter, debugPort, localTemp),
-              buildClasspath, sourcepath, javacArgs,
-              additionalVmArgs, targetArgs, monitorPort, classpath);
-        this.javaHome = javaHome;
+    JavaVm(EnvironmentHost environment, Mode.Options options, Vm.Options vmOptions) {
+        super(environment, options, vmOptions);
     }
 
     @Override protected VmCommandBuilder newVmCommandBuilder(File workingDirectory) {
-        String java = javaHome == null ? "java" : new File(javaHome, "bin/java").getPath();
         return new VmCommandBuilder()
-                .vmCommand(java)
+                .vmCommand(javaPath("java"))
                 .workingDir(workingDirectory);
     }
 
