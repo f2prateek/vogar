@@ -53,7 +53,7 @@ public class AndroidSdk {
         if (path.isEmpty()) {
             throw new RuntimeException("Adb not found");
         }
-        File adb = new File(path.get(0));
+        File adb = new File(path.get(0)).getAbsoluteFile();
         String parentFileName = adb.getParentFile().getName();
 
         /*
