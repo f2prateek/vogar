@@ -92,13 +92,13 @@ public final class JUnitRunner implements Runner {
         int count = 0;
         TestSuite suite = new TestSuite(className);
         for (Class<?> claz : classes) {
-            if (claz.getName().endsWith("Test")) {
+            if (claz.getName().contains("Test")) {
                 suite.addTestSuite(claz);
                 count++;
             }
         }
         if (count == 0) {
-            throw new RuntimeException("No classes in package: " + className
+            throw new RuntimeException("No test classes in package: " + className
                     + "; classes are " + classes);
         }
         return suite;
