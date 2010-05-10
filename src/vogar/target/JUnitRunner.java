@@ -50,7 +50,7 @@ public final class JUnitRunner implements Runner {
     public void init(TargetMonitor monitor, String actionName, String className) throws Exception {
         final TestSuiteLoader testSuiteLoader = new TestSuiteLoader() {
             public Class load(String suiteClassName) throws ClassNotFoundException {
-                return JUnitRunner.class.getClassLoader().loadClass(suiteClassName);
+                return Class.forName(suiteClassName);
             }
 
             public Class reload(Class c) {

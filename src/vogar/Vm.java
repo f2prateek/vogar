@@ -52,8 +52,13 @@ public abstract class Vm extends Mode {
      * Returns a VM for action execution.
      */
     @Override protected Command createActionCommand(Action action) {
-        return newVmCommandBuilder(action.getUserDir())
-                .classpath(getRuntimeClasspath(action))
+        VmCommandBuilder vmCommandBuilder = newVmCommandBuilder(action.getUserDir());
+        if (modeOptions.useBootClasspath) {
+            vmCommandBuilder.bootClasspath(getRuntimeClasspath(action));
+        } else {
+            vmCommandBuilder.classpath(getRuntimeClasspath(action));            
+        }
+        return vmCommandBuilder
                 .userDir(action.getUserDir())
                 .debugPort(environment.debugPort)
                 .vmArgs(vmOptions.additionalVmArgs)
@@ -78,6 +83,7 @@ public abstract class Vm extends Mode {
      */
     public static class VmCommandBuilder {
         private File temp;
+        private Classpath bootClasspath = new Classpath();
         private Classpath classpath = new Classpath();
         private File workingDir;
         private File userDir;
@@ -95,6 +101,11 @@ public abstract class Vm extends Mode {
 
         public VmCommandBuilder temp(File temp) {
             this.temp = temp;
+            return this;
+        }
+
+        public VmCommandBuilder bootClasspath(Classpath bootClasspath) {
+            this.bootClasspath.addAll(bootClasspath);
             return this;
         }
 
@@ -150,6 +161,10 @@ public abstract class Vm extends Mode {
             Command.Builder builder = new Command.Builder();
             builder.args(vmCommand);
             builder.args("-classpath", classpath.toString());
+            // Only output this if there's something on the boot classpath, otherwise dalvikvm gets upset.
+            if (!bootClasspath.isEmpty()) {
+                builder.args("-Xbootclasspath/a:" + bootClasspath);
+            }
             builder.args("-Duser.dir=" + userDir);
             if (workingDir != null) {
                 builder.workingDirectory(workingDir);

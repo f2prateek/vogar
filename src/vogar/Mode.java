@@ -47,6 +47,7 @@ abstract class Mode {
         protected final List<String> javacArgs;
         protected final File javaHome;
         protected final int monitorPort;
+        protected final boolean useBootClasspath;
         protected final Classpath classpath;
 
         Options(Classpath buildClasspath,
@@ -54,12 +55,14 @@ abstract class Mode {
                 List<String> javacArgs,
                 File javaHome,
                 int monitorPort,
+                boolean useBootClasspath,
                 Classpath classpath) {
             this.buildClasspath = buildClasspath;
             this.sourcepath = sourcepath;
             this.javacArgs = javacArgs;
             this.javaHome = javaHome;
             this.monitorPort = monitorPort;
+            this.useBootClasspath = useBootClasspath;
             this.classpath = classpath;
         }
     }

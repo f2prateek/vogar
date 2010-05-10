@@ -97,6 +97,9 @@ public final class Vogar {
         @Option(names = { "--javac-arg" })
         private List<String> javacArgs = new ArrayList<String>();
 
+        @Option(names = { "--use-boot-classpath" })
+        private boolean useBootClasspath = false;
+
         @Option(names = { "--build-classpath" })
         private List<File> buildClasspath = new ArrayList<File>();
 
@@ -137,6 +140,8 @@ public final class Vogar {
             System.out.println("      XML test results.");
             System.out.println();
             System.out.println("  --classpath <jar file>: add the .jar to both build and execute classpaths.");
+            System.out.println();
+            System.out.println("  --use-boot-classpath: use the classpath as search path for bootstrap classes.");
             System.out.println();
             System.out.println("  --build-classpath <element>: add the directory or .jar to the build");
             System.out.println("      classpath. Such classes are available as build dependencies, but");
@@ -312,6 +317,7 @@ public final class Vogar {
                                                     options.javacArgs,
                                                     options.javaHome,
                                                     monitorPort,
+                                                    options.useBootClasspath,
                                                     Classpath.of(options.classpath));
 
         boolean vmMode = hostMode || options.mode.equals(Options.MODE_DEVICE);
