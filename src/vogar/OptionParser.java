@@ -76,6 +76,9 @@ import java.util.List;
  * by the option parser. The collection field should be initialized
  * with an appropriate collection instance.
  *
+ * Enum types are supported. Input may be in either CONSTANT_CASE or
+ * lower_case.
+ * 
  * The fields corresponding to options are updated as their options
  * are processed. Any remaining positional arguments are returned as a
  * List<String>.
