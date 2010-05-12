@@ -170,7 +170,8 @@ public class OptionParser {
             return getHandler(actualType);
         }
         if (type instanceof Class) {
-            if (Collection.class.isAssignableFrom((Class) type)) {
+            Class<?> classType = (Class) type;
+            if (Collection.class.isAssignableFrom(classType)) {
                 // could handle by just having a default of treating
                 // contents as String but consciously decided this
                 // should be an error
@@ -178,7 +179,10 @@ public class OptionParser {
                         "cannot handle non-parameterized collection " + type + ". " +
                         "use a generic Collection to specify a desired element type");
             }
-            return handlers.get((Class<?>) type);
+            if (classType.isEnum()) {
+                return new EnumHandler(classType);
+            }
+            return handlers.get(classType);
         }
         throw new RuntimeException("cannot handle unknown field type " + type);
     }
@@ -433,6 +437,19 @@ public class OptionParser {
     static class StringHandler extends Handler {
         Object translate(String valueText) {
             return valueText;
+        }
+    }
+
+    @SuppressWarnings("unchecked") // creating an instance with a non-enum type is an error!
+    static class EnumHandler extends Handler {
+        private final Class<?> enumType;
+
+        public EnumHandler(Class<?> enumType) {
+            this.enumType = enumType;
+        }
+
+        Object translate(String valueText) {
+            return Enum.valueOf((Class) enumType, valueText.toUpperCase());
         }
     }
 

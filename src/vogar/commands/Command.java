@@ -25,7 +25,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -42,6 +44,7 @@ import vogar.Threads;
  */
 public final class Command {
     private final List<String> args;
+    private final Map<String, String> env;
     private final File workingDirectory;
     private final boolean permitNonZeroExitStatus;
     private final PrintStream tee;
@@ -53,6 +56,7 @@ public final class Command {
 
     public Command(List<String> args) {
         this.args = new ArrayList<String>(args);
+        this.env = Collections.emptyMap();
         this.workingDirectory = null;
         this.permitNonZeroExitStatus = false;
         this.tee = null;
@@ -60,6 +64,7 @@ public final class Command {
 
     private Command(Builder builder) {
         this.args = new ArrayList<String>(builder.args);
+        this.env = builder.env;
         this.workingDirectory = builder.workingDirectory;
         this.permitNonZeroExitStatus = builder.permitNonZeroExitStatus;
         this.tee = builder.tee;
@@ -74,7 +79,8 @@ public final class Command {
             throw new IllegalStateException("Already started!");
         }
 
-        Console.getInstance().verbose("executing " + Strings.join(args, " "));
+        String envString = !env.isEmpty() ? (Strings.join(env.entrySet(), " ") + " ") : "";
+        Console.getInstance().verbose("executing " + envString + Strings.join(args, " "));
 
         ProcessBuilder processBuilder = new ProcessBuilder()
                 .command(args)
@@ -82,6 +88,8 @@ public final class Command {
         if (workingDirectory != null) {
             processBuilder.directory(workingDirectory);
         }
+
+        processBuilder.environment().putAll(env);
 
         process = processBuilder.start();
     }
@@ -183,6 +191,7 @@ public final class Command {
 
     public static class Builder {
         private final List<String> args = new ArrayList<String>();
+        private final Map<String, String> env = new LinkedHashMap<String, String>();
         private File workingDirectory;
         private boolean permitNonZeroExitStatus = false;
         private PrintStream tee = null;
@@ -200,6 +209,11 @@ public final class Command {
 
         public Builder args(Collection<String> args) {
             this.args.addAll(args);
+            return this;
+        }
+
+        public Builder env(String key, String value) {
+            env.put(key, value);
             return this;
         }
 

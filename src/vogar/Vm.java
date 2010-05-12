@@ -22,7 +22,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import vogar.commands.Command;
 import vogar.target.TestRunner;
 
@@ -93,6 +95,7 @@ public abstract class Vm extends Mode {
         private List<String> vmCommand = Collections.singletonList("java");
         private List<String> vmArgs = new ArrayList<String>();
         private List<String> args = new ArrayList<String>();
+        private Map<String, String> env = new LinkedHashMap<String, String>();
 
         public VmCommandBuilder vmCommand(String... vmCommand) {
             this.vmCommand = Arrays.asList(vmCommand.clone());
@@ -121,6 +124,11 @@ public abstract class Vm extends Mode {
 
         public VmCommandBuilder userDir(File userDir) {
             this.userDir = userDir;
+            return this;
+        }
+
+        public VmCommandBuilder env(String key, String value) {
+            this.env.put(key, value);
             return this;
         }
 
@@ -159,6 +167,11 @@ public abstract class Vm extends Mode {
 
         public Command build() {
             Command.Builder builder = new Command.Builder();
+
+            for (Map.Entry<String, String> entry : env.entrySet()) {
+                builder.env(entry.getKey(), entry.getValue());
+            }
+
             builder.args(vmCommand);
             builder.args("-classpath", classpath.toString());
             // Only output this if there's something on the boot classpath, otherwise dalvikvm gets upset.

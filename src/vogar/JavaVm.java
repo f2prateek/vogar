@@ -24,7 +24,7 @@ import java.util.List;
  */
 final class JavaVm extends Vm {
 
-    JavaVm(EnvironmentHost environment, Mode.Options options, Vm.Options vmOptions) {
+    JavaVm(Environment environment, Mode.Options options, Vm.Options vmOptions) {
         super(environment, options, vmOptions);
     }
 

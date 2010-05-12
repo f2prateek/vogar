@@ -20,7 +20,9 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeoutException;
 import vogar.Classpath;
 import vogar.Console;
@@ -39,6 +41,13 @@ public class AndroidSdk {
             return a.getName().compareTo(b.getName());
         }
     };
+
+    /** A list of generic names that we avoid when naming generated files. */
+    private static final Set<String> BANNED_NAMES = new HashSet<String>();
+    static {
+        BANNED_NAMES.add("classes");
+        BANNED_NAMES.add("javalib");
+    }
 
     private final File androidClasses;
     private final File androidToolsDir;
@@ -107,6 +116,23 @@ public class AndroidSdk {
      */
     private String toolPath(String tool) {
         return (androidToolsDir != null) ? new File(androidToolsDir, tool).toString() : tool;
+    }
+
+    /**
+     * Returns a recognizable readable name for the given generated .jar file,
+     * appropriate for use in naming derived files.
+     *
+     * @param file a product of the android build system, such as
+     *     "out/core_intermediates/javalib.jar".
+     * @return a recognizable base name like "core_intermediates".
+     */
+    public String basenameOfJar(File file) {
+        String name = file.getName().replaceAll("\\.jar$", "");
+        while (BANNED_NAMES.contains(name)) {
+            file = file.getParentFile();
+            name = file.getName();
+        }
+        return name;
     }
 
     /**

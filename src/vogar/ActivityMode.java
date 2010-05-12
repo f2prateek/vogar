@@ -36,7 +36,7 @@ final class ActivityMode extends Mode {
 
     private File keystore;
 
-    ActivityMode(EnvironmentDevice environment, Options options) {
+    ActivityMode(Environment environment, Options options) {
         super(environment, options);
     }
 

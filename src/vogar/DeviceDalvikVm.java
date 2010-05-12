@@ -17,23 +17,14 @@
 package vogar;
 
 import java.io.File;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 import vogar.commands.AndroidSdk;
 
 /**
  * Execute actions on a Dalvik VM using an Android device or emulator.
  */
 final class DeviceDalvikVm extends Vm {
-    /** A list of generic names that we avoid when naming generated files. */
-    private static final Set<String> BANNED_NAMES = new HashSet<String>();
-    static {
-        BANNED_NAMES.add("classes");
-        BANNED_NAMES.add("javalib");
-    }
 
-    DeviceDalvikVm(EnvironmentDevice environment, Mode.Options options, Vm.Options vmOptions) {
+    DeviceDalvikVm(Environment environment, Mode.Options options, Vm.Options vmOptions) {
         super(environment, options, vmOptions);
     }
 
@@ -41,20 +32,15 @@ final class DeviceDalvikVm extends Vm {
         return (EnvironmentDevice) environment;
     }
 
+    private AndroidSdk getSdk() {
+        return getEnvironmentDevice().androidSdk;
+    }
+
     @Override protected void installRunner() {
         // dex everything on the classpath and push it to the device.
         for (File classpathElement : classpath.getElements()) {
-            dexAndPush(basenameOfJar(classpathElement), classpathElement);
+            dexAndPush(getSdk().basenameOfJar(classpathElement), classpathElement);
         }
-    }
-
-    private String basenameOfJar(File file) {
-        String name = file.getName().replaceAll("\\.jar$", "");
-        while (BANNED_NAMES.contains(name)) {
-            file = file.getParentFile();
-            name = file.getName();
-        }
-        return name;
     }
 
     @Override protected void postCompile(Action action, File jar) {
@@ -66,10 +52,10 @@ final class DeviceDalvikVm extends Vm {
 
         // make the local dex (inside a jar)
         File localDex = environment.file(name, name + ".dx.jar");
-        getEnvironmentDevice().androidSdk.dex(localDex, Classpath.of(jar));
+        getSdk().dex(localDex, Classpath.of(jar));
 
         // post the local dex to the device
-        getEnvironmentDevice().androidSdk.push(localDex, deviceDexFile(name));
+        getSdk().push(localDex, deviceDexFile(name));
     }
 
     private File deviceDexFile(String name) {
@@ -97,7 +83,7 @@ final class DeviceDalvikVm extends Vm {
         Classpath result = new Classpath();
         result.addAll(deviceDexFile(action.getName()));
         for (File classpathElement : classpath.getElements()) {
-            result.addAll(deviceDexFile(basenameOfJar(classpathElement)));
+            result.addAll(deviceDexFile(getSdk().basenameOfJar(classpathElement)));
         }
         return result;
     }
