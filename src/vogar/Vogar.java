@@ -216,7 +216,7 @@ public final class Vogar {
         }
 
         // check vm option consistency
-        if (mode.acceptsVmArgs() && !vmArgs.isEmpty()) {
+        if (!mode.acceptsVmArgs() && !vmArgs.isEmpty()) {
             System.out.println("VM args " + vmArgs + " should not be specified for mode " + mode);
             return false;
         }
@@ -270,7 +270,7 @@ public final class Vogar {
             return false;
         }
 
-        if (mode.acceptsVmArgs() && !targetArgs.isEmpty()) {
+        if (!mode.acceptsVmArgs() && !targetArgs.isEmpty()) {
             System.out.println("Target args " + targetArgs + " should not be specified for mode " + mode);
             return false;
         }
