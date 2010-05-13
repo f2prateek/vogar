@@ -29,23 +29,15 @@ final public class TestProperties {
     public static final String FILE = "test.properties";
 
     /**
-     * Name of the property giving the test's main class name. This class should
-     * have a {@code public static void main(String[] args)} method.
+     * Name of the property giving the class name or package name of the test to be performed.
      */
-    public static final String TEST_CLASS = "testClass";
+    public static final String TEST_CLASS_OR_PACKAGE = "testClassOrPackage";
 
     /**
      * Name of the property giving the test's name, such as {@code
      * java.math.BigDecimal.PowTests}.
      */
     public static final String QUALIFIED_NAME = "qualifiedName";
-
-    /**
-     * Name of the property used by TestRunner to determine which
-     * class to use as the Runner name. This class should implement
-     * Runner.
-     */
-    public static final String RUNNER_CLASS = "runnerClass";
 
     /**
      * Name of the property used by TestActivity to the test directory.

@@ -19,7 +19,10 @@ package vogar.target;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 import vogar.Result;
 import vogar.TestProperties;
 
@@ -31,16 +34,18 @@ public class TestRunner {
     protected final Properties properties;
 
     protected final String qualifiedName;
-    protected final String className;
-    protected final Class<?> runnerClass;
+    protected final String classOrPackageName;
     protected final int monitorPort;
+    protected final List<Runner> runners;
 
     protected TestRunner() {
         properties = loadProperties();
         qualifiedName = properties.getProperty(TestProperties.QUALIFIED_NAME);
-        className = properties.getProperty(TestProperties.TEST_CLASS);
-        runnerClass = classProperty(TestProperties.RUNNER_CLASS, Runner.class);
+        classOrPackageName = properties.getProperty(TestProperties.TEST_CLASS_OR_PACKAGE);
         monitorPort = Integer.parseInt(properties.getProperty(TestProperties.MONITOR_PORT));
+        runners = Arrays.asList(new JUnitRunner(),
+                                new CaliperRunner(),
+                                new MainRunner());
     }
 
     protected static Properties loadProperties() {
@@ -58,22 +63,19 @@ public class TestRunner {
         }
     }
 
-    private Class<?> classProperty(String propertyName, Class<?> superClass) {
-        String className = properties.getProperty(propertyName);
-        if (className == null) {
-            throw new IllegalArgumentException("Could not find property for " +
-                                               propertyName);
-        }
-        try {
-            Class<?> klass = Class.forName(className);
-            if (!superClass.isAssignableFrom(klass)) {
-                throw new IllegalArgumentException(
-                        className + " can not be assigned to " + Runner.class);
+    /**
+     * Returns the class to run the test with based on {@param klass}. For instance, a class
+     * that extends junit.framework.TestCase should be run with JUnitSpec.
+     */
+    private Class<?> runnerClass(Class<?> klass) {
+        for (Runner runner : runners) {
+            if (runner.supports(klass)) {
+                return runner.getClass();
             }
-            return klass;
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException(e);
         }
+
+        throw new IllegalArgumentException(klass
+                + " cannot be matched with a Runner class out of potential runners " + runners);
     }
 
     public void run(String... args) {
@@ -89,19 +91,25 @@ public class TestRunner {
         System.setOut(monitorPrintStream);
         System.setErr(monitorPrintStream);
 
-        Runner runner;
-        try {
-            runner = (Runner) runnerClass.newInstance();
-            runner.init(monitor, qualifiedName, className);
-        } catch (Exception e) {
-            monitor.outcomeStarted(qualifiedName, qualifiedName);
-            e.printStackTrace();
-            monitor.outcomeFinished(Result.ERROR);
-            monitor.close();
-            return;
+        Set<Class<?>> classes = new ClassFinder().find(classOrPackageName);
+
+        for (Class<?> klass : classes) {
+            Class<?> runnerClass = runnerClass(klass);
+            Runner runner;
+            try {
+                runner = (Runner) runnerClass.newInstance();
+                runner.init(monitor, qualifiedName, klass);
+            } catch (Exception e) {
+                monitor.outcomeStarted(qualifiedName, qualifiedName);
+                e.printStackTrace();
+                monitor.outcomeFinished(Result.ERROR);
+                monitor.close();
+                return;
+            }
+
+            runner.run(qualifiedName, klass, args);
         }
 
-        runner.run(qualifiedName, className, args);
         monitor.close();
     }
 

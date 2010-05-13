@@ -16,9 +16,6 @@
 
 package vogar.target;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -35,6 +32,7 @@ import junit.framework.TestSuite;
 import junit.runner.BaseTestRunner;
 import junit.runner.TestSuiteLoader;
 import junit.textui.ResultPrinter;
+import vogar.ClassAnalyzer;
 import vogar.Result;
 
 /**
@@ -47,7 +45,7 @@ public final class JUnitRunner implements Runner {
     private junit.textui.TestRunner testRunner;
     private Test junitTest;
 
-    public void init(TargetMonitor monitor, String actionName, String className) throws Exception {
+    public void init(TargetMonitor monitor, String actionName, Class<?> klass) {
         final TestSuiteLoader testSuiteLoader = new TestSuiteLoader() {
             public Class load(String suiteClassName) throws ClassNotFoundException {
                 return Class.forName(suiteClassName);
@@ -69,53 +67,17 @@ public final class JUnitRunner implements Runner {
             }
         };
 
-        // perhaps a test name was specified?
-        try {
-            Class.forName(className);
-            this.junitTest = testRunner.getTest(className);
-            return;
-        } catch (ClassNotFoundException e) {
-        }
-
-        // probably a package name. Scan all the classes on the classpath
-        this.junitTest = allTestsInPackage(className);
+        this.junitTest = testRunner.getTest(klass.getName());
     }
 
-    private TestSuite allTestsInPackage(String className) throws IOException {
-        ClassPathScanner classpathScanner = new ClassPathScanner();
-        Package aPackage = classpathScanner.scan(className);
-        Set<Class<?>> classes = aPackage.getTopLevelClassesRecursive();
-        if (classes.isEmpty()) {
-            throw new RuntimeException("No classes in package: " + className + "; classpath is "
-                    + Arrays.toString(ClassPathScanner.getClassPath()));
-        }
-        int count = 0;
-        TestSuite suite = new TestSuite(className);
-        for (Class<?> claz : classes) {
-            if (claz.getName().contains("Test")) {
-                suite.addTestSuite(claz);
-                count++;
-            }
-        }
-        if (count == 0) {
-            throw new RuntimeException("No test classes in package: " + className
-                    + "; classes are " + classes);
-        }
-        return suite;
-    }
-
-    public void run(String actionName, String className, String[] args) {
+    public void run(String actionName, Class<?> klass, String[] args) {
         // if target args were specified, perhaps only a few tests should be run?
-        try {
-            Class clazz = Class.forName(className);
-            if (args != null && args.length > 0 && TestCase.class.isAssignableFrom(clazz)) {
-                TestSuite testSuite = new TestSuite();
-                for (String arg : args) {
-                    testSuite.addTest(TestSuite.createTest(clazz, arg));
-                }
-                this.junitTest = testSuite;
+        if (args != null && args.length > 0 && TestCase.class.isAssignableFrom(klass)) {
+            TestSuite testSuite = new TestSuite();
+            for (String arg : args) {
+                testSuite.addTest(TestSuite.createTest(klass, arg));
             }
-        } catch (ClassNotFoundException e) {
+            this.junitTest = testSuite;
         }
         testRunner.doRun(junitTest);
     }
@@ -217,5 +179,15 @@ public final class JUnitRunner implements Runner {
                 });
             }
         }
+    }
+
+    public boolean supports(Class<?> klass) {
+        // public class FooTest extends TestCase {...}
+        //   or
+        // public class FooSuite {
+        //    public static Test suite() {...}
+        // }
+        return  TestCase.class.isAssignableFrom(klass)
+                || new ClassAnalyzer(klass).hasMethod(true, Test.class, "suite");
     }
 }

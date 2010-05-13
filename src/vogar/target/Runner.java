@@ -22,7 +22,12 @@ package vogar.target;
  */
 public interface Runner {
 
-    void init(TargetMonitor monitor, String actionName, String className) throws Exception;
+    /**
+     * Returns true if this runner can exercise {@code klass}.
+     */
+    boolean supports(Class<?> klass);
 
-    void run(String actionName, String className, String[] args);
+    void init(TargetMonitor monitor, String actionName, Class<?> klass);
+
+    void run(String actionName, Class<?> klass, String[] args);
 }

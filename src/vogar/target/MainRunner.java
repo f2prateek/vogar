@@ -17,28 +17,40 @@
 package vogar.target;
 
 import java.lang.reflect.Method;
+import vogar.ClassAnalyzer;
 import vogar.Result;
 
 /**
- * Runs a Java class with a main method.
+ * Runs a Java class with a main method. This includes jtreg tests.
  */
 public final class MainRunner implements Runner {
 
     private TargetMonitor monitor;
     private Method main;
 
-    public void init(TargetMonitor monitor, String actionName, String className) throws Exception {
+    public void init(TargetMonitor monitor, String actionName, Class<?> klass) {
         this.monitor = monitor;
-        this.main = Class.forName(className).getMethod("main", String[].class);
+        try {
+            this.main = klass.getMethod("main", String[].class);
+        } catch (NoSuchMethodException e) {
+            // Don't create a MainRunner without first checking supports().
+            throw new IllegalArgumentException(e);
+        }
     }
 
-    public void run(String actionName, String className, String[] args) {
+    public void run(String actionName, Class<?> klass, String[] args) {
         monitor.outcomeStarted(actionName, actionName);
         try {
             main.invoke(null, new Object[] { args });
+            monitor.outcomeFinished(Result.SUCCESS);
         } catch (Throwable ex) {
             ex.printStackTrace();
+            monitor.outcomeFinished(Result.EXEC_FAILED);
         }
-        monitor.outcomeFinished(Result.SUCCESS);
+    }
+
+    public boolean supports(Class<?> klass) {
+        // public static void main(String[] args)
+        return new ClassAnalyzer(klass).hasMethod(true, void.class, "main", String[].class);
     }
 }

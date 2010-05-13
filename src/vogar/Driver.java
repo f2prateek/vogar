@@ -23,7 +23,6 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -42,7 +41,6 @@ import vogar.commands.Mkdir;
 final class Driver implements HostMonitor.Handler {
     private final File localTemp;
     private final ExpectationStore expectationStore;
-    private final List<RunnerSpec> runnerSpecs;
     private final Mode mode;
     private final XmlReportPrinter reportPrinter;
     private final int monitorPort;
@@ -66,12 +64,11 @@ final class Driver implements HostMonitor.Handler {
     private int unsupportedActions = 0;
 
     public Driver(File localTemp, Mode mode, ExpectationStore expectationStore,
-            List<RunnerSpec> runnerSpecs, XmlReportPrinter reportPrinter,
-            HostMonitor monitor, int monitorPort, long timeoutSeconds) {
+            XmlReportPrinter reportPrinter, HostMonitor monitor, int monitorPort,
+            long timeoutSeconds) {
         this.localTemp = localTemp;
         this.expectationStore = expectationStore;
         this.mode = mode;
-        this.runnerSpecs = runnerSpecs;
         this.reportPrinter = reportPrinter;
         this.monitor = monitor;
         this.monitorPort = monitorPort;
@@ -185,31 +182,14 @@ final class Driver implements HostMonitor.Handler {
 
     private void classesToActions(Collection<String> classes) {
         for (String clazz : classes) {
-            for (RunnerSpec runnerSpec : runnerSpecs) {
-                if (runnerSpec.supports(clazz)) {
-                    Action action = new Action(clazz, clazz, null, null, null, runnerSpec);
-                    actions.put(action.getName(), action);
-                    break;
-                }
-            }
+            Action action = new Action(clazz, clazz, null, null, null);
+            actions.put(action.getName(), action);
         }
     }
 
     private void filesToActions(Collection<File> files) {
         for (File file : files) {
-            Set<Action> actionsForFile = Collections.emptySet();
-
-            for (RunnerSpec runnerSpec : runnerSpecs) {
-                actionsForFile = runnerSpec.findActions(file);
-
-                // break as soon as we find any match. We don't need multiple
-                // matches for the same file, since that would run it twice.
-                if (!actionsForFile.isEmpty()) {
-                    break;
-                }
-            }
-
-            for (Action action : actionsForFile) {
+            for (Action action : new ActionFinder().findActions(file)) {
                 actions.put(action.getName(), action);
             }
         }

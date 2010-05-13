@@ -319,12 +319,6 @@ public final class Vogar {
 
         HostMonitor monitor = new HostMonitor(monitorTimeout);
 
-        List<RunnerSpec> runnerSpecs = Arrays.asList(
-                new JtregSpec(localTemp),
-                new JUnitSpec(),
-                new CaliperSpec(),
-                new MainSpec());
-
         ExpectationStore expectationStore;
         try {
             expectationStore = ExpectationStore.parse(expectationFiles);
@@ -341,7 +335,6 @@ public final class Vogar {
                 localTemp,
                 mode,
                 expectationStore,
-                runnerSpecs,
                 xmlReportPrinter,
                 monitor,
                 monitorPort,

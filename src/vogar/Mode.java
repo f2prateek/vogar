@@ -197,9 +197,8 @@ abstract class Mode {
      * Fill in properties for running in this mode
      */
     protected void fillInProperties(Properties properties, Action action) {
-        properties.setProperty(TestProperties.TEST_CLASS, action.getTargetClass());
+        properties.setProperty(TestProperties.TEST_CLASS_OR_PACKAGE, action.getTargetClass());
         properties.setProperty(TestProperties.QUALIFIED_NAME, action.getName());
-        properties.setProperty(TestProperties.RUNNER_CLASS, action.getRunnerSpec().getRunnerClass().getName());
         properties.setProperty(TestProperties.MONITOR_PORT, String.valueOf(modeOptions.monitorPort));
     }
 

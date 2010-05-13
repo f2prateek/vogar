@@ -16,9 +16,6 @@
 
 package vogar;
 
-import java.text.*;
-import java.util.*;
-
 /**
  * Utilities to make it easier to work with ISO 8601 dates and times.
  * This is a subset of the original class from http://software.jessies.org/salma-hayek/ --- please submit fixes upstream.

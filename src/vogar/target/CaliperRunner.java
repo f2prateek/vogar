@@ -18,6 +18,7 @@ package vogar.target;
 
 import com.google.caliper.Benchmark;
 import com.google.caliper.Runner;
+import com.google.caliper.SimpleBenchmark;
 import vogar.Result;
 
 /**
@@ -28,12 +29,12 @@ public final class CaliperRunner implements vogar.target.Runner {
     private TargetMonitor monitor;
     private Class<?> testClass;
 
-    public void init(TargetMonitor monitor, String actionName, String className) throws Exception {
+    public void init(TargetMonitor monitor, String actionName, Class<?> klass) {
         this.monitor = monitor;
-        testClass = Class.forName(className);
+        testClass = klass;
     }
 
-    public void run(String actionName, String className, String[] args) {
+    public void run(String actionName, Class<?> klass, String[] args) {
         monitor.outcomeStarted(actionName, actionName);
         try {
             Runner.main(testClass.asSubclass(Benchmark.class), args);
@@ -41,5 +42,9 @@ public final class CaliperRunner implements vogar.target.Runner {
             ex.printStackTrace();
         }
         monitor.outcomeFinished(Result.SUCCESS);
+    }
+
+    public boolean supports(Class<?> klass) {
+        return SimpleBenchmark.class.isAssignableFrom(klass);
     }
 }

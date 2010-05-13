@@ -17,7 +17,6 @@
 package vogar;
 
 import java.io.File;
-import java.util.List;
 
 /**
  * A local Java virtual machine like Harmony or the RI.
