@@ -18,6 +18,7 @@ package vogar.commands;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -102,16 +103,21 @@ public class AndroidSdk {
         }
     }
 
+    public static Collection<File> defaultExpectations() {
+        File[] files = new File("libcore/expectations").listFiles();
+        return (files != null) ? Arrays.asList(files) : Collections.<File>emptyList();
+    }
+
     public File getAndroidClasses() {
         return androidClasses;
     }
 
     /**
      * Returns the path to a version-specific tool.
-     * 
+     *
      * An SDK has two tools directories: a version-independent one containing "adb" and a few
      * others, plus a version-specific one containing "dx" and a few others.
-     * 
+     *
      * If you're running from an Android build tree, everything is already on your path.
      */
     private String toolPath(String tool) {
