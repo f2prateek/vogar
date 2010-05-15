@@ -38,9 +38,12 @@ public final class Vogar {
     @Option(names = { "--expectations" })
     private Set<File> expectationFiles = new LinkedHashSet<File>();
     {
-        File[] files = new File("expectations").listFiles();
-        if (files != null) {
-            expectationFiles.addAll(Arrays.asList(files));
+        // TODO: why does looking for "./expectations" make any sense?
+        for (String path : Arrays.asList("expectations", "libcore/expectations")) {
+            File[] files = new File(path).listFiles();
+            if (files != null) {
+                expectationFiles.addAll(Arrays.asList(files));
+            }
         }
     }
 
