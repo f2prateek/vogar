@@ -64,15 +64,9 @@ final class DeviceDalvikVm extends Vm {
         return new File(getEnvironmentDevice().runnerDir, name + ".jar");
     }
 
-    @Override protected VmCommandBuilder newVmCommandBuilder(
-            File workingDirectory) {
-        // ignore the working directory; it's device-local and we can't easily
-        // set the working directory for commands run via adb shell.
-        // TODO: we only *need* to set ANDROID_DATA on production devices.
-        // We set "user.home" to /sdcard because code might reasonably assume it can write to
-        // that directory.
+    @Override protected VmCommandBuilder newVmCommandBuilder(File workingDirectory) {
         return new VmCommandBuilder()
-                .vmCommand("adb", "shell", "ANDROID_DATA=/sdcard", "dalvikvm")
+                .vmCommand("adb", "shell", getEnvironmentDevice().getAndroidData(), "dalvikvm")
                 .vmArgs("-Duser.home=/sdcard")
                 .vmArgs("-Duser.name=root")
                 .vmArgs("-Duser.language=en")

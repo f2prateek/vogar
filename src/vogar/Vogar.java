@@ -78,7 +78,7 @@ public final class Vogar {
     private Integer debugPort;
 
     @Option(names = { "--device-runner-dir" })
-    private File deviceRunnerDir = new File("/sdcard/dalvikrunner");
+    private File deviceRunnerDir = new File("/sdcard/vogar");
 
     @Option(names = { "--vm-arg" })
     private List<String> vmArgs = new ArrayList<String>();

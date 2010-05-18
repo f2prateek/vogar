@@ -23,6 +23,7 @@ class EnvironmentDevice extends Environment {
     final AndroidSdk androidSdk;
     final File runnerDir;
     final File vogarTemp;
+    final File dalvikCache;
     final int monitorPort;
 
     EnvironmentDevice(boolean cleanBefore, boolean cleanAfter, Integer debugPort, int monitorPort,
@@ -30,8 +31,19 @@ class EnvironmentDevice extends Environment {
         super(cleanBefore, cleanAfter, debugPort, localTemp);
         this.androidSdk = androidSdk;
         this.runnerDir = runnerDir;
-        this.vogarTemp = new File(runnerDir, "/vogar.tmp");
+        this.vogarTemp = new File(runnerDir, "tmp");
+        this.dalvikCache = new File(runnerDir.getParentFile(), "dalvik-cache");
         this.monitorPort = monitorPort;
+    }
+
+    /**
+     * Returns an environment variable assignment to configure where the VM will
+     * store its dexopt files. This must be set on production devices and is
+     * optional for development devices.
+     */
+    public String getAndroidData() {
+        // The VM wants the parent directory of a directory named "dalvik-cache"
+        return "ANDROID_DATA=" + dalvikCache.getParentFile();
     }
 
     @Override void prepare() {
@@ -42,7 +54,7 @@ class EnvironmentDevice extends Environment {
         }
         androidSdk.mkdir(runnerDir);
         androidSdk.mkdir(vogarTemp);
-        androidSdk.mkdir(new File("/sdcard/dalvik-cache")); // TODO: only necessary on production devices.
+        androidSdk.mkdir(dalvikCache);
         androidSdk.forwardTcp(monitorPort, monitorPort);
         if (debugPort != null) {
             androidSdk.forwardTcp(debugPort, debugPort);
