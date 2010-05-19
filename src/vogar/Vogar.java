@@ -89,7 +89,7 @@ public final class Vogar {
     @Option(names = { "--javac-arg" })
     private List<String> javacArgs = new ArrayList<String>();
 
-    @Option(names = { "--use-boot-classpath" })
+    @Option(names = { "--use-bootclasspath" })
     private boolean useBootClasspath = false;
 
     @Option(names = { "--build-classpath" })
