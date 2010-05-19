@@ -458,7 +458,7 @@ public class OptionParser {
 
     static class FileHandler extends Handler {
         Object translate(String valueText) {
-            return new File(valueText);
+            return new File(valueText).getAbsoluteFile();
         }
     }
 }
