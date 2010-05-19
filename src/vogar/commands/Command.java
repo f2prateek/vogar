@@ -144,7 +144,7 @@ public final class Command {
      * @param timeoutSeconds how long to wait, or 0 to wait indefinitely
      * @return the command's output, or null if the command timed out
      */
-    public List<String> executeWithTimeout(long timeoutSeconds)
+    public List<String> executeWithTimeout(int timeoutSeconds)
             throws TimeoutException {
         if (timeoutSeconds == 0) {
             return execute();

@@ -45,7 +45,7 @@ public final class Vogar {
     private ModeId mode = ModeId.DEVICE;
 
     @Option(names = { "--timeout" })
-    private long timeoutSeconds = 10 * 60; // default is ten minutes;
+    private int timeoutSeconds = 1 * 60; // default is one minute;
 
     @Option(names = { "--monitor-timeout" })
     private long monitorTimeout = 30;
@@ -283,7 +283,7 @@ public final class Vogar {
 
         int monitorPort = mode.isHost() ? 8788 : 8787;
         Mode.Options modeOptions = new Mode.Options(Classpath.of(buildClasspath), sourcepath,
-                javacArgs, javaHome, monitorPort, useBootClasspath, Classpath.of(classpath));
+                javacArgs, javaHome, monitorPort, timeoutSeconds, useBootClasspath, Classpath.of(classpath));
 
         AndroidSdk androidSdk = null;
         if (mode.requiresAndroidSdk()) {

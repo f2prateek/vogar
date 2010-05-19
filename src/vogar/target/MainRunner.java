@@ -38,7 +38,7 @@ public final class MainRunner implements Runner {
         }
     }
 
-    public void run(String actionName, Class<?> klass, String[] args) {
+    public void run(String actionName, Class<?> klass, String[] args, int timeout) {
         monitor.outcomeStarted(actionName, actionName);
         try {
             main.invoke(null, new Object[] { args });

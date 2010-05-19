@@ -36,6 +36,7 @@ public class TestRunner {
     protected final String qualifiedName;
     protected final String classOrPackageName;
     protected final int monitorPort;
+    protected final int timeout;
     protected final List<Runner> runners;
 
     protected TestRunner() {
@@ -43,6 +44,7 @@ public class TestRunner {
         qualifiedName = properties.getProperty(TestProperties.QUALIFIED_NAME);
         classOrPackageName = properties.getProperty(TestProperties.TEST_CLASS_OR_PACKAGE);
         monitorPort = Integer.parseInt(properties.getProperty(TestProperties.MONITOR_PORT));
+        timeout = Integer.parseInt(properties.getProperty(TestProperties.TIMEOUT));
         runners = Arrays.asList(new JUnitRunner(),
                                 new CaliperRunner(),
                                 new MainRunner());
@@ -122,7 +124,7 @@ public class TestRunner {
                     monitor.close();
                     return;
                 }
-                runner.run(qualifiedName, klass, args);
+                runner.run(qualifiedName, klass, args, timeout);
             } else {
                 monitor.outcomeStarted(klass.getName(), qualifiedName);
                 System.out.println("Skipping " + klass.getName() + ": no associated runner class");

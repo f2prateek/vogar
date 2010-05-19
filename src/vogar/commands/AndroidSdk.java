@@ -220,18 +220,18 @@ public class AndroidSdk {
      * Loop until we see a non-empty directory on the device. For
      * example, wait until /sdcard is mounted.
      */
-    public void waitForNonEmptyDirectory(File path, long timeoutSeconds) {
+    public void waitForNonEmptyDirectory(File path, int timeoutSeconds) {
         waitFor(false, path, timeoutSeconds);
     }
 
-    private void waitFor(boolean file, File path, long timeoutSeconds) {
+    private void waitFor(boolean file, File path, int timeoutSeconds) {
         final int millisPerSecond = 1000;
         final long start = System.currentTimeMillis();
         final long deadline = start + (millisPerSecond * timeoutSeconds);
 
         while (true) {
-            final long remainingSeconds = ((deadline - System.currentTimeMillis())
-                                           / millisPerSecond);
+            final int remainingSeconds =
+                    (int) ((deadline - System.currentTimeMillis()) / millisPerSecond);
             String pathArgument = path.getPath();
             if (!file) {
                 pathArgument += "/";

@@ -29,5 +29,5 @@ public interface Runner {
 
     void init(TargetMonitor monitor, String actionName, Class<?> klass);
 
-    void run(String actionName, Class<?> klass, String[] args);
+    void run(String actionName, Class<?> klass, String[] args, int timeout);
 }

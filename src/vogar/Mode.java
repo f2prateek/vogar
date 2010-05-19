@@ -47,6 +47,7 @@ abstract class Mode {
         protected final List<String> javacArgs;
         protected final File javaHome;
         protected final int monitorPort;
+        protected final int timeoutSeconds;
         protected final boolean useBootClasspath;
         protected final Classpath classpath;
 
@@ -55,6 +56,7 @@ abstract class Mode {
                 List<String> javacArgs,
                 File javaHome,
                 int monitorPort,
+                int timeoutSeconds,
                 boolean useBootClasspath,
                 Classpath classpath) {
             this.buildClasspath = buildClasspath;
@@ -62,6 +64,7 @@ abstract class Mode {
             this.javacArgs = javacArgs;
             this.javaHome = javaHome;
             this.monitorPort = monitorPort;
+            this.timeoutSeconds = timeoutSeconds;
             this.useBootClasspath = useBootClasspath;
             this.classpath = classpath;
         }
@@ -199,7 +202,8 @@ abstract class Mode {
     protected void fillInProperties(Properties properties, Action action) {
         properties.setProperty(TestProperties.TEST_CLASS_OR_PACKAGE, action.getTargetClass());
         properties.setProperty(TestProperties.QUALIFIED_NAME, action.getName());
-        properties.setProperty(TestProperties.MONITOR_PORT, String.valueOf(modeOptions.monitorPort));
+        properties.setProperty(TestProperties.MONITOR_PORT, Integer.toString(modeOptions.monitorPort));
+        properties.setProperty(TestProperties.TIMEOUT, Integer.toString(modeOptions.timeoutSeconds));
     }
 
     /**

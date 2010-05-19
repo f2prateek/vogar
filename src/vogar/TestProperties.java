@@ -49,5 +49,7 @@ final public class TestProperties {
      */
     public static final String MONITOR_PORT = "monitorPort";
 
+    public static final String TIMEOUT = "timeout";
+
     private TestProperties() {}
 }

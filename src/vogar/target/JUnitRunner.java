@@ -44,6 +44,7 @@ public final class JUnitRunner implements Runner {
 
     private junit.textui.TestRunner testRunner;
     private Test junitTest;
+    private int timeoutSeconds;
 
     public void init(TargetMonitor monitor, String actionName, Class<?> klass) {
         final TestSuiteLoader testSuiteLoader = new TestSuiteLoader() {
@@ -63,15 +64,16 @@ public final class JUnitRunner implements Runner {
             }
 
             @Override protected TestResult createTestResult() {
-                return new TimoutTestResult();
+                return new TimeoutTestResult();
             }
         };
 
         this.junitTest = testRunner.getTest(klass.getName());
     }
 
-    public void run(String actionName, Class<?> klass, String[] args) {
+    public void run(String actionName, Class<?> klass, String[] args, int timeoutSeconds) {
         // if target args were specified, perhaps only a few tests should be run?
+        this.timeoutSeconds = timeoutSeconds;
         if (args != null && args.length > 0 && TestCase.class.isAssignableFrom(klass)) {
             TestSuite testSuite = new TestSuite();
             for (String arg : args) {
@@ -148,7 +150,7 @@ public final class JUnitRunner implements Runner {
         @Override protected void printFooter(TestResult result) {}
     }
 
-    private static class TimoutTestResult extends TestResult {
+    private class TimeoutTestResult extends TestResult {
         final ExecutorService executor = Executors.newCachedThreadPool();
 
         @Override public void runProtected(Test test, final Protectable p) {
@@ -165,7 +167,7 @@ public final class JUnitRunner implements Runner {
 
             Throwable thrown;
             try {
-                thrown = result.get(60000000, TimeUnit.SECONDS);
+                thrown = result.get(timeoutSeconds, TimeUnit.SECONDS);
             } catch (Exception e) {
                 thrown = e;
             }
@@ -187,7 +189,7 @@ public final class JUnitRunner implements Runner {
         // public class FooSuite {
         //    public static Test suite() {...}
         // }
-        return  TestCase.class.isAssignableFrom(klass)
+        return TestCase.class.isAssignableFrom(klass)
                 || new ClassAnalyzer(klass).hasMethod(true, Test.class, "suite");
     }
 }

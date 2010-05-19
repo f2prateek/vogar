@@ -45,7 +45,7 @@ final class Driver implements HostMonitor.Handler {
     private final XmlReportPrinter reportPrinter;
     private final int monitorPort;
     private final HostMonitor monitor;
-    private final long timeoutSeconds;
+    private final int timeoutSeconds;
     private int successes = 0;
     private int failures = 0;
     private List<String> failureNames = new ArrayList<String>();
@@ -66,7 +66,7 @@ final class Driver implements HostMonitor.Handler {
 
     public Driver(File localTemp, Mode mode, ExpectationStore expectationStore,
             XmlReportPrinter reportPrinter, HostMonitor monitor, int monitorPort,
-            long timeoutSeconds) {
+            int timeoutSeconds) {
         this.localTemp = localTemp;
         this.expectationStore = expectationStore;
         this.mode = mode;
