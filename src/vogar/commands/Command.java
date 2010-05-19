@@ -79,8 +79,7 @@ public final class Command {
             throw new IllegalStateException("Already started!");
         }
 
-        String envString = !env.isEmpty() ? (Strings.join(env.entrySet(), " ") + " ") : "";
-        Console.getInstance().verbose("executing " + envString + Strings.join(args, " "));
+        Console.getInstance().verbose("executing " + this);
 
         ProcessBuilder processBuilder = new ProcessBuilder()
                 .command(args)
@@ -187,6 +186,11 @@ public final class Command {
         if (process != null) {
             process.destroy();
         }
+    }
+
+    @Override public String toString() {
+        String envString = !env.isEmpty() ? (Strings.join(env.entrySet(), " ") + " ") : "";
+        return envString + Strings.join(args, " ");
     }
 
     public static class Builder {

@@ -21,6 +21,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import junit.framework.AssertionFailedError;
@@ -34,6 +36,7 @@ import junit.runner.TestSuiteLoader;
 import junit.textui.ResultPrinter;
 import vogar.ClassAnalyzer;
 import vogar.Result;
+import vogar.Threads;
 
 /**
  * Adapts a JUnit test for use by vogar.
@@ -151,11 +154,14 @@ public final class JUnitRunner implements Runner {
     }
 
     private class TimeoutTestResult extends TestResult {
-        final ExecutorService executor = Executors.newCachedThreadPool();
+        final ExecutorService executor = Executors.newCachedThreadPool(
+                Threads.daemonThreadFactory());
 
         @Override public void runProtected(Test test, final Protectable p) {
+            final AtomicReference<Thread> executingThreadReference = new AtomicReference<Thread>();
             Future<Throwable> result = executor.submit(new Callable<Throwable>() {
                 public Throwable call() throws Exception {
+                    executingThreadReference.set(Thread.currentThread());
                     try {
                         p.protect();
                         return null;
@@ -168,6 +174,13 @@ public final class JUnitRunner implements Runner {
             Throwable thrown;
             try {
                 thrown = result.get(timeoutSeconds, TimeUnit.SECONDS);
+            } catch (TimeoutException e) {
+                Thread executingThread = executingThreadReference.get();
+                if (executingThread != null) {
+                    executingThread.interrupt();
+                    e.setStackTrace(executingThread.getStackTrace());
+                }
+                thrown = e;
             } catch (Exception e) {
                 thrown = e;
             }

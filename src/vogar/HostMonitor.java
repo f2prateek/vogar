@@ -86,10 +86,10 @@ class HostMonitor {
         } catch (ParserConfigurationException e) {
             throw new RuntimeException(e);
         } catch (IOException e) {
-            Console.getInstance().info("Connection error from localhost:" + port, e);
+            Console.getInstance().verbose("connection error from localhost:" + port + " " + e);
             return false;
         } catch (SAXException e) {
-            Console.getInstance().info("Received bad XML from localhost:" + port + " " + e);
+            Console.getInstance().verbose("received bad XML from localhost:" + port + " " + e);
             return false;
         }
 

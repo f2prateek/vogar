@@ -20,6 +20,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +53,7 @@ final class Driver implements HostMonitor.Handler {
     private List<String> skippedNames = new ArrayList<String>();
 
     private Timer actionTimeoutTimer = new Timer("action timeout", true);
+    private volatile Date killTime;
 
     private final Map<String, Action> actions = Collections.synchronizedMap(
             new LinkedHashMap<String, Action>());
@@ -209,19 +211,12 @@ final class Driver implements HostMonitor.Handler {
             final Command command = mode.createActionCommand(action);
             Future<List<String>> consoleOut = command.executeLater();
             final AtomicReference<Result> result = new AtomicReference<Result>();
-/*
+
             if (timeoutSeconds != 0) {
-                actionTimeoutTimer.schedule(new TimerTask() {
-                    @Override public void run() {
-                        if (result.compareAndSet(null, Result.EXEC_TIMEOUT)) {
-                            Console.getInstance().verbose("killing " + action.getName() + " because it "
-                                    + "timed out after " + timeoutSeconds + " seconds");
-                            command.destroy();
-                        }
-                    }
-                }, timeoutSeconds * 1000);
+                resetKillTime();
+                scheduleTaskKiller(command, result);
             }
-*/
+
             boolean completedNormally = monitor.monitor(monitorPort, this);
             if (completedNormally) {
                 if (result.compareAndSet(null, Result.SUCCESS)) {
@@ -241,6 +236,9 @@ final class Driver implements HostMonitor.Handler {
                 if (e.getCause() instanceof CommandFailedException) {
                     earlyFailure = new Outcome(action.getName(), action.getName(), result.get(),
                             ((CommandFailedException) e.getCause()).getOutputLines());
+                } else if (result.get() == Result.EXEC_TIMEOUT) {
+                    earlyFailure = new Outcome(action.getName(), result.get(),
+                            "killed because it timed out after " + timeoutSeconds + " seconds");
                 } else {
                     earlyFailure = new Outcome(action.getName(), result.get(), e);
                 }
@@ -258,7 +256,25 @@ final class Driver implements HostMonitor.Handler {
         }
     }
 
+    private void scheduleTaskKiller(final Command command, final AtomicReference<Result> result) {
+        actionTimeoutTimer.schedule(new TimerTask() {
+            @Override public void run() {
+                // if the kill time has been pushed back, reschedule
+                if (System.currentTimeMillis() < killTime.getTime()) {
+                    scheduleTaskKiller(command, result);
+                    return;
+                }
+                if (result.compareAndSet(null, Result.EXEC_TIMEOUT)) {
+                    Console.getInstance().verbose("killing command that timed out after "
+                            + timeoutSeconds + " seconds: " + command);
+                    command.destroy();
+                }
+            }
+        }, killTime);
+    }
+
     public void outcome(Outcome outcome) {
+        resetKillTime();
         outcomes.put(outcome.getName(), outcome);
         Expectation expectation = expectationStore.get(outcome);
         ResultValue resultValue;
@@ -278,6 +294,19 @@ final class Driver implements HostMonitor.Handler {
         }
         Console.getInstance().outcome(outcome.getName());
         Console.getInstance().printResult(outcome.getResult(), resultValue);
+    }
+
+    /**
+     * Sets the time at which we'll kill a task that starts right now.
+     */
+    private void resetKillTime() {
+        /*
+         * Give the target process an extra 2 seconds to self-timeout and report
+         * the error. This way, when a JUnit test has one slow method, we don't
+         * end up killing the whole process.
+         */
+        long delay = TimeUnit.SECONDS.toMillis(timeoutSeconds + 2);
+        killTime = new Date(System.currentTimeMillis() + delay);
     }
 
     public void output(String outcomeName, String output) {
