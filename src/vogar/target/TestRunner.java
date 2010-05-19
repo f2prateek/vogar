@@ -88,6 +88,20 @@ public class TestRunner {
                 super.print(str);
                 monitor.output(str != null ? str : "null");
             }
+
+            @Override public void println() {
+                print("\n");
+            }
+
+            /**
+             * Although println() is documented to be equivalent to print()
+             * followed by println(), this isn't the behavior on HotSpot
+             * and we must manually override println(String) to ensure that
+             * newlines aren't dropped.
+             */
+            @Override public void println(String s) {
+                print(s + "\n");
+            }
         };
         System.setOut(monitorPrintStream);
         System.setErr(monitorPrintStream);
