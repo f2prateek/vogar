@@ -209,7 +209,7 @@ final class Driver implements HostMonitor.Handler {
             final Command command = mode.createActionCommand(action);
             Future<List<String>> consoleOut = command.executeLater();
             final AtomicReference<Result> result = new AtomicReference<Result>();
-
+/*
             if (timeoutSeconds != 0) {
                 actionTimeoutTimer.schedule(new TimerTask() {
                     @Override public void run() {
@@ -221,7 +221,7 @@ final class Driver implements HostMonitor.Handler {
                     }
                 }, timeoutSeconds * 1000);
             }
-
+*/
             boolean completedNormally = monitor.monitor(monitorPort, this);
             if (completedNormally) {
                 if (result.compareAndSet(null, Result.SUCCESS)) {
