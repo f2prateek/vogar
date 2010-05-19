@@ -99,4 +99,13 @@ final class Outcome {
         int lastHash = name.indexOf('#');
         return lastHash == -1 ? name.lastIndexOf('.') : lastHash;
     }
+
+    /**
+     * Returns whether the result indicates that the contents of the Outcome are important.
+     *
+     * For example, for a test skipped because it is unsupported, we don't care about the result.
+     */
+    public boolean matters() {
+        return result != Result.UNSUPPORTED;
+    }
 }

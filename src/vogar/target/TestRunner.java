@@ -66,6 +66,8 @@ public class TestRunner {
     /**
      * Returns the class to run the test with based on {@param klass}. For instance, a class
      * that extends junit.framework.TestCase should be run with JUnitSpec.
+     *
+     * Returns null if no such associated runner exists.
      */
     private Class<?> runnerClass(Class<?> klass) {
         for (Runner runner : runners) {
@@ -74,8 +76,7 @@ public class TestRunner {
             }
         }
 
-        throw new IllegalArgumentException(klass
-                + " cannot be matched with a Runner class out of potential runners " + runners);
+        return null;
     }
 
     public void run(String... args) {
@@ -95,19 +96,24 @@ public class TestRunner {
 
         for (Class<?> klass : classes) {
             Class<?> runnerClass = runnerClass(klass);
-            Runner runner;
-            try {
-                runner = (Runner) runnerClass.newInstance();
-                runner.init(monitor, qualifiedName, klass);
-            } catch (Exception e) {
-                monitor.outcomeStarted(qualifiedName, qualifiedName);
-                e.printStackTrace();
-                monitor.outcomeFinished(Result.ERROR);
-                monitor.close();
-                return;
+            if (runnerClass != null) {
+                Runner runner;
+                try {
+                    runner = (Runner) runnerClass.newInstance();
+                    runner.init(monitor, qualifiedName, klass);
+                } catch (Exception e) {
+                    monitor.outcomeStarted(qualifiedName, qualifiedName);
+                    e.printStackTrace();
+                    monitor.outcomeFinished(Result.ERROR);
+                    monitor.close();
+                    return;
+                }
+                runner.run(qualifiedName, klass, args);
+            } else {
+                monitor.outcomeStarted(klass.getName(), qualifiedName);
+                System.out.println("Skipping " + klass.getName() + ": no associated runner class");
+                monitor.outcomeFinished(Result.UNSUPPORTED);
             }
-
-            runner.run(qualifiedName, klass, args);
         }
 
         monitor.close();

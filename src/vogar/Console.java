@@ -113,12 +113,12 @@ public class Console {
     /**
      * Writes the action's outcome.
      */
-    public void printResult(Result result, boolean ok) {
-        if (ok) {
+    public void printResult(Result result, ResultValue resultValue) {
+        if (resultValue == ResultValue.OK) {
             String prefix = (currentLine == CurrentLine.NAME) ? " " : "\n" + indent;
             System.out.println(prefix + green("OK (" + result + ")"));
 
-        } else {
+        } else if (resultValue == ResultValue.FAIL) {
             if (bufferedOutput.length() > 0) {
                 printOutput(bufferedOutput.toString());
                 bufferedOutput.delete(0, bufferedOutput.length());
@@ -126,6 +126,14 @@ public class Console {
 
             newLine();
             System.out.println(indent + red("FAIL (" + result + ")"));
+        } else if (resultValue == ResultValue.IGNORE) {
+            if (bufferedOutput.length() > 0) {
+                printOutput(bufferedOutput.toString());
+                bufferedOutput.delete(0, bufferedOutput.length());
+            }
+
+            newLine();
+            System.out.println(indent + yellow("SKIP (" + result + ")"));
         }
 
         currentName = null;
@@ -136,6 +144,13 @@ public class Console {
         System.out.println("Failure summary:");
         for (String failureName : failureNames) {
             System.out.println(red(failureName));
+        }
+    }
+
+    public void summarizeSkips(List<String> skippedNames) {
+        System.out.println("Skip summary:");
+        for (String skippedName : skippedNames) {
+            System.out.println(yellow(skippedName));
         }
     }
 
@@ -233,6 +248,10 @@ public class Console {
 
     private String red(String message) {
         return color ? ("\u001b[31;1m" + message + "\u001b[0m") : message;
+    }
+
+    private String yellow(String message) {
+        return color ? ("\u001b[33;1m" + message + "\u001b[0m") : message;
     }
 
     private void eraseCurrentLine() {

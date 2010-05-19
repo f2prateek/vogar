@@ -49,6 +49,7 @@ final class Driver implements HostMonitor.Handler {
     private int successes = 0;
     private int failures = 0;
     private List<String> failureNames = new ArrayList<String>();
+    private List<String> skippedNames = new ArrayList<String>();
 
     private Timer actionTimeoutTimer = new Timer("action timeout", true);
 
@@ -61,7 +62,7 @@ final class Driver implements HostMonitor.Handler {
      * The number of tests that weren't run because they aren't supported by
      * this runner.
      */
-    private int unsupportedActions = 0;
+    private int skipped = 0;
 
     public Driver(File localTemp, Mode mode, ExpectationStore expectationStore,
             XmlReportPrinter reportPrinter, HostMonitor monitor, int monitorPort,
@@ -168,11 +169,13 @@ final class Driver implements HostMonitor.Handler {
         mode.shutdown();
         final long t1 = System.currentTimeMillis();
 
-        if (failures > 0 || unsupportedActions > 0) {
+        if (failures > 0 || skipped > 0) {
             Collections.sort(failureNames);
             Console.getInstance().summarizeFailures(failureNames);
+            Collections.sort(skippedNames);
+            Console.getInstance().summarizeSkips(skippedNames);
             Console.getInstance().info(String.format("Outcomes: %s. Passed: %d, Failed: %d, Skipped: %d. Took %s.",
-                    (successes + failures), successes, failures, unsupportedActions,
+                    (successes + failures), successes, failures, skipped,
                     TimeUtilities.msToString(t1 - t0)));
         } else {
             Console.getInstance().info(String.format("Outcomes: %s. All successful. Took %s.",
@@ -246,7 +249,7 @@ final class Driver implements HostMonitor.Handler {
 
         if (earlyFailure.getResult() == Result.UNSUPPORTED) {
             Console.getInstance().verbose("skipping " + action.getName());
-            unsupportedActions++;
+            skipped++;
         } else {
             for (String line : earlyFailure.getOutputLines()) {
                 Console.getInstance().streamOutput(line + "\n");
@@ -258,15 +261,23 @@ final class Driver implements HostMonitor.Handler {
     public void outcome(Outcome outcome) {
         outcomes.put(outcome.getName(), outcome);
         Expectation expectation = expectationStore.get(outcome);
-        boolean ok = expectation.matches(outcome);
-        if (ok) {
-            successes++;
+        ResultValue resultValue;
+        if (outcome.matters()) {
+            resultValue = expectation.matches(outcome) ? ResultValue.OK : ResultValue.FAIL;
         } else {
+            resultValue = ResultValue.IGNORE;
+        }
+        if (resultValue == ResultValue.OK) {
+            successes++;
+        } else if (resultValue == ResultValue.FAIL) {
             failures++;
             failureNames.add(outcome.getName());
+        } else { // ResultValue.IGNORE
+            skipped++;
+            skippedNames.add(outcome.getName());
         }
         Console.getInstance().outcome(outcome.getName());
-        Console.getInstance().printResult(outcome.getResult(), ok);
+        Console.getInstance().printResult(outcome.getResult(), resultValue);
     }
 
     public void output(String outcomeName, String output) {
