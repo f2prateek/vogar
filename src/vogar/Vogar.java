@@ -137,7 +137,7 @@ public final class Vogar {
         System.out.println();
         System.out.println("  --classpath <jar file>: add the .jar to both build and execute classpaths.");
         System.out.println();
-        System.out.println("  --use-boot-classpath: use the classpath as search path for bootstrap classes.");
+        System.out.println("  --use-bootclasspath: use the classpath as search path for bootstrap classes.");
         System.out.println();
         System.out.println("  --build-classpath <element>: add the directory or .jar to the build");
         System.out.println("      classpath. Such classes are available as build dependencies, but");
