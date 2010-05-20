@@ -173,7 +173,11 @@ public final class JUnitRunner implements Runner {
 
             Throwable thrown;
             try {
-                thrown = result.get(timeoutSeconds, TimeUnit.SECONDS);
+                if (timeoutSeconds == 0) {
+                    thrown = result.get();
+                } else {
+                    thrown = result.get(timeoutSeconds, TimeUnit.SECONDS);
+                }
             } catch (TimeoutException e) {
                 Thread executingThread = executingThreadReference.get();
                 if (executingThread != null) {
