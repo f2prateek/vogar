@@ -11,10 +11,7 @@
     <property name="javadocroot" value="${installroot}/docs/api"/>
     <property name="caliper" value="lib/caliper.jar"/>
     <property name="guava" value="lib/guava.jar"/>
-    <property name="javatest" value="lib/javatest.jar"/>
-    <property name="jh" value="lib/jh.jar"/>
     <property name="jsr305" value="lib/jsr305.jar"/>
-    <property name="jtreg" value="lib/jtreg.jar"/>
     <property name="junit" value="lib/junit.jar"/>
     <property name="kxml2" value="lib/kxml2-2.3.0.jar"/>
     <property name="android" value="${android.platform.dir}/android.jar"/>
@@ -22,10 +19,7 @@
     <path id="dependencies">
         <pathelement location="${caliper}"/>
         <pathelement location="${guava}"/>
-        <pathelement location="${javatest}"/>
-        <pathelement location="${jh}"/>
         <pathelement location="${jsr305}"/>
-        <pathelement location="${jtreg}"/>
         <pathelement location="${junit}"/>
         <pathelement location="${kxml2}"/>
         <pathelement location="${android}"/>
@@ -53,10 +47,7 @@
             <fileset dir="build/classes"/>
             <zipfileset src="${caliper}"/>
             <zipfileset src="${guava}"/>
-            <zipfileset src="${javatest}"/>
-            <zipfileset src="${jh}"/>
             <zipfileset src="${jsr305}"/>
-            <zipfileset src="${jtreg}"/>
             <zipfileset src="${junit}"/>
             <zipfileset src="${kxml2}"/>
             <fileset dir="src">
