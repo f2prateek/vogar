@@ -27,9 +27,9 @@ import java.util.regex.Pattern;
  */
 public final class ActionFinder {
     private static final String PACKAGE_PATTERN = "(?m)^\\s*package\\s+(\\S+)\\s*;";
-
     private static final String TYPE_DECLARATION_PATTERN
             = "(?m)\\b(?:public|private\\s+)?(?:final\\s+)?(?:interface|class|enum)\\b";
+    private static final String TEST_ROOT = "/test/";
 
     private final Map<String, Action> actions;
     private final Map<String, Outcome> outcomes;
@@ -60,29 +60,29 @@ public final class ActionFinder {
             return;
         }
 
-        String className = fileToClass(file);
-        String fullPath = file.getPath();
-        String shortPath = className.replace('.', File.separatorChar) + ".java";
-        File sourcePath = null;
-        if (fullPath.endsWith(shortPath)) {
-            sourcePath = new File(fullPath.substring(0, fullPath.length() - shortPath.length()));
-        } else {
-            String fail = "Class " + className + " expected to be in file ending in " + shortPath
-                    + " but instead found in " + fullPath;
-            outcomes.put(className, new Outcome(className, Result.UNSUPPORTED, fail));
+        try {
+            Action action = fileToAction(file);
+            actions.put(action.getName(), action);
+        } catch (IllegalArgumentException e) {
+            String actionName = file.getPath();
+            Action action = new Action(actionName, null, null, null, file);
+            actions.put(actionName, action);
+            outcomes.put(actionName, new Outcome(actionName, Result.UNSUPPORTED, e));
         }
-        actions.put(className, new Action(className, className, null, sourcePath, file));
     }
 
     private boolean matches(File file) {
         return !file.getName().startsWith(".") && file.getName().endsWith(".java");
     }
 
-    private String fileToClass(File javaFile) {
+    /**
+     * Returns an action for the given .java file.
+     */
+    private Action fileToAction(File javaFile) {
         // We can get the unqualified class name from the path.
         // It's the last element minus the trailing ".java".
         String filename = javaFile.getName();
-        String className = filename.substring(0, filename.length() - 5);
+        String simpleName = filename.substring(0, filename.length() - ".java".length());
 
         // For the package, the only foolproof way is to look for the package
         // declaration inside the file.
@@ -90,19 +90,39 @@ public final class ActionFinder {
             String content = Strings.readFile(javaFile);
             Pattern packagePattern = Pattern.compile(PACKAGE_PATTERN);
             Matcher packageMatcher = packagePattern.matcher(content);
-            if (!packageMatcher.find()) {
-                // if it doesn't have a package, make sure there's at least a
-                // type declaration otherwise we're probably reading the wrong
-                // kind of file.
-                if (Pattern.compile(TYPE_DECLARATION_PATTERN).matcher(content).find()) {
-                    return className;
-                }
-                throw new IllegalArgumentException("No package declaration found in " + javaFile);
+            if (packageMatcher.find()) {
+                String packageName = packageMatcher.group(1);
+                String className = packageName + "." + simpleName;
+                return new Action(className, className, null, getSourcePath(javaFile, className), javaFile);
             }
-            String packageName = packageMatcher.group(1);
-            return packageName + "." + className;
+
+            if (!Pattern.compile(TYPE_DECLARATION_PATTERN).matcher(content).find()) {
+                throw new IllegalArgumentException("Malformed .java file: " + javaFile);
+            }
+
+            String path = javaFile.getAbsolutePath();
+            int indexOfTest = path.indexOf(TEST_ROOT);
+            if (indexOfTest != -1) {
+                path = path.substring(indexOfTest + TEST_ROOT.length(), path.length() - ".java".length());
+            } else {
+                path = path.substring(1);
+            }
+            String actionName = path.replace(File.separatorChar, '.');
+            return new Action(actionName, simpleName, null, javaFile.getParentFile(), javaFile);
         } catch (IOException ex) {
             throw new RuntimeException(ex);
         }
+    }
+
+    /**
+     * Returns the source path of {@code file}.
+     */
+    private File getSourcePath(File file, String className) {
+        String path = file.getPath();
+        String relativePath = className.replace('.', File.separatorChar) + ".java";
+        if (!path.endsWith(relativePath)) {
+            throw new IllegalArgumentException("Expected a file ending in " + relativePath + " but found " + path);
+        }
+        return new File(path.substring(0, path.length() - relativePath.length()));
     }
 }
