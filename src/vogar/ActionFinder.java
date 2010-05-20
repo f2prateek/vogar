@@ -18,8 +18,7 @@ package vogar;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -30,18 +29,28 @@ public final class ActionFinder {
     private static final String PACKAGE_PATTERN = "(?m)^\\s*package\\s+(\\S+)\\s*;";
 
     private static final String TYPE_DECLARATION_PATTERN
-            = "(?m)\\b(?:public|private)\\s+(?:final\\s+)?(?:interface|class|enum)\\b";
+            = "(?m)\\b(?:public|private\\s+)?(?:final\\s+)?(?:interface|class|enum)\\b";
 
-    public Set<Action> findActions(File searchDirectory) {
-        Set<Action> actions = new LinkedHashSet<Action>();
-        findActionsRecursive(actions, searchDirectory);
-        return actions;
+    private final Map<String, Action> actions;
+    private final Map<String, Outcome> outcomes;
+
+    public ActionFinder(Map<String, Action> actions, Map<String, Outcome> outcomes) {
+        this.actions = actions;
+        this.outcomes = outcomes;
     }
 
-    protected void findActionsRecursive(Set<Action> actions, File file) {
+    public void findActions(File file) {
+        findActionsRecursive(file, 0);
+    }
+
+    private void findActionsRecursive(File file, int depth) {
         if (file.isDirectory()) {
+            int size = actions.size();
             for (File child : file.listFiles()) {
-                findActionsRecursive(actions, child);
+                findActionsRecursive(child, depth + 1);
+            }
+            if (depth < 3) {
+                Console.getInstance().verbose("Found " + (actions.size() - size) + " actions in " + file);
             }
             return;
         }
@@ -52,15 +61,24 @@ public final class ActionFinder {
         }
 
         String className = fileToClass(file);
-        File sourcePath = fileAndClassToSourcePath(file, className);
-        actions.add(new Action(className, className, null, sourcePath, file));
+        String fullPath = file.getPath();
+        String shortPath = className.replace('.', File.separatorChar) + ".java";
+        File sourcePath = null;
+        if (fullPath.endsWith(shortPath)) {
+            sourcePath = new File(fullPath.substring(0, fullPath.length() - shortPath.length()));
+        } else {
+            String fail = "Class " + className + " expected to be in file ending in " + shortPath
+                    + " but instead found in " + fullPath;
+            outcomes.put(className, new Outcome(className, Result.UNSUPPORTED, fail));
+        }
+        actions.put(className, new Action(className, className, null, sourcePath, file));
     }
 
-    protected static boolean matches(File file) {
+    private boolean matches(File file) {
         return !file.getName().startsWith(".") && file.getName().endsWith(".java");
     }
 
-    private static String fileToClass(File javaFile) {
+    private String fileToClass(File javaFile) {
         // We can get the unqualified class name from the path.
         // It's the last element minus the trailing ".java".
         String filename = javaFile.getName();
@@ -86,16 +104,5 @@ public final class ActionFinder {
         } catch (IOException ex) {
             throw new RuntimeException(ex);
         }
-    }
-
-    private static File fileAndClassToSourcePath(File javaFile, String className) {
-        String longPath = javaFile.getPath();
-        String shortPath = className.replace('.', File.separatorChar) + ".java";
-
-        if (!longPath.endsWith(shortPath)) {
-            throw new IllegalArgumentException("Class " + className + " expected to be in file "
-                    + "ending in " + shortPath + " but instead found in " + longPath);
-        }
-        return new File(longPath.substring(0, longPath.length() - shortPath.length()));
     }
 }

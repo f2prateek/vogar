@@ -194,9 +194,7 @@ final class Driver implements HostMonitor.Handler {
 
     private void filesToActions(Collection<File> files) {
         for (File file : files) {
-            for (Action action : new ActionFinder().findActions(file)) {
-                actions.put(action.getName(), action);
-            }
+            new ActionFinder(actions, outcomes).findActions(file);
         }
     }
 
