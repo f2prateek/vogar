@@ -33,7 +33,8 @@ public final class Action {
 
     public Action(String name, String actionClass, File resourcesDirectory,
             File sourcePath, File javaFile) {
-        this.name = name;
+        // Some part of the stack dies with hashes in file-names.
+        this.name = name.replaceAll("#", "_");
         this.actionClass = actionClass;
         this.resourcesDirectory = resourcesDirectory;
         this.sourcePath = sourcePath;

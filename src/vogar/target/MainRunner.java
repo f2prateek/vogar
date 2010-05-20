@@ -28,7 +28,8 @@ public final class MainRunner implements Runner {
     private TargetMonitor monitor;
     private Method main;
 
-    public void init(TargetMonitor monitor, String actionName, Class<?> klass) {
+    public void init(TargetMonitor monitor, String actionName, String qualification,
+            Class<?> klass) {
         this.monitor = monitor;
         try {
             this.main = klass.getMethod("main", String[].class);

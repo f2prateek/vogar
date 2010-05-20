@@ -34,7 +34,7 @@ public class TestRunner {
     protected final Properties properties;
 
     protected final String qualifiedName;
-    protected final String classOrPackageName;
+    protected final String qualifiedClassOrPackageName;
     protected final int monitorPort;
     protected final int timeoutSeconds;
     protected final List<Runner> runners;
@@ -42,7 +42,7 @@ public class TestRunner {
     protected TestRunner() {
         properties = loadProperties();
         qualifiedName = properties.getProperty(TestProperties.QUALIFIED_NAME);
-        classOrPackageName = properties.getProperty(TestProperties.TEST_CLASS_OR_PACKAGE);
+        qualifiedClassOrPackageName = properties.getProperty(TestProperties.TEST_CLASS_OR_PACKAGE);
         monitorPort = Integer.parseInt(properties.getProperty(TestProperties.MONITOR_PORT));
         timeoutSeconds = Integer.parseInt(properties.getProperty(TestProperties.TIMEOUT));
         runners = Arrays.asList(new JUnitRunner(),
@@ -108,6 +108,21 @@ public class TestRunner {
         System.setOut(monitorPrintStream);
         System.setErr(monitorPrintStream);
 
+        String classOrPackageName;
+        String qualification;
+
+        // Check whether the class or package is qualified and, if so, strip it off and pass it
+        // separately to the runners. For instance, may qualify a junit class by appending
+        // #method_name, where method_name is the name of a single test of the class to run.
+        int hash_position = qualifiedClassOrPackageName.indexOf("#");
+        if (hash_position != -1) {
+            classOrPackageName = qualifiedClassOrPackageName.substring(0, hash_position);
+            qualification = qualifiedClassOrPackageName.substring(hash_position + 1);
+        } else {
+            classOrPackageName = qualifiedClassOrPackageName;
+            qualification = null;
+        }
+
         Set<Class<?>> classes = new ClassFinder().find(classOrPackageName);
 
         for (Class<?> klass : classes) {
@@ -116,7 +131,7 @@ public class TestRunner {
                 Runner runner;
                 try {
                     runner = (Runner) runnerClass.newInstance();
-                    runner.init(monitor, qualifiedName, klass);
+                    runner.init(monitor, qualifiedName, qualification, klass);
                 } catch (Exception e) {
                     monitor.outcomeStarted(qualifiedName, qualifiedName);
                     e.printStackTrace();

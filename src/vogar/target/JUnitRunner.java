@@ -49,7 +49,8 @@ public final class JUnitRunner implements Runner {
     private Test junitTest;
     private int timeoutSeconds;
 
-    public void init(TargetMonitor monitor, String actionName, Class<?> klass) {
+    public void init(TargetMonitor monitor, String actionName, String qualification,
+            Class<?> klass) {
         final TestSuiteLoader testSuiteLoader = new TestSuiteLoader() {
             public Class load(String suiteClassName) throws ClassNotFoundException {
                 return Class.forName(suiteClassName);
@@ -71,7 +72,11 @@ public final class JUnitRunner implements Runner {
             }
         };
 
-        this.junitTest = testRunner.getTest(klass.getName());
+        if (qualification == null) {
+            junitTest = testRunner.getTest(klass.getName());
+        } else {
+            junitTest = TestSuite.createTest(klass, qualification);
+        }
     }
 
     public void run(String actionName, Class<?> klass, String[] args, int timeoutSeconds) {

@@ -110,6 +110,9 @@ public final class Vogar {
         System.out.println("      These should be JUnit tests, jtreg tests, Caliper benchmarks");
         System.out.println("      or executable Java classes.");
         System.out.println();
+        System.out.println("      When passing in a JUnit test class, it may have \"#method_name\"");
+        System.out.println("      appended to it, to specify a single test method.");
+        System.out.println();
         System.out.println("  [args]: arguments passed to the target process. This is only useful when");
         System.out.println("      the target process is a Caliper benchmark or main method.");
         System.out.println();
