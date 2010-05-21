@@ -17,6 +17,8 @@
 package vogar.commands;
 
 import java.io.File;
+import java.io.FileFilter;
+import java.io.FilenameFilter;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -104,7 +106,13 @@ public class AndroidSdk {
     }
 
     public static Collection<File> defaultExpectations() {
-        File[] files = new File("libcore/expectations").listFiles();
+        // ignore obviously temporary files
+        class tempFilter implements FilenameFilter {
+            public boolean accept(File dir, String name) {
+                return !name.endsWith("~") && !name.startsWith(".");
+            }
+        }
+        File[] files = new File("libcore/expectations").listFiles(new tempFilter());
         return (files != null) ? Arrays.asList(files) : Collections.<File>emptyList();
     }
 
