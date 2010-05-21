@@ -106,13 +106,12 @@ public class AndroidSdk {
     }
 
     public static Collection<File> defaultExpectations() {
-        // ignore obviously temporary files
-        class tempFilter implements FilenameFilter {
+        File[] files = new File("libcore/expectations").listFiles(new FilenameFilter() {
+            // ignore obviously temporary files
             public boolean accept(File dir, String name) {
                 return !name.endsWith("~") && !name.startsWith(".");
             }
-        }
-        File[] files = new File("libcore/expectations").listFiles(new tempFilter());
+        });
         return (files != null) ? Arrays.asList(files) : Collections.<File>emptyList();
     }
 
