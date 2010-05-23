@@ -189,9 +189,9 @@ final class Driver implements HostMonitor.Handler {
         }
     }
 
-    private void classesToActions(Collection<String> classes) {
-        for (String clazz : classes) {
-            Action action = new Action(clazz, clazz, null, null, null);
+    private void classesToActions(Collection<String> classNames) {
+        for (String className : classNames) {
+            Action action = new Action(className, className, null, null, null);
             actions.put(action.getName(), action);
         }
     }

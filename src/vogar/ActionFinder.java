@@ -64,7 +64,7 @@ public final class ActionFinder {
             Action action = fileToAction(file);
             actions.put(action.getName(), action);
         } catch (IllegalArgumentException e) {
-            String actionName = file.getPath();
+            String actionName = fileToActionName(file);
             Action action = new Action(actionName, null, null, null, file);
             actions.put(actionName, action);
             outcomes.put(actionName, new Outcome(actionName, Result.UNSUPPORTED, e));
@@ -100,15 +100,8 @@ public final class ActionFinder {
                 throw new IllegalArgumentException("Malformed .java file: " + javaFile);
             }
 
-            String path = javaFile.getAbsolutePath();
-            int indexOfTest = path.indexOf(TEST_ROOT);
-            if (indexOfTest != -1) {
-                path = path.substring(indexOfTest + TEST_ROOT.length(), path.length() - ".java".length());
-            } else {
-                path = path.substring(1);
-            }
-            String actionName = path.replace(File.separatorChar, '.');
-            return new Action(actionName, simpleName, null, javaFile.getParentFile(), javaFile);
+            return new Action(fileToActionName(javaFile), simpleName, null,
+                    javaFile.getParentFile(), javaFile);
         } catch (IOException ex) {
             throw new RuntimeException(ex);
         }
@@ -124,5 +117,14 @@ public final class ActionFinder {
             throw new IllegalArgumentException("Expected a file ending in " + relativePath + " but found " + path);
         }
         return new File(path.substring(0, path.length() - relativePath.length()));
+    }
+
+    private final String fileToActionName(File file) {
+        String path = file.getAbsolutePath();
+        int indexOfTest = path.indexOf(TEST_ROOT);
+        path = (indexOfTest != -1)
+                ? path.substring(indexOfTest + TEST_ROOT.length(), path.length() - ".java".length())
+                : path.substring(1);
+        return path.replace(File.separatorChar, '.');
     }
 }
