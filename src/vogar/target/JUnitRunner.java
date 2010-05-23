@@ -198,7 +198,11 @@ public final class JUnitRunner implements Runner {
                 final Throwable finalThrown = thrown;
                 super.runProtected(test, new Protectable() {
                     public void protect() throws Throwable {
-                        throw finalThrown;
+                        // TODO: remove the unnecessary wrapping when b/2700761 is fixed
+                        Exception wrapped = new Exception();
+                        wrapped.setStackTrace(new StackTraceElement[0]);
+                        wrapped.initCause(finalThrown);
+                        throw wrapped;
                     }
                 });
             }

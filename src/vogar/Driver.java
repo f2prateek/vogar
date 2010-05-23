@@ -109,38 +109,42 @@ final class Driver implements HostMonitor.Handler {
         final BlockingQueue<Action> readyToRun = new ArrayBlockingQueue<Action>(4);
 
         ExecutorService builders = Threads.threadPerCpuExecutor();
-        int t = 0;
 
+        int totalToRun = 0;
         for (final Action action : actions.values()) {
             final String name = action.getName();
-            final int runIndex = t++;
+            if (outcomes.containsKey(name)) {
+                addEarlyResult(outcomes.get(name));
+                continue;
+            } else if (expectationStore.get(name).getResult() == Result.UNSUPPORTED) {
+                addEarlyResult(new Outcome(name, Result.UNSUPPORTED,
+                        "Unsupported according to expectations file"));
+                continue;
+            }
+
+            final int runIndex = totalToRun++;
             builders.submit(new Runnable() {
                 public void run() {
                     try {
                         Console.getInstance().verbose("installing action " + runIndex + "; "
                                 + readyToRun.size() + " are runnable");
-
-                        if (expectationStore.get(name).getResult() == Result.UNSUPPORTED) {
-                            outcomes.put(name, new Outcome(name, Result.UNSUPPORTED,
-                                    "Unsupported according to expectations file"));
-
-                        } else {
-                            Outcome outcome = mode.buildAndInstall(action);
-                            if (outcome != null) {
-                                outcomes.put(name, outcome);
-                            }
+                        Outcome outcome = mode.buildAndInstall(action);
+                        if (outcome != null) {
+                            outcomes.put(name, outcome);
                         }
 
                         readyToRun.put(action);
-                    } catch (InterruptedException e) {
-                        outcomes.put(name, new Outcome(name, Result.ERROR, e));
+                        Console.getInstance().verbose("installed action " + runIndex + "; "
+                                + readyToRun.size() + " are runnable");
+                    } catch (Throwable e) {
+                        Console.getInstance().info("unexpected failure!", e);
                     }
                 }
             });
         }
         builders.shutdown();
 
-        for (int i = 0; i < actions.size(); i++) {
+        for (int i = 0; i < totalToRun; i++) {
             Console.getInstance().verbose("executing action " + i + "; "
                     + readyToRun.size() + " are ready to run");
 
@@ -247,10 +251,7 @@ final class Driver implements HostMonitor.Handler {
             Console.getInstance().verbose("skipping " + action.getName());
             skipped++;
         } else {
-            for (String line : earlyFailure.getOutputLines()) {
-                Console.getInstance().streamOutput(line + "\n");
-            }
-            outcome(earlyFailure);
+            addEarlyResult(earlyFailure);
         }
     }
 
@@ -269,6 +270,13 @@ final class Driver implements HostMonitor.Handler {
                 }
             }
         }, killTime);
+    }
+
+    private void addEarlyResult(Outcome earlyFailure) {
+        for (String line : earlyFailure.getOutputLines()) {
+            Console.getInstance().streamOutput(line + "\n");
+        }
+        outcome(earlyFailure);
     }
 
     public void outcome(Outcome outcome) {

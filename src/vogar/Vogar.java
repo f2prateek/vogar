@@ -252,7 +252,7 @@ public final class Vogar {
             File file = new File(arg);
             if (file.exists()) {
                 if (arg.endsWith(".java") || file.isDirectory()) {
-                    actionFiles.add(file);
+                    actionFiles.add(file.getAbsoluteFile());
                 } else {
                     System.out.println("Expected a .jar file, .java file, directory, "
                             + "package name or classname, but was: " + arg);
