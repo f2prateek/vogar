@@ -182,12 +182,13 @@ final class Driver implements HostMonitor.Handler {
             Console.getInstance().summarizeFailures(failureNames);
             Collections.sort(skippedNames);
             Console.getInstance().summarizeSkips(skippedNames);
-            Console.getInstance().info(String.format("Outcomes: %s. Passed: %d, Failed: %d, Skipped: %d. Took %s.",
-                    (successes + failures), successes, failures, skipped,
+            Console.getInstance().info(String.format(
+                    "Outcomes: %s. Passed: %d, Failed: %d, Skipped: %d. Took %s.",
+                    (successes + failures + skipped), successes, failures, skipped,
                     TimeUtilities.msToString(t1 - t0)));
         } else {
             Console.getInstance().info(String.format("Outcomes: %s. All successful. Took %s.",
-                    (successes + failures), TimeUtilities.msToString(t1 - t0)));
+                    successes, TimeUtilities.msToString(t1 - t0)));
         }
     }
 

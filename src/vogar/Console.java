@@ -55,25 +55,25 @@ public class Console {
         this.verbose = verbose;
     }
 
-    public void verbose(String s) {
+    public synchronized void verbose(String s) {
         newLine();
         System.out.print(s);
         System.out.flush();
         currentLine = CurrentLine.VERBOSE;
     }
 
-    public void info(String s) {
+    public synchronized void info(String s) {
         newLine();
         System.out.println(s);
     }
 
-    public void info(String message, Throwable throwable) {
+    public synchronized void info(String message, Throwable throwable) {
         newLine();
         System.out.println(message);
         throwable.printStackTrace(System.out);
     }
 
-    public void action(String name) {
+    public synchronized void action(String name) {
         newLine();
         System.out.print("Action " + name);
         System.out.flush();
@@ -84,7 +84,7 @@ public class Console {
     /**
      * Prints the beginning of the named outcome.
      */
-    public void outcome(String name) {
+    public synchronized void outcome(String name) {
         // if the outcome and action names are the same, omit the outcome name
         if (name.equals(currentName)) {
             return;
@@ -102,7 +102,7 @@ public class Console {
      * or to a buffer when streaming is off. Buffered output will be held and
      * printed only if the outcome is unsuccessful.
      */
-    public void streamOutput(String output) {
+    public synchronized void streamOutput(String output) {
         if (stream) {
             printOutput(output);
         } else {
@@ -113,7 +113,7 @@ public class Console {
     /**
      * Writes the action's outcome.
      */
-    public void printResult(Result result, ResultValue resultValue) {
+    public synchronized void printResult(Result result, ResultValue resultValue) {
         if (resultValue == ResultValue.OK) {
             String prefix = (currentLine == CurrentLine.NAME) ? " " : "\n" + indent;
             System.out.println(prefix + green("OK (" + result + ")"));
@@ -140,14 +140,14 @@ public class Console {
         currentLine = CurrentLine.NEW;
     }
 
-    public void summarizeFailures(List<String> failureNames) {
+    public synchronized void summarizeFailures(List<String> failureNames) {
         System.out.println("Failure summary:");
         for (String failureName : failureNames) {
             System.out.println(red(failureName));
         }
     }
 
-    public void summarizeSkips(List<String> skippedNames) {
+    public synchronized void summarizeSkips(List<String> skippedNames) {
         System.out.println("Skip summary:");
         for (String skippedName : skippedNames) {
             System.out.println(yellow(skippedName));
