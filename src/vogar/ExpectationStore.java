@@ -54,7 +54,7 @@ final class ExpectationStore {
      * returns a value for all names, even if no explicit expectation was set.
      */
     public Expectation get(String name) {
-        Expectation byName = getByName(name);
+        Expectation byName = getByNameOrPackage(name);
         return byName != null ? byName : Expectation.SUCCESS;
     }
 
@@ -62,11 +62,15 @@ final class ExpectationStore {
      * Finds the expected result for the specified outcome after it has
      * completed. Unlike {@code get()}, this also takes into account the
      * outcome's output.
+     *
+     * <p>For outcomes that have both a name match and an output match,
+     * exact name matches are preferred, then output matches, then inexact
+     * name matches.
      */
     public Expectation get(Outcome outcome) {
-        Expectation byName = getByName(outcome.getName());
-        if (byName != null) {
-            return byName;
+        Expectation exactNameMatch = outcomes.get(outcome.getName());
+        if (exactNameMatch != null) {
+            return exactNameMatch;
         }
 
         for (Map.Entry<String, Expectation> entry : failures.entrySet()) {
@@ -75,10 +79,11 @@ final class ExpectationStore {
             }
         }
 
-        return Expectation.SUCCESS;
+        Expectation byName = getByNameOrPackage(outcome.getName());
+        return byName != null ? byName : Expectation.SUCCESS;
     }
 
-    private Expectation getByName(String name) {
+    private Expectation getByNameOrPackage(String name) {
         while (true) {
             Expectation expectation = outcomes.get(name);
             if (expectation != null) {
