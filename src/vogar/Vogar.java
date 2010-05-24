@@ -19,7 +19,6 @@ package vogar;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -30,6 +29,8 @@ import vogar.commands.AndroidSdk;
  * Command line interface for running benchmarks and tests on dalvik.
  */
 public final class Vogar {
+
+    private static final int LARGE_TIMEOUT_MULTIPLIER = 10;
 
     private final List<File> actionFiles = new ArrayList<File>();
     private final List<String> actionClassesAndPackages = new ArrayList<String>();
@@ -132,7 +133,8 @@ public final class Vogar {
         System.out.println();
         System.out.println("  --timeout <seconds>: maximum execution time of each action before the");
         System.out.println("      runner aborts it. Specifying zero seconds or using --debug will");
-        System.out.println("      disable the execution timeout.");
+        System.out.println("      disable the execution timeout. Tests tagged with 'large' will time");
+        System.out.println("      out in " + LARGE_TIMEOUT_MULTIPLIER + "x this timeout.");
         System.out.println("      Default is: " + timeoutSeconds);
         System.out.println();
         System.out.println("  --xml-reports-directory <path>: directory to emit JUnit-style");
@@ -331,6 +333,7 @@ public final class Vogar {
                 ? new XmlReportPrinter(xmlReportsDirectory, expectationStore)
                 : null;
 
+        int smallTimeoutSeconds = timeoutSeconds;
         Driver driver = new Driver(
                 localTemp,
                 mode,
@@ -338,7 +341,8 @@ public final class Vogar {
                 xmlReportPrinter,
                 monitor,
                 monitorPort,
-                timeoutSeconds);
+                smallTimeoutSeconds,
+                smallTimeoutSeconds * LARGE_TIMEOUT_MULTIPLIER);
 
         driver.buildAndRun(actionFiles, actionClassesAndPackages);
     }

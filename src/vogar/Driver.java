@@ -46,7 +46,8 @@ final class Driver implements HostMonitor.Handler {
     private final XmlReportPrinter reportPrinter;
     private final int monitorPort;
     private final HostMonitor monitor;
-    private final int timeoutSeconds;
+    private final int smallTimeoutSeconds;
+    private final int largeTimeoutSeconds;
     private int successes = 0;
     private int failures = 0;
     private List<String> failureNames = new ArrayList<String>();
@@ -68,14 +69,15 @@ final class Driver implements HostMonitor.Handler {
 
     public Driver(File localTemp, Mode mode, ExpectationStore expectationStore,
             XmlReportPrinter reportPrinter, HostMonitor monitor, int monitorPort,
-            int timeoutSeconds) {
+            int smallTimeoutSeconds, int largeTimeoutSeconds) {
         this.localTemp = localTemp;
         this.expectationStore = expectationStore;
         this.mode = mode;
         this.reportPrinter = reportPrinter;
         this.monitor = monitor;
         this.monitorPort = monitorPort;
-        this.timeoutSeconds = timeoutSeconds;
+        this.smallTimeoutSeconds = smallTimeoutSeconds;
+        this.largeTimeoutSeconds = largeTimeoutSeconds;
     }
 
     /**
@@ -207,6 +209,10 @@ final class Driver implements HostMonitor.Handler {
      */
     private void execute(final Action action) {
         Console.getInstance().action(action.getName());
+        Expectation expectation = expectationStore.get(action.getName());
+        int timeoutSeconds = expectation.getTags().contains("large")
+                ? largeTimeoutSeconds
+                : smallTimeoutSeconds;
 
         Outcome earlyFailure = outcomes.get(action.getName());
         if (earlyFailure == null) {
@@ -215,8 +221,8 @@ final class Driver implements HostMonitor.Handler {
             final AtomicReference<Result> result = new AtomicReference<Result>();
 
             if (timeoutSeconds != 0) {
-                resetKillTime();
-                scheduleTaskKiller(command, result);
+                resetKillTime(timeoutSeconds);
+                scheduleTaskKiller(command, result, timeoutSeconds);
             }
 
             boolean completedNormally = monitor.monitor(monitorPort, this);
@@ -255,12 +261,13 @@ final class Driver implements HostMonitor.Handler {
         }
     }
 
-    private void scheduleTaskKiller(final Command command, final AtomicReference<Result> result) {
+    private void scheduleTaskKiller(
+            final Command command, final AtomicReference<Result> result, final int timeoutSeconds) {
         actionTimeoutTimer.schedule(new TimerTask() {
             @Override public void run() {
                 // if the kill time has been pushed back, reschedule
                 if (System.currentTimeMillis() < killTime.getTime()) {
-                    scheduleTaskKiller(command, result);
+                    scheduleTaskKiller(command, result, timeoutSeconds);
                     return;
                 }
                 if (result.compareAndSet(null, Result.EXEC_TIMEOUT)) {
@@ -280,7 +287,7 @@ final class Driver implements HostMonitor.Handler {
     }
 
     public void outcome(Outcome outcome) {
-        resetKillTime();
+        resetKillTime(smallTimeoutSeconds); // TODO: support flexible timeouts for JUnit tests
         outcomes.put(outcome.getName(), outcome);
         Expectation expectation = expectationStore.get(outcome);
         ResultValue resultValue;
@@ -305,13 +312,13 @@ final class Driver implements HostMonitor.Handler {
     /**
      * Sets the time at which we'll kill a task that starts right now.
      */
-    private void resetKillTime() {
+    private void resetKillTime(int timeoutForTest) {
         /*
          * Give the target process an extra 2 seconds to self-timeout and report
          * the error. This way, when a JUnit test has one slow method, we don't
          * end up killing the whole process.
          */
-        long delay = TimeUnit.SECONDS.toMillis(timeoutSeconds + 2);
+        long delay = TimeUnit.SECONDS.toMillis(timeoutForTest + 2);
         killTime = new Date(System.currentTimeMillis() + delay);
     }
 

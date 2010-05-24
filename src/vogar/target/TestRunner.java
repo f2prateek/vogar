@@ -29,7 +29,7 @@ import vogar.TestProperties;
 /**
  * Runs an action, in process on the target.
  */
-public class TestRunner {
+public final class TestRunner {
 
     protected final Properties properties;
 
@@ -50,19 +50,29 @@ public class TestRunner {
                                 new MainRunner());
     }
 
-    protected static Properties loadProperties() {
+    private Properties loadProperties() {
         Properties properties = new Properties();
         try {
-            InputStream propertiesStream = TestRunner.class.getResourceAsStream(
-                    "/" + TestProperties.FILE);
-            if (propertiesStream == null) {
-                throw new RuntimeException(TestProperties.FILE + " missing!");
-            }
-            properties.load(propertiesStream);
+            properties.load(getPropertiesStream());
             return properties;
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * Attempt to load the test properties file from both the application and system classloader.
+     * This is necessary because sometimes we run tests from the boot classpath.
+     */
+    private InputStream getPropertiesStream() throws IOException {
+        for (Class<?> classToLoadFrom : new Class<?>[] { TestRunner.class, Object.class }) {
+            InputStream propertiesStream = classToLoadFrom.getResourceAsStream(
+                    "/" + TestProperties.FILE);
+            if (propertiesStream != null) {
+                return propertiesStream;
+            }
+        }
+        throw new IOException(TestProperties.FILE + " missing!");
     }
 
     /**

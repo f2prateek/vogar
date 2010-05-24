@@ -16,6 +16,9 @@
 
 package vogar;
 
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
@@ -39,7 +42,8 @@ final class Expectation {
             = Pattern.compile(".*", Pattern.MULTILINE | Pattern.DOTALL);
 
     /** The expectation of a general successful run. */
-    static final Expectation SUCCESS = new Expectation(Result.SUCCESS, null);
+    static final Expectation SUCCESS = new Expectation(Result.SUCCESS, null,
+            Collections.<String>emptySet());
 
     /** The action's expected result, such as {@code EXEC_FAILED}. */
     private final Result result;
@@ -47,7 +51,10 @@ final class Expectation {
     /** The pattern the expected output will match. */
     private final Pattern pattern;
 
-    public Expectation(Result result, String pattern) {
+    /** Attributes of this test. */
+    private final Set<String> tags;
+
+    public Expectation(Result result, String pattern, Set<String> tags) {
         if (result == null) {
             throw new IllegalArgumentException();
         }
@@ -56,10 +63,15 @@ final class Expectation {
         this.pattern = pattern != null
                 ? Pattern.compile(pattern, Pattern.MULTILINE | Pattern.DOTALL)
                 : MATCH_ALL_PATTERN;
+        this.tags = new LinkedHashSet<String>(tags);
     }
 
     public Result getResult() {
         return result;
+    }
+
+    public Set<String> getTags() {
+        return tags;
     }
 
     /**

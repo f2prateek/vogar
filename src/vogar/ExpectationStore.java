@@ -20,7 +20,9 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -120,8 +122,9 @@ final class ExpectationStore {
             // the fields of interest for the current element
             String type = null;
             String qualifiedName = null;
-            Result result = null;
+            Result result = Result.SUCCESS;
             String pattern = null;
+            Set<String> tags = new LinkedHashSet<String>();
 
             String line;
             while ((line = reader.readLine()) != null) {
@@ -139,20 +142,24 @@ final class ExpectationStore {
 
                 String key = keyValuePairMatcher.group(1);
                 String value = keyValuePairMatcher.group(2);
-                if (key.equals("result") && result == null) {
+                if (key.equals("result")) {
                     result = Result.valueOf(value);
 
                 } else if (key.equals("pattern") && pattern == null) {
                     pattern = value;
+
+                } else if (key.equals("tags")) {
+                    tags.addAll(Arrays.asList(value.toLowerCase().split("[\\s,]+")));
 
                 } else if (key.equals("test") || key.equals("failure")) {
                     // when we encounter a new qualified name, the previous
                     // element is complete. Add it to the results.
                     if (qualifiedName != null) {
                         count++;
-                        put(type, qualifiedName, result, pattern);
-                        result = null;
+                        put(type, qualifiedName, result, pattern, tags);
+                        result = Result.SUCCESS;
                         pattern = null;
+                        tags.clear();
                     }
                     type = key;
                     qualifiedName = value;
@@ -166,7 +173,7 @@ final class ExpectationStore {
             // add the last element in the file
             if (qualifiedName != null) {
                 count++;
-                put(type, qualifiedName, result, pattern);
+                put(type, qualifiedName, result, pattern, tags);
             }
 
             Console.getInstance().verbose("loaded " + count + " expectations from " + expectationsFile);
@@ -175,8 +182,8 @@ final class ExpectationStore {
         }
     }
 
-    void put(String type, String qualifiedName, Result result, String pattern) {
-        Expectation expectation = new Expectation(result, pattern);
+    void put(String type, String qualifiedName, Result result, String pattern, Set<String> tags) {
+        Expectation expectation = new Expectation(result, pattern, tags);
         Map<String, Expectation> map = "test".equals(type) ? outcomes : failures;
         if (map.put(qualifiedName, expectation) != null) {
             throw new IllegalArgumentException(
