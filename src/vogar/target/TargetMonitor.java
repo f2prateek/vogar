@@ -19,6 +19,7 @@ package vogar.target;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.regex.Pattern;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
 import org.xmlpull.v1.XmlSerializer;
@@ -30,6 +31,8 @@ import vogar.Result;
 class TargetMonitor {
 
     private static final int ACCEPT_TIMEOUT_MILLIS = 10 * 1000;
+    private static final Pattern XML_INVALID_CHARS
+            = Pattern.compile("[^\\x09\\x0A\\x0D\\x20-\\xD7FF\\xE000-\\xFFFD]+");
 
     private static final String ns = null; // no namespaces
     ServerSocket serverSocket;
@@ -74,12 +77,19 @@ class TargetMonitor {
     public void output(String text) {
         try {
             synchronized (serializer) {
-                serializer.text(text);
+                serializer.text(sanitize(text));
                 serializer.flush();
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * Replaces XML-invalid characters with a placeholder.
+     */
+    private static String sanitize(String text) {
+        return XML_INVALID_CHARS.matcher(text).replaceAll("<?>");
     }
 
     public void outcomeFinished(Result result) {
