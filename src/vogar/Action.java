@@ -24,6 +24,8 @@ import java.io.File;
  */
 public final class Action {
 
+    private static final String TEST_ROOT = "/test/";
+
     private final String name;
     private final String actionClass;
     private final File resourcesDirectory;
@@ -94,5 +96,18 @@ public final class Action {
 
     @Override public String toString() {
         return name;
+    }
+
+    /**
+     * Returns an action name appropriate for the given {@code .java} file
+     * without first reading the contents of the file.
+     */
+    public static final String nameForJavaFile(File javaFile) {
+        String path = javaFile.getAbsolutePath();
+        int indexOfTest = path.indexOf(TEST_ROOT);
+        path = (indexOfTest != -1)
+                ? path.substring(indexOfTest + TEST_ROOT.length(), path.length() - ".java".length())
+                : path.substring(1);
+        return path.replace(File.separatorChar, '.');
     }
 }
