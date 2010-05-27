@@ -19,6 +19,7 @@ package vogar.target;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
@@ -86,10 +87,25 @@ class TargetMonitor {
     }
 
     /**
-     * Replaces XML-invalid characters with a placeholder.
+     * Replaces XML-invalid characters with the corresponding U+XXXX code point escapes.
      */
     private static String sanitize(String text) {
-        return XML_INVALID_CHARS.matcher(text).replaceAll("<?>");
+        StringBuffer result = new StringBuffer();
+        Matcher matcher = XML_INVALID_CHARS.matcher(text);
+        while (matcher.find()) {
+            matcher.appendReplacement(result, "");
+            result.append(escapeCodePoint(matcher.group()));
+        }
+        matcher.appendTail(result);
+        return result.toString();
+    }
+
+    private static String escapeCodePoint(CharSequence cs) {
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < cs.length(); ++i) {
+            result.append(String.format("U+%04X", (int) cs.charAt(i)));
+        }
+        return result.toString();
     }
 
     public void outcomeFinished(Result result) {
