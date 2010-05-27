@@ -17,18 +17,21 @@
 package vogar.commands;
 
 import java.io.File;
-import java.io.FileFilter;
+import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
 import vogar.Classpath;
 import vogar.Console;
+import vogar.DeviceCacheFileInterface;
+import vogar.HostCacheFileInterface;
 import vogar.Md5Cache;
 import vogar.Strings;
 
@@ -36,7 +39,10 @@ import vogar.Strings;
  * Android SDK commands such as adb, aapt and dx.
  */
 public class AndroidSdk {
-    private static final Md5Cache DEX_CACHE = new Md5Cache("dex");
+    private final Md5Cache DEX_CACHE;
+    private final Md5Cache PUSH_CACHE;
+    private boolean deviceCache = false;
+    private Set<File> mkdirCache = new HashSet<File>();
 
     private static final Comparator<File> ORDER_BY_NAME = new Comparator<File>() {
         public int compare(File a, File b) {
@@ -58,6 +64,8 @@ public class AndroidSdk {
     private AndroidSdk(File androidClasses, File androidToolsDir) {
         this.androidClasses = androidClasses;
         this.androidToolsDir = androidToolsDir;
+        DEX_CACHE = new Md5Cache("dex", new HostCacheFileInterface());
+        PUSH_CACHE = new Md5Cache("pushed", new DeviceCacheFileInterface(this));
     }
 
     public static AndroidSdk getFromPath() {
@@ -119,6 +127,10 @@ public class AndroidSdk {
         return androidClasses;
     }
 
+    public void setDeviceCache(boolean deviceCache) {
+        this.deviceCache = deviceCache;
+    }
+
     /**
      * Returns the path to a version-specific tool.
      *
@@ -152,13 +164,6 @@ public class AndroidSdk {
      * Converts all the .class files on 'classpath' into a dex file written to 'output'.
      */
     public void dex(File output, Classpath classpath) {
-        output.getParentFile().mkdirs();
-        File key = DEX_CACHE.makeKey(classpath);
-        if (key != null && key.exists()) {
-            Console.getInstance().verbose("dex cache hit for " + classpath);
-            new Command.Builder().args("cp", key, output).execute();
-            return;
-        }
         /*
          * We pass --core-library so that we can write tests in the
          * same package they're testing, even when that's a core
@@ -170,16 +175,19 @@ public class AndroidSdk {
          * Memory options pulled from build/core/definitions.mk to
          * handle large dx input when building dex for APK.
          */
-        new Command.Builder()
+        Command fallbackCommand = new Command.Builder()
                 .args(toolPath("dx"))
                 .args("-JXms16M")
                 .args("-JXmx1536M")
                 .args("--dex")
                 .args("--output=" + output)
                 .args("--core-library")
-                .args(Strings.objectsToStrings(classpath.getElements()))
-                .execute();
-        DEX_CACHE.insert(key, output);
+                .args(Strings.objectsToStrings(classpath.getElements())).build();
+        boolean cacheHit = DEX_CACHE.getFromCache(output, DEX_CACHE.makeKey(classpath),
+                fallbackCommand);
+        if (cacheHit) {
+            Console.getInstance().verbose("dex cache hit for " + classpath);
+        }
     }
 
     public void packageApk(File apk, File manifest) {
@@ -196,15 +204,79 @@ public class AndroidSdk {
     }
 
     public void mkdir(File name) {
-        new Command("adb", "shell", "mkdir", name.getPath()).execute();
+        // to reduce adb traffic, only try to make a directory if we haven't tried before.
+        if (mkdirCache.contains(name)) {
+            return;
+        }
+        List<String> rawResult = new Command("adb", "shell", "mkdir", name.getPath()).execute();
+        // fail if this failed for any reason other than the file existing.
+        if (!rawResult.isEmpty() && !rawResult.get(0).contains("File exists")) {
+            throw new RuntimeException("Couldn't create directory " + name
+                    + ": " + rawResult.get(0));
+        }
+        mkdirCache.add(name);
+    }
+
+    // Do some directory bootstrapping since "mkdir -p" doesn't always work.
+    public void mkdirs(File name) {
+        LinkedList<File> directoryQueue = new LinkedList<File>();
+        File dir = name;
+        // don't bother trying to create /sdcard or /
+        while (dir != null && !dir.getPath().equals("/sdcard") && !dir.getPath().equals("/")) {
+            directoryQueue.addFirst(dir);
+            dir = dir.getParentFile();
+        }
+        for (File createDir : directoryQueue) {
+            try {
+                mkdir(createDir);
+            } catch (RuntimeException e) {
+                // ignore
+            }
+        }
+    }
+
+    public void mv(File source, File destination) {
+        new Command("adb", "shell", "mv", source.getPath(), destination.getPath()).execute();
     }
 
     public void rm(File name) {
         new Command("adb", "shell", "rm", "-r", name.getPath()).execute();
     }
 
+    public void cp(File source, File destination) {
+        // adb doesn't support "cp" command directly
+        new Command("adb", "shell", "cat", source.getPath(), ">", destination.getPath()).execute();
+    }
+
+    public Set<File> ls(File dir) throws FileNotFoundException {
+        List<String> rawResult = new Command("adb", "shell", "ls", dir.getPath()).execute();
+        Set<File> files = new HashSet<File>();
+        for (String fileString : rawResult) {
+            if (fileString.equals(dir.getPath() + ": No such file or directory")) {
+                throw new FileNotFoundException("File or directory " + dir + " not found.");
+            }
+            if (fileString.equals(dir.getPath())) {
+                // The argument must have been a file or symlink, not a directory
+                files.add(dir);
+            } else {
+                files.add(new File(dir, fileString));
+            }
+        }
+        return files;
+    }
+
     public void push(File local, File remote) {
-        new Command("adb", "push", local.getPath(), remote.getPath()).execute();
+        Command fallbackCommand = new Command("adb", "push", local.getPath(), remote.getPath());
+        // don't yet cache directories (only used by jtreg tests)
+        if (deviceCache && local.isFile()) {
+            boolean found = PUSH_CACHE.getFromCache(remote, PUSH_CACHE.makeKey(local),
+                    fallbackCommand);
+            if (found) {
+                Console.getInstance().verbose("device cache hit for " + local);
+            }
+        } else {
+            fallbackCommand.execute();
+        }
     }
 
     public void install(File apk) {

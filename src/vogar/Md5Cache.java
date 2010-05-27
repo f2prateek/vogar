@@ -20,22 +20,33 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.security.MessageDigest;
 import vogar.commands.Command;
-import vogar.commands.Mkdir;
 
 /**
  * Caches content by MD5.
  */
 public final class Md5Cache {
-    private static final File CACHE_ROOT = new File("/tmp/vogar-md5-cache/");
 
     private final String keyPrefix;
+    private final CacheFileInterface cacheFileInterface;
 
     /**
      * Creates a new cache accessor. There's only one directory on disk, so 'keyPrefix' is really
      * just a convenience for humans inspecting the cache.
      */
-    public Md5Cache(String keyPrefix) {
+    public Md5Cache(String keyPrefix, CacheFileInterface cacheFileInterface) {
         this.keyPrefix = keyPrefix;
+        this.cacheFileInterface = cacheFileInterface;
+    }
+
+    public boolean getFromCache(File output, String key, Command fallbackCommand) {
+        cacheFileInterface.prepareDestination(output);
+        if (cacheFileInterface.existsInCache(key)) {
+            cacheFileInterface.copyFromCache(key, output);
+            return true;
+        }
+        fallbackCommand.execute();
+        insert(key, output);
+        return false;
     }
 
     /**
@@ -75,7 +86,7 @@ public final class Md5Cache {
      * Returns the appropriate key for a dex file corresponding to the contents of 'classpath'.
      * Returns null if we don't think it's possible to cache the given classpath.
      */
-    public File makeKey(Classpath classpath) {
+    public String makeKey(Classpath classpath) {
         // Do we have it in cache?
         String key = keyPrefix;
         for (File element : classpath.getElements()) {
@@ -85,7 +96,14 @@ public final class Md5Cache {
             }
             key += "-" + md5(element);
         }
-        return new File(CACHE_ROOT, key);
+        return key;
+    }
+
+    /**
+     * Returns a key corresponding to the MD5ed contents of {@code file}.
+     */
+    public String makeKey(File file) {
+        return keyPrefix + "-" + md5(file);
     }
 
     /**
@@ -96,20 +114,11 @@ public final class Md5Cache {
      * We accept a null so the caller doesn't have to pay attention to whether we think we can
      * cache the content or not.
      */
-    public void insert(File key, File content) {
+    private void insert(String key, File content) {
         if (key == null) {
             return;
         }
         Console.getInstance().verbose("inserting " + key);
-        if (!key.toString().startsWith(CACHE_ROOT.toString())) {
-            throw new IllegalArgumentException("key '" + key + "' not a valid cache key");
-        }
-        // Make sure the cache exists first.
-        new Mkdir().mkdirs(CACHE_ROOT);
-        // Copy it onto the same file system first, then atomically move it into place.
-        // That way, if we fail, we don't leave anything dangerous lying around.
-        File temporary = new File(key + ".tmp");
-        new Command.Builder().args("cp", content, temporary).execute();
-        new Command.Builder().args("mv", temporary, key).execute();
+        cacheFileInterface.copyToCache(content, key);
     }
 }

@@ -29,7 +29,7 @@ public final class DotJavaFile {
             "(?m)^\\s*package\\s+(\\S+)\\s*;");
     private static final Pattern TYPE_DECLARATION_PATTERN = Pattern.compile(
             "(?m)\\b(?:public|private\\s+)?(?:final\\s+)?(?:interface|class|enum)\\b");
-    private static final Pattern AT_TEST_PATTERN = Pattern.compile("@test");
+    private static final Pattern AT_TEST_PATTERN = Pattern.compile("\\W@test\\W");
 
     private final String simpleName;
     private final String packageName;

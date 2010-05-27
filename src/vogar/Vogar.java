@@ -102,6 +102,9 @@ public final class Vogar {
     @Option(names = { "--sourcepath" })
     private List<File> sourcepath = new ArrayList<File>();
 
+    @Option(names = { "--device-cache" })
+    private boolean deviceCache = false;
+
     private Vogar() {}
 
     private void printUsage() {
@@ -170,6 +173,10 @@ public final class Vogar {
         System.out.println("      which javac gets used. When unset, java is used from the PATH.");
         System.out.println();
         System.out.println("EXOTIC OPTIONS");
+        System.out.println();
+        System.out.println("  --device-cache: keep copies of dexed files on the sdcard so they");
+        System.out.println("      don't need to be pushed each time a test is run, improving");
+        System.out.println("      start times. Only affects device mode.");
         System.out.println();
         System.out.println("  --clean-before: remove working directories before building and");
         System.out.println("      running (default). Disable with --no-clean-before if you are");
@@ -293,6 +300,7 @@ public final class Vogar {
         AndroidSdk androidSdk = null;
         if (mode.requiresAndroidSdk()) {
             androidSdk = AndroidSdk.getFromPath();
+            androidSdk.setDeviceCache(deviceCache);
             modeOptions.buildClasspath.addAll(androidSdk.getAndroidClasses());
         }
 
