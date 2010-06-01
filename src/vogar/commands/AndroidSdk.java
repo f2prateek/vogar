@@ -30,8 +30,8 @@ import java.util.Set;
 import java.util.concurrent.TimeoutException;
 import vogar.Classpath;
 import vogar.Console;
-import vogar.DeviceCacheFileInterface;
-import vogar.HostCacheFileInterface;
+import vogar.DeviceFileCache;
+import vogar.HostFileCache;
 import vogar.Md5Cache;
 import vogar.Strings;
 
@@ -39,8 +39,8 @@ import vogar.Strings;
  * Android SDK commands such as adb, aapt and dx.
  */
 public class AndroidSdk {
-    private final Md5Cache DEX_CACHE;
-    private final Md5Cache PUSH_CACHE;
+    private final Md5Cache dexCache;
+    private final Md5Cache pushCache;
     private boolean deviceCache = false;
     private Set<File> mkdirCache = new HashSet<File>();
 
@@ -64,8 +64,8 @@ public class AndroidSdk {
     private AndroidSdk(File androidClasses, File androidToolsDir) {
         this.androidClasses = androidClasses;
         this.androidToolsDir = androidToolsDir;
-        DEX_CACHE = new Md5Cache("dex", new HostCacheFileInterface());
-        PUSH_CACHE = new Md5Cache("pushed", new DeviceCacheFileInterface(this));
+        dexCache = new Md5Cache("dex", new HostFileCache());
+        pushCache = new Md5Cache("pushed", new DeviceFileCache(this));
     }
 
     public static AndroidSdk getFromPath() {
@@ -164,6 +164,14 @@ public class AndroidSdk {
      * Converts all the .class files on 'classpath' into a dex file written to 'output'.
      */
     public void dex(File output, Classpath classpath) {
+        new Mkdir().mkdirs(output.getParentFile());
+
+        String key = dexCache.makeKey(classpath);
+        boolean cacheHit = dexCache.getFromCache(output, key);
+        if (cacheHit) {
+            Console.getInstance().verbose("dex cache hit for " + classpath);
+            return;
+        }
         /*
          * We pass --core-library so that we can write tests in the
          * same package they're testing, even when that's a core
@@ -175,19 +183,15 @@ public class AndroidSdk {
          * Memory options pulled from build/core/definitions.mk to
          * handle large dx input when building dex for APK.
          */
-        Command fallbackCommand = new Command.Builder()
+        new Command.Builder()
                 .args(toolPath("dx"))
                 .args("-JXms16M")
                 .args("-JXmx1536M")
                 .args("--dex")
                 .args("--output=" + output)
                 .args("--core-library")
-                .args(Strings.objectsToStrings(classpath.getElements())).build();
-        boolean cacheHit = DEX_CACHE.getFromCache(output, DEX_CACHE.makeKey(classpath),
-                fallbackCommand);
-        if (cacheHit) {
-            Console.getInstance().verbose("dex cache hit for " + classpath);
-        }
+                .args(Strings.objectsToStrings(classpath.getElements())).execute();
+        dexCache.insert(key, output);
     }
 
     public void packageApk(File apk, File manifest) {
@@ -208,30 +212,30 @@ public class AndroidSdk {
         if (mkdirCache.contains(name)) {
             return;
         }
-        List<String> rawResult = new Command("adb", "shell", "mkdir", name.getPath()).execute();
+        List<String> args = Arrays.asList("adb", "shell", "mkdir", name.getPath());
+        List<String> rawResult = new Command(args).execute();
         // fail if this failed for any reason other than the file existing.
         if (!rawResult.isEmpty() && !rawResult.get(0).contains("File exists")) {
-            throw new RuntimeException("Couldn't create directory " + name
-                    + ": " + rawResult.get(0));
+            throw new CommandFailedException(args, rawResult);
         }
         mkdirCache.add(name);
     }
 
-    // Do some directory bootstrapping since "mkdir -p" doesn't always work.
     public void mkdirs(File name) {
-        LinkedList<File> directoryQueue = new LinkedList<File>();
+        LinkedList<File> directoryStack = new LinkedList<File>();
         File dir = name;
-        // don't bother trying to create /sdcard or /
+        // Do some directory bootstrapping since "mkdir -p" doesn't work in adb shell. Don't bother
+        // trying to create /sdcard or /. This might reach dir == null if given a relative path,
+        // otherwise it should terminate with "/sdcard" or "/".
         while (dir != null && !dir.getPath().equals("/sdcard") && !dir.getPath().equals("/")) {
-            directoryQueue.addFirst(dir);
+            directoryStack.addFirst(dir);
             dir = dir.getParentFile();
         }
-        for (File createDir : directoryQueue) {
-            try {
-                mkdir(createDir);
-            } catch (RuntimeException e) {
-                // ignore
-            }
+        // would love to do "adb shell mkdir DIR1 DIR2 DIR3 ..." but unfortunately this will stop
+        // if any of the directories fail to be created (even for a reason like "file exists"), so
+        // they have to be created one by one.
+        for (File createDir : directoryStack) {
+            mkdir(createDir);
         }
     }
 
@@ -267,13 +271,17 @@ public class AndroidSdk {
 
     public void push(File local, File remote) {
         Command fallbackCommand = new Command("adb", "push", local.getPath(), remote.getPath());
+        mkdirs(remote.getParentFile());
         // don't yet cache directories (only used by jtreg tests)
         if (deviceCache && local.isFile()) {
-            boolean found = PUSH_CACHE.getFromCache(remote, PUSH_CACHE.makeKey(local),
-                    fallbackCommand);
-            if (found) {
+            String key = pushCache.makeKey(local);
+            boolean cacheHit = pushCache.getFromCache(remote, key);
+            if (cacheHit) {
                 Console.getInstance().verbose("device cache hit for " + local);
+                return;
             }
+            fallbackCommand.execute();
+            pushCache.insert(key, remote);
         } else {
             fallbackCommand.execute();
         }

@@ -103,7 +103,7 @@ public final class Vogar {
     private List<File> sourcepath = new ArrayList<File>();
 
     @Option(names = { "--device-cache" })
-    private boolean deviceCache = false;
+    private boolean deviceCache = true;
 
     private Vogar() {}
 
@@ -174,9 +174,10 @@ public final class Vogar {
         System.out.println();
         System.out.println("EXOTIC OPTIONS");
         System.out.println();
-        System.out.println("  --device-cache: keep copies of dexed files on the sdcard so they");
+        System.out.println("  --device-cache: keep copies of dexed files on the SD card so they");
         System.out.println("      don't need to be pushed each time a test is run, improving");
-        System.out.println("      start times. Only affects device mode.");
+        System.out.println("      start times (default). Only affects device mode. Disable with");
+        System.out.println("      --no-device-cache if to save space on the SD card.");
         System.out.println();
         System.out.println("  --clean-before: remove working directories before building and");
         System.out.println("      running (default). Disable with --no-clean-before if you are");

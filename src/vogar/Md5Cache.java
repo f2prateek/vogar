@@ -27,25 +27,22 @@ import vogar.commands.Command;
 public final class Md5Cache {
 
     private final String keyPrefix;
-    private final CacheFileInterface cacheFileInterface;
+    private final FileCache fileCache;
 
     /**
      * Creates a new cache accessor. There's only one directory on disk, so 'keyPrefix' is really
      * just a convenience for humans inspecting the cache.
      */
-    public Md5Cache(String keyPrefix, CacheFileInterface cacheFileInterface) {
+    public Md5Cache(String keyPrefix, FileCache fileCache) {
         this.keyPrefix = keyPrefix;
-        this.cacheFileInterface = cacheFileInterface;
+        this.fileCache = fileCache;
     }
 
-    public boolean getFromCache(File output, String key, Command fallbackCommand) {
-        cacheFileInterface.prepareDestination(output);
-        if (cacheFileInterface.existsInCache(key)) {
-            cacheFileInterface.copyFromCache(key, output);
+    public boolean getFromCache(File output, String key) {
+        if (fileCache.existsInCache(key)) {
+            fileCache.copyFromCache(key, output);
             return true;
         }
-        fallbackCommand.execute();
-        insert(key, output);
         return false;
     }
 
@@ -114,11 +111,11 @@ public final class Md5Cache {
      * We accept a null so the caller doesn't have to pay attention to whether we think we can
      * cache the content or not.
      */
-    private void insert(String key, File content) {
+    public void insert(String key, File content) {
         if (key == null) {
             return;
         }
         Console.getInstance().verbose("inserting " + key);
-        cacheFileInterface.copyToCache(content, key);
+        fileCache.copyToCache(content, key);
     }
 }

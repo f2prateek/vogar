@@ -1,23 +1,30 @@
+/*
+ * Copyright (C) 2010 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package vogar;
 
 import java.io.File;
 import java.util.List;
 
 import vogar.commands.Command;
+import vogar.commands.Mkdir;
+import vogar.commands.Rm;
 
-public class HostCacheFileInterface implements CacheFileInterface {
+public class HostFileCache implements FileCache {
     private final File CACHE_ROOT = new File("/tmp/vogar-md5-cache/");
-
-    private void mkdirs(File dir) {
-        dir.mkdirs();
-        if (!(dir.exists() && dir.isDirectory())) {
-            throw new RuntimeException("Couldn't create directory " + dir.getPath());
-        }
-    }
-
-    public void prepareDestination(File destination) {
-        mkdirs(destination.getParentFile());
-    }
 
     private void cp(File source, File destination) {
         List<String> rawResult = new Command.Builder().args("cp", source, destination).execute();
@@ -44,7 +51,7 @@ public class HostCacheFileInterface implements CacheFileInterface {
 
     public void copyToCache(File source, String key) {
         File cachedFile = new File(CACHE_ROOT, key);
-        mkdirs(CACHE_ROOT);
+        new Mkdir().mkdirs(CACHE_ROOT);
         // Copy it onto the same file system first, then atomically move it into place.
         // That way, if we fail, we don't leave anything dangerous lying around.
         File temporary = new File(cachedFile + ".tmp");
