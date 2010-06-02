@@ -26,6 +26,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Parses command line options.
@@ -192,6 +193,7 @@ public class OptionParser {
 
     private final Object optionSource;
     private final HashMap<String, Field> optionMap;
+    private final Map<Field, Object> defaultOptionMap;
 
     /**
      * Constructs a new OptionParser for setting the @Option fields of 'optionSource'.
@@ -199,6 +201,7 @@ public class OptionParser {
     public OptionParser(Object optionSource) {
         this.optionSource = optionSource;
         this.optionMap = makeOptionMap();
+        this.defaultOptionMap = new HashMap<Field, Object>();
     }
 
     /**
@@ -266,7 +269,7 @@ public class OptionParser {
                 value = grabNextValue(args, name, field);
             }
         }
-        setValue(optionSource, field, arg, handler, value);
+        setValue(field, arg, handler, value);
     }
 
     // Given boolean options a and b, and non-boolean option f, we want to allow:
@@ -291,12 +294,12 @@ public class OptionParser {
                     value = grabNextValue(args, name, field);
                 }
             }
-            setValue(optionSource, field, arg, handler, value);
+            setValue(field, arg, handler, value);
         }
     }
 
     @SuppressWarnings("unchecked")
-    private static void setValue(Object object, Field field, String arg, Handler handler, String valueText) {
+    private void setValue(Field field, String arg, Handler handler, String valueText) {
 
         Object value = handler.translate(valueText);
         if (value == null) {
@@ -305,14 +308,31 @@ public class OptionParser {
         }
         try {
             field.setAccessible(true);
+            // record the original value of the field so it can be reset
+            if (!defaultOptionMap.containsKey(field)) {
+                defaultOptionMap.put(field, field.get(optionSource));
+            }
             if (Collection.class.isAssignableFrom(field.getType())) {
-                Collection collection = (Collection) field.get(object);
+                Collection collection = (Collection) field.get(optionSource);
                 collection.add(value);
             } else {
-                field.set(object, value);
+                field.set(optionSource, value);
             }
         } catch (IllegalAccessException ex) {
             throw new RuntimeException("internal error", ex);
+        }
+    }
+
+    /**
+     * Resets optionSource's fields to their defaults
+     */
+    public void reset() {
+        for (Map.Entry<Field, Object> entry : defaultOptionMap.entrySet()) {
+            try {
+                entry.getKey().set(optionSource, entry.getValue());
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 

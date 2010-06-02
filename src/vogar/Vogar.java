@@ -17,6 +17,7 @@
 package vogar;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -105,6 +106,18 @@ public final class Vogar {
     @Option(names = { "--device-cache" })
     private boolean deviceCache = true;
 
+    @Option(names = { "--tag-dir" })
+    private File tagDir = new File(System.getProperty("user.home", ".vogar/tags/") + "/.vogar/tags/");
+
+    @Option(names = { "--tag" })
+    private String tagName = null;
+
+    @Option(names = { "--run-tag" })
+    private String runTag = null;
+
+    @Option(names = { "--tag-overwrite" })
+    private boolean tagOverwrite = false;
+
     private Vogar() {}
 
     private void printUsage() {
@@ -153,6 +166,18 @@ public final class Vogar {
         System.out.println();
         System.out.println("  --sourcepath <directory>: add the directory to the build sourcepath.");
         System.out.println();
+        System.out.println("  --tag-dir <directory>: directory in which to find tags.");
+        System.out.println("      Default is: " + tagDir);
+        System.out.println();
+        System.out.println("  --tag <tag name>: creates a tag recording the arguments to this");
+        System.out.println("      invocation of Vogar so that it can be rerun later.");
+        System.out.println();
+        System.out.println("  --run-tag <tag name>: runs Vogar with arguments as specified by the");
+        System.out.println("      tag. Any arguments supplied for this run will override those");
+        System.out.println("      supplied by the tag.");
+        System.out.println();
+        System.out.println("  --tag-overwrite: allow --tag to overwrite an existing tag.");
+        System.out.println();
         System.out.println("  --verbose: turn on persistent verbose output.");
         System.out.println();
         System.out.println("TARGET OPTIONS");
@@ -177,7 +202,7 @@ public final class Vogar {
         System.out.println("  --device-cache: keep copies of dexed files on the SD card so they");
         System.out.println("      don't need to be pushed each time a test is run, improving");
         System.out.println("      start times (default). Only affects device mode. Disable with");
-        System.out.println("      --no-device-cache if to save space on the SD card.");
+        System.out.println("      --no-device-cache to save space on the SD card.");
         System.out.println();
         System.out.println("  --clean-before: remove working directories before building and");
         System.out.println("      running (default). Disable with --no-clean-before if you are");
@@ -209,11 +234,42 @@ public final class Vogar {
 
     private boolean parseArgs(String[] args) {
         List<String> actionsAndTargetArgs;
+        OptionParser optionParser = new OptionParser(this);
         try {
-            actionsAndTargetArgs = new OptionParser(this).parse(args);
+            actionsAndTargetArgs = optionParser.parse(args);
         } catch (RuntimeException e) {
             System.out.println(e.getMessage());
+            optionParser.reset();
             return false;
+        }
+
+        if (runTag != null && tagName != null) {
+            System.out.println("Cannot use both --run-tag and --tag options");
+            optionParser.reset();
+            return false;
+        }
+
+        if (runTag != null) {
+            String oldTag = tagName;
+            String[] runTagArgs;
+            try {
+                runTagArgs = new Tag(tagDir, runTag, false).getArgs();
+                System.out.println("Executing Vogar with additional arguments from tag \""
+                        + runTag + "\":");
+                System.out.println(Strings.join(runTagArgs, " "));
+            } catch (FileNotFoundException e) {
+                System.out.println("Tag \"" + runTag + "\" doesn't exist - can't run it");
+                optionParser.reset();
+                return false;
+            }
+            // rollback changes already made by the optionParser
+            optionParser.reset();
+            // runTags options are applied first so that the current command's arguments win if
+            // there is a conflict
+            actionsAndTargetArgs = optionParser.parse(runTagArgs);
+            // tag is the only argument we don't allow to be supplied by the run tag
+            tagName = oldTag;
+            actionsAndTargetArgs.addAll(optionParser.parse(args));
         }
 
         //
@@ -222,17 +278,20 @@ public final class Vogar {
 
         if (javaHome != null && !new File(javaHome, "/bin/java").exists()) {
             System.out.println("Invalid java home: " + javaHome);
+            optionParser.reset();
             return false;
         }
 
         // check vm option consistency
         if (!mode.acceptsVmArgs() && !vmArgs.isEmpty()) {
             System.out.println("VM args " + vmArgs + " should not be specified for mode " + mode);
+            optionParser.reset();
             return false;
         }
 
         if (xmlReportsDirectory != null && !xmlReportsDirectory.isDirectory()) {
             System.out.println("Invalid XML reports directory: " + xmlReportsDirectory);
+            optionParser.reset();
             return false;
         }
 
@@ -266,6 +325,7 @@ public final class Vogar {
                 } else {
                     System.out.println("Expected a .jar file, .java file, directory, "
                             + "package name or classname, but was: " + arg);
+                    optionParser.reset();
                     return false;
                 }
             } else {
@@ -277,12 +337,25 @@ public final class Vogar {
 
         if (actionFiles.isEmpty() && actionClassesAndPackages.isEmpty()) {
             System.out.println("No actions provided.");
+            optionParser.reset();
             return false;
         }
 
         if (!mode.acceptsVmArgs() && !targetArgs.isEmpty()) {
             System.out.println("Target args " + targetArgs + " should not be specified for mode " + mode);
+            optionParser.reset();
             return false;
+        }
+
+        if (tagName != null) {
+            Tag tagToSave = new Tag(tagDir, tagName, tagOverwrite);
+            try {
+                tagToSave.saveArgs(args);
+            } catch (FileNotFoundException e) {
+                System.out.println(e.getMessage());
+                optionParser.reset();
+                return false;
+            }
         }
 
         return true;
