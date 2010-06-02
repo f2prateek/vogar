@@ -36,6 +36,7 @@ public final class Vogar {
     private final List<File> actionFiles = new ArrayList<File>();
     private final List<String> actionClassesAndPackages = new ArrayList<String>();
     private final List<String> targetArgs = new ArrayList<String>();
+    private final OptionParser optionParser = new OptionParser(this);
 
     @Option(names = { "--expectations" })
     private Set<File> expectationFiles = new LinkedHashSet<File>();
@@ -121,6 +122,9 @@ public final class Vogar {
     private Vogar() {}
 
     private void printUsage() {
+        // have to reset fields so that "Default is: FOO" lines are accurate
+        optionParser.reset();
+
         System.out.println("Usage: Vogar [options]... <actions>... [-- target args]...");
         System.out.println();
         System.out.println("  <actions>: .java files, directories, or class names.");
@@ -234,18 +238,15 @@ public final class Vogar {
 
     private boolean parseArgs(String[] args) {
         List<String> actionsAndTargetArgs;
-        OptionParser optionParser = new OptionParser(this);
         try {
             actionsAndTargetArgs = optionParser.parse(args);
         } catch (RuntimeException e) {
             System.out.println(e.getMessage());
-            optionParser.reset();
             return false;
         }
 
         if (runTag != null && tagName != null) {
             System.out.println("Cannot use both --run-tag and --tag options");
-            optionParser.reset();
             return false;
         }
 
@@ -258,8 +259,9 @@ public final class Vogar {
                         + runTag + "\":");
                 System.out.println(Strings.join(runTagArgs, " "));
             } catch (FileNotFoundException e) {
-                System.out.println("Tag \"" + runTag + "\" doesn't exist - can't run it");
-                optionParser.reset();
+                System.out.println("Tag \"" + runTag + "\" doesn't exist");
+                System.out.println("Existing tags are: "
+                        + Strings.join(Tag.getAllTags(tagDir), ", "));
                 return false;
             }
             // rollback changes already made by the optionParser
@@ -278,20 +280,17 @@ public final class Vogar {
 
         if (javaHome != null && !new File(javaHome, "/bin/java").exists()) {
             System.out.println("Invalid java home: " + javaHome);
-            optionParser.reset();
             return false;
         }
 
         // check vm option consistency
         if (!mode.acceptsVmArgs() && !vmArgs.isEmpty()) {
             System.out.println("VM args " + vmArgs + " should not be specified for mode " + mode);
-            optionParser.reset();
             return false;
         }
 
         if (xmlReportsDirectory != null && !xmlReportsDirectory.isDirectory()) {
             System.out.println("Invalid XML reports directory: " + xmlReportsDirectory);
-            optionParser.reset();
             return false;
         }
 
@@ -325,7 +324,6 @@ public final class Vogar {
                 } else {
                     System.out.println("Expected a .jar file, .java file, directory, "
                             + "package name or classname, but was: " + arg);
-                    optionParser.reset();
                     return false;
                 }
             } else {
@@ -337,13 +335,11 @@ public final class Vogar {
 
         if (actionFiles.isEmpty() && actionClassesAndPackages.isEmpty()) {
             System.out.println("No actions provided.");
-            optionParser.reset();
             return false;
         }
 
         if (!mode.acceptsVmArgs() && !targetArgs.isEmpty()) {
             System.out.println("Target args " + targetArgs + " should not be specified for mode " + mode);
-            optionParser.reset();
             return false;
         }
 
@@ -353,7 +349,6 @@ public final class Vogar {
                 tagToSave.saveArgs(args);
             } catch (FileNotFoundException e) {
                 System.out.println(e.getMessage());
-                optionParser.reset();
                 return false;
             }
         }

@@ -29,7 +29,7 @@ import vogar.commands.Mkdir;
  * A representation of a previous invocation of Vogar.
  */
 public class Tag {
-    final private String ARGS_DIR = "args";
+    final static private String ARGS_DIR = "args";
 
     final private File argsDir;
     final private String tag;
@@ -39,6 +39,10 @@ public class Tag {
         this.tag = tag;
         this.argsDir = new File(tagDir, ARGS_DIR);
         this.tagOverwrite = tagOverwrite;
+    }
+
+    public static String[] getAllTags(File tagDir) {
+        return new File(tagDir, ARGS_DIR).list();
     }
 
     public String[] getArgs() throws FileNotFoundException {
