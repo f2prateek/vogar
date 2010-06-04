@@ -62,6 +62,22 @@ public class Console {
         currentLine = CurrentLine.VERBOSE;
     }
 
+    public synchronized void warn(String message) {
+        newLine();
+        System.out.println(yellow("Warning: " + message));
+    }
+
+    /**
+     * Warns, and also puts a list of strings afterwards.
+     */
+    public synchronized void warn(String message, List<String> list) {
+        newLine();
+        System.out.println(yellow("Warning: " + message));
+        for (String item : list) {
+            System.out.println(yellow(indent + item));
+        }
+    }
+
     public synchronized void info(String s) {
         newLine();
         System.out.println(s);
@@ -141,6 +157,7 @@ public class Console {
     }
 
     public synchronized void summarizeFailures(List<String> failureNames) {
+        newLine();
         System.out.println("Failure summary:");
         for (String failureName : failureNames) {
             System.out.println(red(failureName));
@@ -148,6 +165,7 @@ public class Console {
     }
 
     public synchronized void summarizeSkips(List<String> skippedNames) {
+        newLine();
         System.out.println("Skip summary:");
         for (String skippedName : skippedNames) {
             System.out.println(yellow(skippedName));

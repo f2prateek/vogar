@@ -119,6 +119,9 @@ public final class Vogar {
     @Option(names = { "--tag-overwrite" })
     private boolean tagOverwrite = false;
 
+    @Option(names = { "--suggest-classpaths" })
+    private boolean suggestClasspaths = false;
+
     private Vogar() {}
 
     private void printUsage() {
@@ -208,6 +211,14 @@ public final class Vogar {
         System.out.println("      start times (default). Only affects device mode. Disable with");
         System.out.println("      --no-device-cache to save space on the SD card.");
         System.out.println();
+        System.out.println("  --suggest-classpaths: build an index of jar files under the");
+        System.out.println("      directories given in VOGAR_JAR_PATH (a colon separated");
+        System.out.println("      environment variable). If Vogar then fails due to missing");
+        System.out.println("      classes or packages, it will use the index to diagnose the");
+        System.out.println("      problem and suggest a fix.");
+        System.out.println();
+        System.out.println("      Currently only looks for jars called exactly \"classes.jar\".");
+        System.out.println();
         System.out.println("  --clean-before: remove working directories before building and");
         System.out.println("      running (default). Disable with --no-clean-before if you are");
         System.out.println("      using interactively with your own temporary input files.");
@@ -223,7 +234,7 @@ public final class Vogar {
         System.out.println("      and the corresponding expected output.");
         System.out.println("      Default is: " + expectationFiles);
         System.out.println();
-        System.out.println("  --ident: amount to indent action result output. Can be set to ''");
+        System.out.println("  --indent: amount to indent action result output. Can be set to ''");
         System.out.println("      (aka empty string) to simplify output parsing.");
         System.out.println("      Default is: '" + indent + "'");
         System.out.println();
@@ -362,6 +373,11 @@ public final class Vogar {
         Console.getInstance().setStream(stream);
         Console.getInstance().setVerbose(verbose);
 
+        ClassFileIndex classFileIndex = new ClassFileIndex();
+        if (suggestClasspaths) {
+            classFileIndex.createIndex();
+        }
+
         int monitorPort = mode.isHost() ? 8788 : 8787;
         Mode.Options modeOptions = new Mode.Options(Classpath.of(buildClasspath), sourcepath,
                 javacArgs, javaHome, monitorPort, timeoutSeconds, useBootClasspath, Classpath.of(classpath));
@@ -419,7 +435,8 @@ public final class Vogar {
                 monitor,
                 monitorPort,
                 smallTimeoutSeconds,
-                smallTimeoutSeconds * LARGE_TIMEOUT_MULTIPLIER);
+                smallTimeoutSeconds * LARGE_TIMEOUT_MULTIPLIER,
+                classFileIndex);
 
         driver.buildAndRun(actionFiles, actionClassesAndPackages);
     }

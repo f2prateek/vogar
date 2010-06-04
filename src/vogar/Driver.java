@@ -21,9 +21,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -48,10 +50,12 @@ final class Driver implements HostMonitor.Handler {
     private final HostMonitor monitor;
     private final int smallTimeoutSeconds;
     private final int largeTimeoutSeconds;
+    private final ClassFileIndex classFileIndex;
     private int successes = 0;
     private int failures = 0;
     private List<String> failureNames = new ArrayList<String>();
     private List<String> skippedNames = new ArrayList<String>();
+    private Set<File> allSuggestedJars = new HashSet<File>();
 
     private Timer actionTimeoutTimer = new Timer("action timeout", true);
     private volatile Date killTime;
@@ -69,7 +73,7 @@ final class Driver implements HostMonitor.Handler {
 
     public Driver(File localTemp, Mode mode, ExpectationStore expectationStore,
             XmlReportPrinter reportPrinter, HostMonitor monitor, int monitorPort,
-            int smallTimeoutSeconds, int largeTimeoutSeconds) {
+            int smallTimeoutSeconds, int largeTimeoutSeconds, ClassFileIndex classFileIndex) {
         this.localTemp = localTemp;
         this.expectationStore = expectationStore;
         this.mode = mode;
@@ -78,6 +82,7 @@ final class Driver implements HostMonitor.Handler {
         this.monitorPort = monitorPort;
         this.smallTimeoutSeconds = smallTimeoutSeconds;
         this.largeTimeoutSeconds = largeTimeoutSeconds;
+        this.classFileIndex = classFileIndex;
     }
 
     /**
@@ -177,11 +182,26 @@ final class Driver implements HostMonitor.Handler {
         mode.shutdown();
         final long t1 = System.currentTimeMillis();
 
-        if (failures > 0 || skipped > 0) {
+        if (failures > 0) {
             Collections.sort(failureNames);
             Console.getInstance().summarizeFailures(failureNames);
+        }
+
+        if (skipped > 0) {
             Collections.sort(skippedNames);
             Console.getInstance().summarizeSkips(skippedNames);
+        }
+
+        List<String> jarStringList = new ArrayList<String>();
+        for (File jar : allSuggestedJars) {
+            jarStringList.add(jar.getPath());
+        }
+        if (!jarStringList.isEmpty()) {
+            Console.getInstance().warn("consider adding the following to the classpath:",
+                    jarStringList);
+        }
+
+        if (failures > 0 || skipped > 0) {
             Console.getInstance().info(String.format(
                     "Outcomes: %s. Passed: %d, Failed: %d, Skipped: %d. Took %s.",
                     (successes + failures + skipped), successes, failures, skipped,
@@ -306,8 +326,42 @@ final class Driver implements HostMonitor.Handler {
             skipped++;
             skippedNames.add(outcome.getName());
         }
+
+        Result result = outcome.getResult();
         Console.getInstance().outcome(outcome.getName());
-        Console.getInstance().printResult(outcome.getResult(), resultValue);
+        Console.getInstance().printResult(result, resultValue);
+
+        // suggest jars to add to the classpath
+        if (result == Result.COMPILE_FAILED || result == Result.EXEC_FAILED) {
+            Set<File> suggestedJars = classFileIndex.suggestClasspaths(outcome.getOutputLines());
+
+            // don't suggest adding a jar that's already on the classpath
+            Set<File> redundantJars = new HashSet<File>();
+            for (File jar : suggestedJars) {
+                if (mode.classpathContains(jar)) {
+                    redundantJars.add(jar);
+                }
+            }
+            suggestedJars.removeAll(redundantJars);
+
+            if (suggestedJars.size() > 0) {
+                allSuggestedJars.addAll(suggestedJars);
+                List<String> jarStringList = new ArrayList<String>();
+                for (File jar : suggestedJars) {
+                    jarStringList.add(jar.getPath());
+                }
+                if (suggestedJars.size() == 1) {
+                    Console.getInstance().warn(
+                            "may have failed because this jar is missing from the classpath:",
+                            jarStringList);
+                } else {
+                    Console.getInstance().warn(
+                            "may have failed because some of these jars are missing from the"
+                                    + "classpath:",
+                            jarStringList);
+                }
+            }
+        }
     }
 
     /**

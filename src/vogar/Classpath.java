@@ -59,6 +59,10 @@ public final class Classpath {
         return elements.isEmpty();
     }
 
+    public boolean contains(File file) {
+        return elements.contains(file);
+    }
+
     @Override public String toString() {
         return Strings.join(elements, ":");
     }

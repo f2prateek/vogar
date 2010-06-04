@@ -235,4 +235,8 @@ abstract class Mode {
     void shutdown() {
         environment.shutdown();
     }
+
+    public boolean classpathContains(File file) {
+        return classpath.contains(file);
+    }
 }
