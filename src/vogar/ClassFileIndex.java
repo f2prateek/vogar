@@ -16,18 +16,26 @@
 
 package vogar;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -37,51 +45,56 @@ import vogar.commands.Mkdir;
 /**
  * Indexes the locations of commonly used classes to assist in constructing correct Vogar commands.
  */
-public class ClassFileIndex {
+public final class ClassFileIndex {
     // how many milliseconds before the cache expires and we reindex jars
-    final private long cacheExpiry = 86400000; // = one day
-    final private String DELIMITER = "\t";
-    final private File classFileIndexFile =
+    private final long cacheExpiry = 86400000; // = one day
+    private final  String DELIMITER = "\t";
+    private final File classFileIndexFile =
             new File(System.getProperty("user.home"), ".vogar/classfileindex");
     // regular expressions representing things that make sense on the classpath
-    final private List<String> JAR_PATTERN_STRINGS = Arrays.asList(
+    private final List<String> JAR_PATTERN_STRINGS = Arrays.asList(
             "classes\\.jar"
     );
     // regular expressions representing failures probably due to things missing on the classpath
-    final private List<String> FAILURE_PATTERN_STRINGS = Arrays.asList(
+    private final List<String> FAILURE_PATTERN_STRINGS = Arrays.asList(
             ".*package (.*) does not exist.*",
             ".*import (.*);.*",
             ".*ClassNotFoundException: (\\S*).*"
     );
-    private List<Pattern> jarPatterns;
-    private List<Pattern> failurePatterns;
+    private final List<Pattern> JAR_PATTERNS = new ArrayList<Pattern>();
+    {
+        for (String patternString : JAR_PATTERN_STRINGS) {
+            this.JAR_PATTERNS.add(Pattern.compile(patternString));
+        }
+    }
+    private final List<Pattern> FAILURE_PATTERNS = new ArrayList<Pattern>();
+    {
+        for (String patternString : FAILURE_PATTERN_STRINGS) {
+            // DOTALL flag allows proper handling of multiline strings
+            this.FAILURE_PATTERNS.add(Pattern.compile(patternString, Pattern.DOTALL));
+        }
+    }
     private Map<String, Set<File>> classFileMap;
 
     public ClassFileIndex() {
         this.classFileMap = new HashMap<String, Set<File>>();
-        this.failurePatterns = new ArrayList<Pattern>();
-        this.jarPatterns = new ArrayList<Pattern>();
-        for (String patternString : FAILURE_PATTERN_STRINGS) {
-            // DOTALL flag allows proper handling of multiline strings
-            this.failurePatterns.add(Pattern.compile(patternString, Pattern.DOTALL));
-        }
-        for (String patternString : JAR_PATTERN_STRINGS) {
-            this.jarPatterns.add(Pattern.compile(patternString));
-        }
     }
 
     public Set<File> suggestClasspaths(List<String> testOutput) {
         Set<File> suggestedClasspaths = new HashSet<File>();
 
         for (String line : testOutput) {
-            for (Pattern pattern : failurePatterns) {
+            for (Pattern pattern : FAILURE_PATTERNS) {
                 Matcher matcher = pattern.matcher(line);
-                if (matcher.matches()) {
-                    for (int i = 1; i <= matcher.groupCount(); i++) {
-                        String missingPackageOrClass = matcher.group(i);
-                        if (classFileMap.containsKey(missingPackageOrClass)) {
-                            suggestedClasspaths.addAll(classFileMap.get(missingPackageOrClass));
-                        }
+                if (!matcher.matches()) {
+                    continue;
+                }
+
+                for (int i = 1; i <= matcher.groupCount(); i++) {
+                    String missingPackageOrClass = matcher.group(i);
+                    Set<File> containingJars = classFileMap.get(missingPackageOrClass);
+                    if (containingJars != null) {
+                        suggestedClasspaths.addAll(containingJars);
                     }
                 }
             }
@@ -122,7 +135,7 @@ public class ClassFileIndex {
         }
         String[] jarDirs = jarPath.split(":");
         for (String jarDir : jarDirs) {
-            if (jarDir.equals("")) {
+            if (jarDir.isEmpty()) {
                 // protect against trailing or leading colons
                 continue;
             }
@@ -139,27 +152,8 @@ public class ClassFileIndex {
 
             Set<File> jarFiles = new HashSet<File>();
             getJarFiles(jarFiles, jarDirFile);
-            for (File jarFile : jarFiles) {
-                List<String> rawResults = new Command("jar", "tvf", jarFile.getPath()).execute();
-                for (String resultLine : rawResults) {
-                    // the filename is the last entry in the line - convert it to a class/package
-                    // name
-                    String[] splitLine = resultLine.split(" ");
-                    String classPath = splitLine[splitLine.length - 1]
-                            // change paths into classes/packages
-                            .replaceAll("/", ".")
-                            // strip trailing period
-                            .replaceFirst("\\.$", "")
-                            // strip trailing .class extension
-                            .replaceFirst("\\.class$", "");
-                    if (classFileMap.containsKey(classPath)) {
-                        classFileMap.get(classPath).add(jarFile);
-                    } else {
-                        Set<File> classPathJars = new HashSet<File>();
-                        classPathJars.add(jarFile);
-                        classFileMap.put(classPath, classPathJars);
-                    }
-                }
+            for (File file : jarFiles) {
+                indexJarFile(file);
             }
         }
 
@@ -167,17 +161,43 @@ public class ClassFileIndex {
         writeIndexCache();
     }
 
+    private void indexJarFile(File file) {
+        try {
+            JarFile jarFile = new JarFile(file);
+            for (Enumeration<JarEntry> e = jarFile.entries(); e.hasMoreElements(); ) {
+                JarEntry jarEntry = e.nextElement();
+
+                // change paths into classes/packages, strip trailing period, and strip
+                // trailing .class extension
+                String classPath = jarEntry.getName()
+                        .replaceAll("/", ".")
+                        .replaceFirst("\\.$", "")
+                        .replaceFirst("\\.class$", "");
+                if (classFileMap.containsKey(classPath)) {
+                    classFileMap.get(classPath).add(file);
+                } else {
+                    Set<File> classPathJars = new HashSet<File>();
+                    classPathJars.add(file);
+                    classFileMap.put(classPath, classPathJars);
+                }
+            }
+        } catch (IOException e) {
+            Console.getInstance().warn("failed to read " + file + ": " + e.getMessage());
+        }
+    }
+
     private void getJarFiles(Set<File> jarFiles, File dir) {
         List<File> files = Arrays.asList(dir.listFiles());
         for (File file : files) {
             if (file.isDirectory()) {
                 getJarFiles(jarFiles, file);
-            } else {
-                for (Pattern pattern : jarPatterns) {
-                    Matcher matcher = pattern.matcher(file.getName());
-                    if (matcher.matches()) {
-                        jarFiles.add(file);
-                    }
+                continue;
+            }
+
+            for (Pattern pattern : JAR_PATTERNS) {
+                Matcher matcher = pattern.matcher(file.getName());
+                if (matcher.matches()) {
+                    jarFiles.add(file);
                 }
             }
         }
@@ -186,47 +206,51 @@ public class ClassFileIndex {
     private void writeIndexCache() {
         Console.getInstance().verbose("writing index cache");
 
-        PrintStream indexCacheWriter;
+        BufferedWriter indexCacheWriter;
         new Mkdir().mkdirs(classFileIndexFile.getParentFile());
         try {
-            indexCacheWriter = new PrintStream(classFileIndexFile);
-        } catch (FileNotFoundException e) {
-            Console.getInstance().warn("cannot write to file " + classFileIndexFile + ": ");
-            Console.getInstance().warn(e.getMessage());
-            return;
+            indexCacheWriter = new BufferedWriter(new FileWriter(classFileIndexFile));
+            for (Map.Entry<String, Set<File>> entry : classFileMap.entrySet()) {
+                indexCacheWriter.write(entry.getKey() + DELIMITER
+                        + Strings.join(entry.getValue(), DELIMITER));
+                indexCacheWriter.newLine();
+            }
+            indexCacheWriter.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
-
-        for (Map.Entry<String, Set<File>> entry : classFileMap.entrySet()) {
-            indexCacheWriter.println(entry.getKey() + DELIMITER
-                    + Strings.join(entry.getValue(), DELIMITER));
-        }
-        indexCacheWriter.close();
     }
 
     private void readIndexCache() {
         Console.getInstance().verbose("reading class file index cache");
 
-        Scanner scanner;
+        BufferedReader reader;
         try {
-            scanner = new Scanner(classFileIndexFile);
+            reader = new BufferedReader(new FileReader(classFileIndexFile));
         } catch (FileNotFoundException e) {
             throw new RuntimeException(e);
         }
-        while (scanner.hasNextLine()) {
-            // Each line is a mapping of a class, package or file to the .jar files that
-            // contain its definition within VOGAR_JAR_PATH. Each component is separated by a
-            // tab (\t) character.
-            String line = scanner.nextLine();
-            String[] parts = line.split(DELIMITER);
-            if (parts.length < 2) {
-                throw new RuntimeException("classfileindex contains invalid line: " + line);
+        try {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+
+                // Each line is a mapping of a class, package or file to the .jar files that
+                // contain its definition within VOGAR_JAR_PATH. Each component is separated
+                // by a delimiter.
+                String[] parts = line.split(DELIMITER);
+                if (parts.length < 2) {
+                    throw new RuntimeException("classfileindex contains invalid line: " + line);
+                }
+                String resource = parts[0];
+                Set<File> jarFiles = new HashSet<File>();
+                for (int i = 1; i < parts.length; i++) {
+                    jarFiles.add(new File(parts[i]));
+                }
+                classFileMap.put(resource, jarFiles);
             }
-            String resource = parts[0];
-            Set<File> jarFiles = new HashSet<File>();
-            for (int i = 1; i < parts.length; i++) {
-                jarFiles.add(new File(parts[i]));
-            }
-            classFileMap.put(resource, jarFiles);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 }

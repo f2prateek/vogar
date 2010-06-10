@@ -107,16 +107,16 @@ public final class Vogar {
     @Option(names = { "--device-cache" })
     private boolean deviceCache = true;
 
-    @Option(names = { "--tag-dir" })
-    private File tagDir = new File(System.getProperty("user.home", ".vogar/tags/") + "/.vogar/tags/");
+    @Option(names = { "--tag-dir" }, savedInTag = false)
+    private File tagDir = new File(System.getProperty("user.home", ".") + "/.vogar/tags/");
 
-    @Option(names = { "--tag" })
+    @Option(names = { "--tag" }, savedInTag = false)
     private String tagName = null;
 
-    @Option(names = { "--run-tag" })
+    @Option(names = { "--run-tag" }, savedInTag = false)
     private String runTag = null;
 
-    @Option(names = { "--tag-overwrite" })
+    @Option(names = { "--tag-overwrite" }, savedInTag = false)
     private boolean tagOverwrite = false;
 
     @Option(names = { "--suggest-classpaths" })
@@ -355,13 +355,7 @@ public final class Vogar {
         }
 
         if (tagName != null) {
-            Tag tagToSave = new Tag(tagDir, tagName, tagOverwrite);
-            try {
-                tagToSave.saveArgs(args);
-            } catch (FileNotFoundException e) {
-                System.out.println(e.getMessage());
-                return false;
-            }
+            new Tag(tagDir, tagName, tagOverwrite).saveArgs(args);
         }
 
         return true;

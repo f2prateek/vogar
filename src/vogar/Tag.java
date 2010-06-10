@@ -16,11 +16,15 @@
 
 package vogar;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.PrintStream;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 
 import vogar.commands.Mkdir;
@@ -29,11 +33,14 @@ import vogar.commands.Mkdir;
  * A representation of a previous invocation of Vogar.
  */
 public class Tag {
-    final static private String ARGS_DIR = "args";
+    private final static String ARGS_DIR = "args";
+    // maps ignored command line options (for the purposes of saving the command to a tag) to
+    // the number of arguments they take.
+    private static Map<String, Integer> optionsToIgnore = new HashMap<String, Integer>();
 
-    final private File argsDir;
-    final private String tag;
-    final private boolean tagOverwrite;
+    private final File argsDir;
+    private final String tag;
+    private final boolean tagOverwrite;
 
     public Tag(File tagDir, String tag, boolean tagOverwrite) {
         this.tag = tag;
@@ -55,28 +62,34 @@ public class Tag {
         return args.toArray(new String[args.size()]);
     }
 
-    public void saveArgs(String[] args) throws FileNotFoundException {
+    public void saveArgs(String[] args) {
         File argsFile = new File(argsDir, tag);
         if (!tagOverwrite && argsFile.exists()) {
-            throw new FileNotFoundException("Tag \"" + tag + "\" already exists");
+            throw new RuntimeException("Tag \"" + tag + "\" already exists");
         }
         new Mkdir().mkdirs(argsFile.getParentFile());
-        PrintStream stream;
+        BufferedWriter tagWriter;
         try {
-            stream = new PrintStream(argsFile);
-        } catch (FileNotFoundException e) {
+            tagWriter = new BufferedWriter(new FileWriter(argsFile));
+            for (int i = 0; i < args.length; i++) {
+                if (optionsToIgnore.containsKey(args[i])) {
+                    // skip the arguments to the flag as well
+                    i += optionsToIgnore.get(args[i]);
+                } else {
+                    tagWriter.write(args[i]);
+                    tagWriter.newLine();
+                }
+            }
+            tagWriter.close();
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
 
-        for (int i = 0; i < args.length; i++) {
-            if (args[i].equals("--tag")) {
-                // Don't write out the --tag option or its argument
-                i++;
-            } else {
-                stream.println(args[i]);
-            }
-        }
-
-        stream.close();
+    /**
+     * Marks option so it is not saved to a tag file.
+     */
+    public static void addUnsavedOption(String arg, int numArgs) {
+        optionsToIgnore.put(arg, numArgs);
     }
 }

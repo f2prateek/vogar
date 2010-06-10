@@ -353,12 +353,17 @@ public class OptionParser {
             if (field.isAnnotationPresent(Option.class)) {
                 final Option option = field.getAnnotation(Option.class);
                 final String[] names = option.names();
+                final boolean savedInTag = option.savedInTag();
                 if (names.length == 0) {
                     throw new RuntimeException("found an @Option with no name!");
                 }
                 for (String name : names) {
                     if (optionMap.put(name, field) != null) {
                         throw new RuntimeException("found multiple @Options sharing the name '" + name + "'");
+                    }
+                    if (!savedInTag) {
+                        int numArgs = getHandler(field.getGenericType()).isBoolean() ? 0 : 1;
+                        Tag.addUnsavedOption(name, numArgs);
                     }
                 }
                 if (getHandler(field.getGenericType()) == null) {

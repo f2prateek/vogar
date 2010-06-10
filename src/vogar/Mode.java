@@ -236,7 +236,7 @@ abstract class Mode {
         environment.shutdown();
     }
 
-    public boolean classpathContains(File file) {
-        return classpath.contains(file);
+    public Classpath getClasspath() {
+        return classpath;
     }
 }

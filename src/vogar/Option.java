@@ -33,4 +33,7 @@ public @interface Option {
      * An option must have at least one name.
      */
     String[] names();
+
+    // these options are used by the tag system to mark 
+    boolean savedInTag() default true;
 }

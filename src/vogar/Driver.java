@@ -331,36 +331,28 @@ final class Driver implements HostMonitor.Handler {
         Console.getInstance().outcome(outcome.getName());
         Console.getInstance().printResult(result, resultValue);
 
-        // suggest jars to add to the classpath
-        if (result == Result.COMPILE_FAILED || result == Result.EXEC_FAILED) {
-            Set<File> suggestedJars = classFileIndex.suggestClasspaths(outcome.getOutputLines());
+        suggestJars(outcome);
+    }
 
-            // don't suggest adding a jar that's already on the classpath
-            Set<File> redundantJars = new HashSet<File>();
+    private void suggestJars(Outcome outcome) {
+        Result result = outcome.getResult();
+        if (result != Result.COMPILE_FAILED && result != Result.EXEC_FAILED) {
+            return;
+        }
+        Set<File> suggestedJars = classFileIndex.suggestClasspaths(outcome.getOutputLines());
+
+        // don't suggest adding a jar that's already on the classpath
+        suggestedJars.removeAll(mode.getClasspath().getElements());
+
+        if (!suggestedJars.isEmpty()) {
+            allSuggestedJars.addAll(suggestedJars);
+            List<String> jarStringList = new ArrayList<String>();
             for (File jar : suggestedJars) {
-                if (mode.classpathContains(jar)) {
-                    redundantJars.add(jar);
-                }
+                jarStringList.add(jar.getPath());
             }
-            suggestedJars.removeAll(redundantJars);
-
-            if (suggestedJars.size() > 0) {
-                allSuggestedJars.addAll(suggestedJars);
-                List<String> jarStringList = new ArrayList<String>();
-                for (File jar : suggestedJars) {
-                    jarStringList.add(jar.getPath());
-                }
-                if (suggestedJars.size() == 1) {
-                    Console.getInstance().warn(
-                            "may have failed because this jar is missing from the classpath:",
-                            jarStringList);
-                } else {
-                    Console.getInstance().warn(
-                            "may have failed because some of these jars are missing from the"
-                                    + "classpath:",
-                            jarStringList);
-                }
-            }
+            Console.getInstance().warn(
+                    "may have failed because some of these jars are missing from the classpath:",
+                    jarStringList);
         }
     }
 
