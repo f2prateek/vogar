@@ -103,6 +103,9 @@ public final class Vogar {
 
     @Option(names = { "--sourcepath" })
     private List<File> sourcepath = new ArrayList<File>();
+    {
+        sourcepath.addAll(AndroidSdk.defaultSourcePath());
+    }
 
     @Option(names = { "--device-cache" })
     private boolean deviceCache = true;

@@ -123,6 +123,11 @@ public class AndroidSdk {
         return (files != null) ? Arrays.asList(files) : Collections.<File>emptyList();
     }
 
+    public static Collection<File> defaultSourcePath() {
+        File supportSrc = new File("libcore/support/src/test/java");
+        return supportSrc.exists() ? Arrays.asList(supportSrc) : Collections.<File>emptyList();
+    }
+
     public File getAndroidClasses() {
         return androidClasses;
     }
