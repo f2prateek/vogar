@@ -68,7 +68,7 @@ final class DeviceDalvikVm extends Vm {
         return new VmCommandBuilder()
                 .vmCommand("adb", "shell", getEnvironmentDevice().getAndroidData(), "dalvikvm")
                 .vmArgs("-Duser.home=/sdcard")
-                .vmArgs("-Duser.name=root")
+                .vmArgs("-Duser.name=" + AndroidSdk.getDeviceUserName())
                 .vmArgs("-Duser.language=en")
                 .vmArgs("-Duser.region=US")
                 .vmArgs("-Djavax.net.ssl.trustStore=/system/etc/security/cacerts.bks")

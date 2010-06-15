@@ -28,6 +28,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import vogar.Classpath;
 import vogar.Console;
 import vogar.DeviceFileCache;
@@ -255,6 +257,14 @@ public class AndroidSdk {
     public void cp(File source, File destination) {
         // adb doesn't support "cp" command directly
         new Command("adb", "shell", "cat", source.getPath(), ">", destination.getPath()).execute();
+    }
+
+    public static String getDeviceUserName() {
+        // The default environment doesn't include $USER, so dalvikvm doesn't set "user.name".
+        // DeviceDalvikVm uses this to set "user.name" manually with -D.
+        String line = new Command("adb", "shell", "id").execute().get(0);
+        Matcher m = Pattern.compile("uid=\\d+\\((\\S+)\\) gid=\\d+\\(\\S+\\)").matcher(line);
+        return m.matches() ? m.group(1) : "root";
     }
 
     public Set<File> ls(File dir) throws FileNotFoundException {
