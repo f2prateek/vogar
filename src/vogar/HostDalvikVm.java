@@ -79,7 +79,6 @@ public class HostDalvikVm extends Vm {
                 .temp(workingDirectory)
                 .vmArgs("-Xbootclasspath:" + bootClasspath.toString())
                 .vmArgs("-Duser.home=" + workingDirectory)
-                .vmArgs("-Duser.name=root")
                 .vmArgs("-Duser.language=en")
                 .vmArgs("-Duser.region=US")
                 .vmArgs("-Djavax.net.ssl.trustStore=" + base + "/system/etc/security/cacerts.bks");
