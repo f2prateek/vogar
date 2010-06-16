@@ -40,7 +40,7 @@ class TargetMonitor {
     private Socket socket;
     private XmlSerializer serializer;
 
-    public void await(int port) {
+    public synchronized void await(int port) {
         if (socket != null) {
             throw new IllegalStateException();
         }
@@ -62,25 +62,21 @@ class TargetMonitor {
         }
     }
 
-    public void outcomeStarted(String outcomeName, String actionName) {
+    public synchronized void outcomeStarted(String outcomeName, String actionName) {
         try {
-            synchronized (serializer) {
-                serializer.startTag(ns, "outcome");
-                serializer.attribute(ns, "name", outcomeName);
-                serializer.attribute(ns, "action", actionName);
-                serializer.flush();
-            }
+            serializer.startTag(ns, "outcome");
+            serializer.attribute(ns, "name", outcomeName);
+            serializer.attribute(ns, "action", actionName);
+            serializer.flush();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public void output(String text) {
+    public synchronized void output(String text) {
         try {
-            synchronized (serializer) {
-                serializer.text(sanitize(text));
-                serializer.flush();
-            }
+            serializer.text(sanitize(text));
+            serializer.flush();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -108,26 +104,22 @@ class TargetMonitor {
         return result.toString();
     }
 
-    public void outcomeFinished(Result result) {
+    public synchronized void outcomeFinished(Result result) {
         try {
-            synchronized (serializer) {
-                serializer.startTag(ns, "result");
-                serializer.attribute(ns, "value", result.name());
-                serializer.endTag(ns, "result");
-                serializer.endTag(ns, "outcome");
-                serializer.flush();
-            }
+            serializer.startTag(ns, "result");
+            serializer.attribute(ns, "value", result.name());
+            serializer.endTag(ns, "result");
+            serializer.endTag(ns, "outcome");
+            serializer.flush();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public void close() {
+    public synchronized void close() {
         try {
-            synchronized (serializer) {
-                serializer.endTag(ns, "vogar-monitor");
-                serializer.endDocument();
-            }
+            serializer.endTag(ns, "vogar-monitor");
+            serializer.endDocument();
             socket.close();
             serverSocket.close();
         } catch (IOException e) {
