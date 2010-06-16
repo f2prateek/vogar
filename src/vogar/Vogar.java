@@ -32,6 +32,7 @@ import vogar.commands.AndroidSdk;
 public final class Vogar {
 
     private static final int LARGE_TIMEOUT_MULTIPLIER = 10;
+    private static final int NUM_PROCESSORS = Runtime.getRuntime().availableProcessors();
 
     private final List<File> actionFiles = new ArrayList<File>();
     private final List<String> actionClassesAndPackages = new ArrayList<String>();
@@ -52,6 +53,9 @@ public final class Vogar {
 
     @Option(names = { "--monitor-timeout" })
     private int monitorTimeout = 30;
+
+    @Option(names = { "--first-monitor-port" })
+    private int firstMonitorPort = -1;
 
     @Option(names = { "--clean-before" })
     private boolean cleanBefore = true;
@@ -248,6 +252,12 @@ public final class Vogar {
         System.out.println("      process to launch. This can be used to prevent connection failures");
         System.out.println("      when dexopt is slow.");
         System.out.println();
+        System.out.println("  --first-monitor-port <port>: the port on the host (and possibly target)");
+        System.out.println("      used to traffic control messages between vogar and forked processes.");
+        System.out.println("      Use this to avoid port conflicts when running multiple vogar instances");
+        System.out.println("      concurrently. Vogar will use up to N ports starting with this one,");
+        System.out.println("      where N is the number of processors on the host (" + NUM_PROCESSORS + "). ");
+        System.out.println();
     }
 
     private boolean parseArgs(String[] args) {
@@ -322,6 +332,10 @@ public final class Vogar {
             timeoutSeconds = 0;
         }
 
+        if (firstMonitorPort == -1) {
+            firstMonitorPort = mode.isHost() ? 8788 : 8787;
+        }
+
         // separate the actions and the target args
         int index = 0;
         for (; index < actionsAndTargetArgs.size(); index++) {
@@ -377,11 +391,10 @@ public final class Vogar {
 
         int numRunners = (stream || this.mode == ModeId.ACTIVITY)
                 ? 1
-                : Runtime.getRuntime().availableProcessors();
+                : NUM_PROCESSORS;
 
-        int monitorPort = mode.isHost() ? 8788 : 8787;
         Mode.Options modeOptions = new Mode.Options(Classpath.of(buildClasspath), sourcepath,
-                javacArgs, javaHome, monitorPort, timeoutSeconds, useBootClasspath, Classpath.of(classpath));
+                javacArgs, javaHome, firstMonitorPort, timeoutSeconds, useBootClasspath, Classpath.of(classpath));
 
         AndroidSdk androidSdk = null;
         if (mode.requiresAndroidSdk()) {
@@ -393,7 +406,7 @@ public final class Vogar {
         File localTemp = new File("/tmp/vogar/" + UUID.randomUUID());
         Environment environment = mode.isHost()
                 ? new EnvironmentHost(cleanBefore, cleanAfter, debugPort, localTemp)
-                : new EnvironmentDevice(cleanBefore, cleanAfter, debugPort, monitorPort, numRunners, localTemp,
+                : new EnvironmentDevice(cleanBefore, cleanAfter, debugPort, firstMonitorPort, numRunners, localTemp,
                         deviceRunnerDir, androidSdk);
 
         Vm.Options vmOptions = (mode.acceptsVmArgs())
@@ -432,7 +445,7 @@ public final class Vogar {
                 expectationStore,
                 xmlReportPrinter,
                 monitorTimeout,
-                monitorPort,
+                firstMonitorPort,
                 smallTimeoutSeconds,
                 smallTimeoutSeconds * LARGE_TIMEOUT_MULTIPLIER,
                 classFileIndex,
