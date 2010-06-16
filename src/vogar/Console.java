@@ -31,7 +31,14 @@ import java.util.Map;
  * </ul>
  */
 public abstract class Console {
-    private static Console INSTANCE;
+
+    private static Console NULL_CONSOLE = new Console() {
+        @Override public void streamOutput(String outcomeName, String output) {
+            throw new IllegalStateException("Call Console.init() first");
+        }
+    };
+
+    private static Console INSTANCE = NULL_CONSOLE;
 
     private boolean color;
     private boolean verbose;
