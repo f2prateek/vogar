@@ -163,7 +163,11 @@ final class ActivityMode extends Mode {
         properties.setProperty(TestProperties.DEVICE_RUNNER_DIR, getEnvironmentDevice().runnerDir.getPath());
     }
 
-    @Override protected Command createActionCommand(Action action) {
+    @Override protected Command createActionCommand(Action action, int monitorPort) {
+        if (monitorPort != -1) {
+            throw new IllegalArgumentException("ActivityMode doesn't support runtime monitor ports!");
+        }
+
         return new Command(
                 "adb", "shell", "am", "start", "-W",
                 "-a", "android.intent.action.MAIN",

@@ -33,6 +33,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import vogar.commands.Command;
 import vogar.commands.CommandFailedException;
@@ -41,48 +42,59 @@ import vogar.commands.Mkdir;
 /**
  * Compiles, installs, runs and reports on actions.
  */
-final class Driver implements HostMonitor.Handler {
+final class Driver {
+
+    /**
+     * Assign each runner thread a unique ID. Necessary so threads don't
+     * conflict when selecting a monitor port.
+     */
+    private final ThreadLocal<Integer> runnerThreadId = new ThreadLocal<Integer>() {
+        private int next = 0;
+        @Override protected synchronized Integer initialValue() {
+            return next++;
+        }
+    };
+
+    private Timer actionTimeoutTimer = new Timer("action timeout", true);
+
     private final File localTemp;
     private final ExpectationStore expectationStore;
     private final Mode mode;
     private final XmlReportPrinter reportPrinter;
-    private final int monitorPort;
-    private final HostMonitor monitor;
+    private final int firstMonitorPort;
+    private final int monitorTimeoutSeconds;
     private final int smallTimeoutSeconds;
     private final int largeTimeoutSeconds;
     private final ClassFileIndex classFileIndex;
+    private final int numRunnerThreads;
+
     private int successes = 0;
     private int failures = 0;
     private List<String> failureNames = new ArrayList<String>();
+    private int skipped = 0;
     private List<String> skippedNames = new ArrayList<String>();
-    private Set<File> allSuggestedJars = new HashSet<File>();
-
-    private Timer actionTimeoutTimer = new Timer("action timeout", true);
-    private volatile Date killTime;
 
     private final Map<String, Action> actions = Collections.synchronizedMap(
             new LinkedHashMap<String, Action>());
     private final Map<String, Outcome> outcomes = Collections.synchronizedMap(
             new LinkedHashMap<String, Outcome>());
 
-    /**
-     * The number of tests that weren't run because they aren't supported by
-     * this runner.
-     */
-    private int skipped = 0;
+    private Set<File> allSuggestedJars = new HashSet<File>();
 
     public Driver(File localTemp, Mode mode, ExpectationStore expectationStore,
-            XmlReportPrinter reportPrinter, HostMonitor monitor, int monitorPort,
-            int smallTimeoutSeconds, int largeTimeoutSeconds, ClassFileIndex classFileIndex) {
+                  XmlReportPrinter reportPrinter, int monitorTimeoutSeconds, int firstMonitorPort,
+                  int smallTimeoutSeconds, int largeTimeoutSeconds, ClassFileIndex classFileIndex,
+                  int numRunnerThreads) {
         this.localTemp = localTemp;
         this.expectationStore = expectationStore;
         this.mode = mode;
         this.reportPrinter = reportPrinter;
-        this.monitor = monitor;
-        this.monitorPort = monitorPort;
+        this.monitorTimeoutSeconds = monitorTimeoutSeconds;
+        this.firstMonitorPort = firstMonitorPort;
         this.smallTimeoutSeconds = smallTimeoutSeconds;
         this.largeTimeoutSeconds = largeTimeoutSeconds;
         this.classFileIndex = classFileIndex;
+        this.numRunnerThreads = numRunnerThreads;
     }
 
     /**
@@ -151,26 +163,26 @@ final class Driver implements HostMonitor.Handler {
         }
         builders.shutdown();
 
+        Console.getInstance().verbose(numRunnerThreads > 1
+                ? ("running actions in parallel (" + numRunnerThreads + " threads)")
+                : ("running actions in serial"));
+
+        ExecutorService runners = Threads.fixedThreadsExecutor(numRunnerThreads);
+
+        final AtomicBoolean prematurelyExhaustedInput = new AtomicBoolean();
         for (int i = 0; i < totalToRun; i++) {
-            Console.getInstance().verbose("executing action " + i + "; "
-                    + readyToRun.size() + " are ready to run");
+            runners.submit(new ActionRunner(prematurelyExhaustedInput, i, readyToRun));
+        }
+        runners.shutdown();
+        try {
+            runners.awaitTermination(60 * 60 * 24 * 28, TimeUnit.SECONDS); // four weeks
+        } catch (InterruptedException e) {
+            recordOutcome(new Outcome("vogar.Vogar", Result.ERROR, e));
+        }
 
-            // if it takes 5 minutes for build and install, something is broken
-            Action action;
-            try {
-                action = readyToRun.poll(5 * 60, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                throw new RuntimeException("Unexpected interruption waiting for build and install", e);
-            }
-
-            if (action == null) {
-                outcome(new Outcome("vogar.Vogar", Result.ERROR,
-                        "Expected " + actions.size() + " actions but found only " + i));
-                break;
-            }
-
-            execute(action);
-            mode.cleanup(action);
+        if (prematurelyExhaustedInput.get()) {
+            recordOutcome(new Outcome("vogar.Vogar", Result.ERROR,
+                    "Expected " + actions.size() + " actions but found fewer."));
         }
 
         if (reportPrinter != null) {
@@ -225,90 +237,20 @@ final class Driver implements HostMonitor.Handler {
         }
     }
 
-    /**
-     * Executes a single action and then prints the result.
-     */
-    private void execute(final Action action) {
-        Console.getInstance().action(action.getName());
-        Expectation expectation = expectationStore.get(action.getName());
-        int timeoutSeconds = expectation.getTags().contains("large")
-                ? largeTimeoutSeconds
-                : smallTimeoutSeconds;
-
-        Outcome earlyFailure = outcomes.get(action.getName());
-        if (earlyFailure == null) {
-            final Command command = mode.createActionCommand(action);
-            Future<List<String>> consoleOut = command.executeLater();
-            final AtomicReference<Result> result = new AtomicReference<Result>();
-
-            if (timeoutSeconds != 0) {
-                resetKillTime(timeoutSeconds);
-                scheduleTaskKiller(command, result, timeoutSeconds);
-            }
-
-            boolean completedNormally = monitor.monitor(monitorPort, this);
-            if (completedNormally) {
-                if (result.compareAndSet(null, Result.SUCCESS)) {
-                    command.destroy();
-                }
-                return; // outcomes will have been reported via outcome()
-            }
-
-            if (result.compareAndSet(null, Result.ERROR)) {
-                Console.getInstance().verbose("killing " + action.getName() + " because it could not be monitored.");
-                command.destroy();
-            }
-            try {
-                earlyFailure = new Outcome(action.getName(), action.getName(),
-                        result.get(), consoleOut.get());
-            } catch (Exception e) {
-                if (e.getCause() instanceof CommandFailedException) {
-                    earlyFailure = new Outcome(action.getName(), action.getName(), result.get(),
-                            ((CommandFailedException) e.getCause()).getOutputLines());
-                } else if (result.get() == Result.EXEC_TIMEOUT) {
-                    earlyFailure = new Outcome(action.getName(), result.get(),
-                            "killed because it timed out after " + timeoutSeconds + " seconds");
-                } else {
-                    earlyFailure = new Outcome(action.getName(), result.get(), e);
-                }
-            }
-        }
-
+    private synchronized void addEarlyResult(Outcome earlyFailure) {
         if (earlyFailure.getResult() == Result.UNSUPPORTED) {
-            Console.getInstance().verbose("skipping " + action.getName());
+            Console.getInstance().verbose("skipped " + earlyFailure.getName());
             skipped++;
+
         } else {
-            addEarlyResult(earlyFailure);
-        }
-    }
-
-    private void scheduleTaskKiller(
-            final Command command, final AtomicReference<Result> result, final int timeoutSeconds) {
-        actionTimeoutTimer.schedule(new TimerTask() {
-            @Override public void run() {
-                // if the kill time has been pushed back, reschedule
-                if (System.currentTimeMillis() < killTime.getTime()) {
-                    scheduleTaskKiller(command, result, timeoutSeconds);
-                    return;
-                }
-                if (result.compareAndSet(null, Result.EXEC_TIMEOUT)) {
-                    Console.getInstance().verbose("killing command that timed out after "
-                            + timeoutSeconds + " seconds: " + command);
-                    command.destroy();
-                }
+            for (String line : earlyFailure.getOutputLines()) {
+                Console.getInstance().streamOutput(earlyFailure.getName(), line + "\n");
             }
-        }, killTime);
-    }
-
-    private void addEarlyResult(Outcome earlyFailure) {
-        for (String line : earlyFailure.getOutputLines()) {
-            Console.getInstance().streamOutput(line + "\n");
+            recordOutcome(earlyFailure);
         }
-        outcome(earlyFailure);
     }
 
-    public void outcome(Outcome outcome) {
-        resetKillTime(smallTimeoutSeconds); // TODO: support flexible timeouts for JUnit tests
+    private synchronized void recordOutcome(Outcome outcome) {
         outcomes.put(outcome.getName(), outcome);
         Expectation expectation = expectationStore.get(outcome);
         ResultValue resultValue;
@@ -317,6 +259,7 @@ final class Driver implements HostMonitor.Handler {
         } else {
             resultValue = ResultValue.IGNORE;
         }
+
         if (resultValue == ResultValue.OK) {
             successes++;
         } else if (resultValue == ResultValue.FAIL) {
@@ -329,7 +272,7 @@ final class Driver implements HostMonitor.Handler {
 
         Result result = outcome.getResult();
         Console.getInstance().outcome(outcome.getName());
-        Console.getInstance().printResult(result, resultValue);
+        Console.getInstance().printResult(outcome.getName(), result, resultValue);
 
         suggestJars(outcome);
     }
@@ -357,20 +300,151 @@ final class Driver implements HostMonitor.Handler {
     }
 
     /**
-     * Sets the time at which we'll kill a task that starts right now.
+     * Runs a single action and reports the result.
      */
-    private void resetKillTime(int timeoutForTest) {
-        /*
-         * Give the target process an extra 2 seconds to self-timeout and report
-         * the error. This way, when a JUnit test has one slow method, we don't
-         * end up killing the whole process.
-         */
-        long delay = TimeUnit.SECONDS.toMillis(timeoutForTest + 2);
-        killTime = new Date(System.currentTimeMillis() + delay);
-    }
+    private class ActionRunner implements Runnable, HostMonitor.Handler {
 
-    public void output(String outcomeName, String output) {
-        Console.getInstance().outcome(outcomeName);
-        Console.getInstance().streamOutput(output);
+        /**
+         * All action runners share this atomic boolean. Whenever any of them
+         * waits for five minutes without retrieving an executable action, we
+         * use this to signal that they should all quit.
+         */
+        private final AtomicBoolean prematurelyExhaustedInput;
+        private final int count;
+        private final BlockingQueue<Action> readyToRun;
+        private volatile Date killTime;
+
+        public ActionRunner(AtomicBoolean prematurelyExhaustedInput, int count, BlockingQueue<Action> readyToRun) {
+            this.prematurelyExhaustedInput = prematurelyExhaustedInput;
+            this.count = count;
+            this.readyToRun = readyToRun;
+        }
+
+        public int monitorPort(int defaultValue) {
+            return numRunnerThreads == 1
+                    ? defaultValue
+                    : firstMonitorPort + (runnerThreadId.get() % numRunnerThreads);
+        }
+
+        public void run() {
+            if (prematurelyExhaustedInput.get()) {
+                return;
+            }
+
+            Console.getInstance().verbose("executing action " + count + "; "
+                    + readyToRun.size() + " are ready to run");
+
+            // if it takes 5 minutes for build and install, something is broken
+            Action action;
+            try {
+                action = readyToRun.poll(5 * 60, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                recordOutcome(new Outcome("vogar.Vogar", Result.ERROR, e));
+                return;
+            }
+
+            if (action == null) {
+                prematurelyExhaustedInput.set(true); // short-circuit subsequent runners
+                return;
+            }
+
+            execute(action);
+            mode.cleanup(action);
+        }
+
+        /**
+         * Executes a single action and then prints the result.
+         */
+        private void execute(final Action action) {
+            Console.getInstance().action(action.getName());
+            Expectation expectation = expectationStore.get(action.getName());
+            int timeoutSeconds = expectation.getTags().contains("large")
+                    ? largeTimeoutSeconds
+                    : smallTimeoutSeconds;
+
+            Outcome earlyFailure = outcomes.get(action.getName());
+            if (earlyFailure != null) {
+                addEarlyResult(earlyFailure);
+                return;
+            }
+
+            final Command command = mode.createActionCommand(action, monitorPort(-1));
+            Future<List<String>> consoleOut = command.executeLater();
+            final AtomicReference<Result> result = new AtomicReference<Result>();
+
+            if (timeoutSeconds != 0) {
+                resetKillTime(timeoutSeconds);
+                scheduleTaskKiller(command, result, timeoutSeconds);
+            }
+
+            HostMonitor hostMonitor = new HostMonitor(monitorTimeoutSeconds);
+            boolean completedNormally = hostMonitor.monitor(monitorPort(firstMonitorPort), this);
+            if (completedNormally) {
+                if (result.compareAndSet(null, Result.SUCCESS)) {
+                    command.destroy();
+                }
+                return; // outcomes will have been reported via outcome()
+            }
+
+            if (result.compareAndSet(null, Result.ERROR)) {
+                Console.getInstance().verbose("killing " + action + " because it could not be monitored.");
+                command.destroy();
+            }
+
+            try {
+                addEarlyResult(new Outcome(action.getName(), action.getName(), result.get(), consoleOut.get()));
+            } catch (Exception e) {
+                if (e.getCause() instanceof CommandFailedException) {
+                    addEarlyResult(new Outcome(action.getName(), action.getName(), result.get(),
+                            ((CommandFailedException) e.getCause()).getOutputLines()));
+                } else if (result.get() == Result.EXEC_TIMEOUT) {
+                    addEarlyResult(new Outcome(action.getName(), result.get(),
+                            "killed because it timed out after " + timeoutSeconds + " seconds"));
+                } else {
+                    addEarlyResult(new Outcome(action.getName(), result.get(), e));
+                }
+            }
+        }
+
+        private void scheduleTaskKiller(
+                final Command command, final AtomicReference<Result> result, final int timeoutSeconds) {
+            actionTimeoutTimer.schedule(new TimerTask() {
+                @Override public void run() {
+                    // if the kill time has been pushed back, reschedule
+                    if (System.currentTimeMillis() < killTime.getTime()) {
+                        scheduleTaskKiller(command, result, timeoutSeconds);
+                        return;
+                    }
+                    if (result.compareAndSet(null, Result.EXEC_TIMEOUT)) {
+                        Console.getInstance().verbose("killing command that timed out after "
+                                + timeoutSeconds + " seconds: " + command);
+                        command.destroy();
+                    }
+                }
+            }, killTime);
+        }
+
+        /**
+         * Sets the time at which we'll kill a task that starts right now.
+         */
+        private void resetKillTime(int timeoutForTest) {
+            /*
+             * Give the target process an extra 2 seconds to self-timeout and report
+             * the error. This way, when a JUnit test has one slow method, we don't
+             * end up killing the whole process.
+             */
+            long delay = TimeUnit.SECONDS.toMillis(timeoutForTest + 2);
+            killTime = new Date(System.currentTimeMillis() + delay);
+        }
+
+        public void output(String outcomeName, String output) {
+            Console.getInstance().outcome(outcomeName);
+            Console.getInstance().streamOutput(outcomeName, output);
+        }
+
+        public void outcome(Outcome outcome) {
+            resetKillTime(smallTimeoutSeconds); // TODO: support flexible timeouts for JUnit tests
+            recordOutcome(outcome);
+        }
     }
 }

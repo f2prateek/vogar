@@ -51,7 +51,7 @@ public final class Vogar {
     private int timeoutSeconds = 1 * 60; // default is one minute;
 
     @Option(names = { "--monitor-timeout" })
-    private long monitorTimeout = 30;
+    private int monitorTimeout = 30;
 
     @Option(names = { "--clean-before" })
     private boolean cleanBefore = true;
@@ -365,15 +365,19 @@ public final class Vogar {
     }
 
     private void run() {
+        Console.init(stream);
         Console.getInstance().setColor(color);
         Console.getInstance().setIndent(indent);
-        Console.getInstance().setStream(stream);
         Console.getInstance().setVerbose(verbose);
 
         ClassFileIndex classFileIndex = new ClassFileIndex();
         if (suggestClasspaths) {
             classFileIndex.createIndex();
         }
+
+        int numRunners = (stream || this.mode == ModeId.ACTIVITY)
+                ? 1
+                : Runtime.getRuntime().availableProcessors();
 
         int monitorPort = mode.isHost() ? 8788 : 8787;
         Mode.Options modeOptions = new Mode.Options(Classpath.of(buildClasspath), sourcepath,
@@ -389,7 +393,7 @@ public final class Vogar {
         File localTemp = new File("/tmp/vogar/" + UUID.randomUUID());
         Environment environment = mode.isHost()
                 ? new EnvironmentHost(cleanBefore, cleanAfter, debugPort, localTemp)
-                : new EnvironmentDevice(cleanBefore, cleanAfter, debugPort, monitorPort, localTemp,
+                : new EnvironmentDevice(cleanBefore, cleanAfter, debugPort, monitorPort, numRunners, localTemp,
                         deviceRunnerDir, androidSdk);
 
         Vm.Options vmOptions = (mode.acceptsVmArgs())
@@ -409,8 +413,6 @@ public final class Vogar {
             throw new AssertionError();
         }
 
-        HostMonitor monitor = new HostMonitor(monitorTimeout);
-
         ExpectationStore expectationStore;
         try {
             expectationStore = ExpectationStore.parse(expectationFiles);
@@ -429,11 +431,12 @@ public final class Vogar {
                 mode,
                 expectationStore,
                 xmlReportPrinter,
-                monitor,
+                monitorTimeout,
                 monitorPort,
                 smallTimeoutSeconds,
                 smallTimeoutSeconds * LARGE_TIMEOUT_MULTIPLIER,
-                classFileIndex);
+                classFileIndex,
+                numRunners);
 
         driver.buildAndRun(actionFiles, actionClassesAndPackages);
     }

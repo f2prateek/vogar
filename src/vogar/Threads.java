@@ -36,7 +36,10 @@ public class Threads {
     }
 
     public static ExecutorService threadPerCpuExecutor() {
-        return Executors.newFixedThreadPool(
-                Runtime.getRuntime().availableProcessors(), daemonThreadFactory());
+        return fixedThreadsExecutor(Runtime.getRuntime().availableProcessors());
+    }
+
+    public static ExecutorService fixedThreadsExecutor(int count) {
+        return Executors.newFixedThreadPool(count, daemonThreadFactory());
     }
 }

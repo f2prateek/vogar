@@ -46,7 +46,7 @@ abstract class Mode {
         protected final List<File> sourcepath;
         protected final List<String> javacArgs;
         protected final File javaHome;
-        protected final int monitorPort;
+        protected final int firstMonitorPort;
         protected final int timeoutSeconds;
         protected final boolean useBootClasspath;
         protected final Classpath classpath;
@@ -55,7 +55,7 @@ abstract class Mode {
                 List<File> sourcepath,
                 List<String> javacArgs,
                 File javaHome,
-                int monitorPort,
+                int firstMonitorPort,
                 int timeoutSeconds,
                 boolean useBootClasspath,
                 Classpath classpath) {
@@ -63,7 +63,7 @@ abstract class Mode {
             this.sourcepath = sourcepath;
             this.javacArgs = javacArgs;
             this.javaHome = javaHome;
-            this.monitorPort = monitorPort;
+            this.firstMonitorPort = firstMonitorPort;
             this.timeoutSeconds = timeoutSeconds;
             this.useBootClasspath = useBootClasspath;
             this.classpath = classpath;
@@ -202,7 +202,7 @@ abstract class Mode {
     protected void fillInProperties(Properties properties, Action action) {
         properties.setProperty(TestProperties.TEST_CLASS_OR_PACKAGE, action.getTargetClass());
         properties.setProperty(TestProperties.QUALIFIED_NAME, action.getName());
-        properties.setProperty(TestProperties.MONITOR_PORT, Integer.toString(modeOptions.monitorPort));
+        properties.setProperty(TestProperties.MONITOR_PORT, Integer.toString(modeOptions.firstMonitorPort));
         properties.setProperty(TestProperties.TIMEOUT, Integer.toString(modeOptions.timeoutSeconds));
     }
 
@@ -218,8 +218,11 @@ abstract class Mode {
 
     /**
      * Create the command that executes the action.
+     *
+     * @param monitorPort the port to accept connections on, or -1 for the
+     *     default port.
      */
-    protected abstract Command createActionCommand(Action action);
+    protected abstract Command createActionCommand(Action action, int monitorPort);
 
     /**
      * Deletes files and releases any resources required for the execution of

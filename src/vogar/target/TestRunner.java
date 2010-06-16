@@ -19,7 +19,9 @@ package vogar.target;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -38,16 +40,28 @@ public final class TestRunner {
     protected final int monitorPort;
     protected final int timeoutSeconds;
     protected final List<Runner> runners;
+    protected final String[] args;
 
-    protected TestRunner() {
+    private TestRunner(List<String> argsList) {
         properties = loadProperties();
         qualifiedName = properties.getProperty(TestProperties.QUALIFIED_NAME);
         qualifiedClassOrPackageName = properties.getProperty(TestProperties.TEST_CLASS_OR_PACKAGE);
-        monitorPort = Integer.parseInt(properties.getProperty(TestProperties.MONITOR_PORT));
         timeoutSeconds = Integer.parseInt(properties.getProperty(TestProperties.TIMEOUT));
         runners = Arrays.asList(new JUnitRunner(),
                                 new CaliperRunner(),
                                 new MainRunner());
+
+        int monitorPort = Integer.parseInt(properties.getProperty(TestProperties.MONITOR_PORT));
+        for (Iterator<String> i = argsList.iterator(); i.hasNext(); ) {
+            if (i.next().equals("--monitorPort")) {
+                i.remove();
+                monitorPort = Integer.parseInt(i.next());
+                i.remove();
+            }
+        }
+
+        this.monitorPort = monitorPort;
+        this.args = argsList.toArray(new String[argsList.size()]);
     }
 
     private Properties loadProperties() {
@@ -161,6 +175,6 @@ public final class TestRunner {
     }
 
     public static void main(String[] args) {
-        new TestRunner().run(args);
+        new TestRunner(new ArrayList<String>(Arrays.asList(args))).run();
     }
 }

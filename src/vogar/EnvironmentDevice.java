@@ -24,16 +24,18 @@ class EnvironmentDevice extends Environment {
     final File runnerDir;
     final File vogarTemp;
     final File dalvikCache;
-    final int monitorPort;
+    final int firstMonitorPort;
+    final int numRunners;
 
-    EnvironmentDevice(boolean cleanBefore, boolean cleanAfter, Integer debugPort, int monitorPort,
-            File localTemp, File runnerDir, AndroidSdk androidSdk) {
+    EnvironmentDevice(boolean cleanBefore, boolean cleanAfter, Integer debugPort, int firstMonitorPort,
+                      int numRunners, File localTemp, File runnerDir, AndroidSdk androidSdk) {
         super(cleanBefore, cleanAfter, debugPort, localTemp);
         this.androidSdk = androidSdk;
         this.runnerDir = runnerDir;
         this.vogarTemp = new File(runnerDir, "tmp");
         this.dalvikCache = new File(runnerDir.getParentFile(), "dalvik-cache");
-        this.monitorPort = monitorPort;
+        this.firstMonitorPort = firstMonitorPort;
+        this.numRunners = numRunners;
     }
 
     /**
@@ -55,7 +57,9 @@ class EnvironmentDevice extends Environment {
         androidSdk.mkdir(runnerDir);
         androidSdk.mkdir(vogarTemp);
         androidSdk.mkdir(dalvikCache);
-        androidSdk.forwardTcp(monitorPort, monitorPort);
+        for (int i = 0; i < numRunners; i++) {
+            androidSdk.forwardTcp(firstMonitorPort + i, firstMonitorPort + i);
+        }
         if (debugPort != null) {
             androidSdk.forwardTcp(debugPort, debugPort);
         }

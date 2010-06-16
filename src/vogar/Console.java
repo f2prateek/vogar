@@ -16,31 +16,36 @@
 
 package vogar;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
- * Controls, formats and emits output to the command line.
+ * Controls, formats and emits output to the command line. This class emits
+ * output in two modes:
+ * <ul>
+ *   <li><strong>Streaming</strong> output prints as it is received, but cannot
+ *       support multiple concurrent output streams.
+ *   <li><strong>Multiplexing</strong> buffers output until it is complete and
+ *       then prints it completely.
+ * </ul>
  */
-public class Console {
-    private static final Console INSTANCE = new Console();
+public abstract class Console {
+    private static Console INSTANCE;
 
-    private boolean stream;
     private boolean color;
     private boolean verbose;
-    private String indent;
-
-    private String currentName;
-    private CurrentLine currentLine = CurrentLine.NEW;
-    private final StringBuilder bufferedOutput = new StringBuilder();
+    protected String indent;
+    protected CurrentLine currentLine = CurrentLine.NEW;
 
     private Console() {}
 
-    public static Console getInstance() {
-        return INSTANCE;
+    public static void init(boolean streaming) {
+        INSTANCE = streaming ? new StreamingConsole() : new MultiplexingConsole();
     }
 
-    public void setStream(boolean stream) {
-        this.stream = stream;
+    public static Console getInstance() {
+        return INSTANCE;
     }
 
     public void setIndent(String indent) {
@@ -89,70 +94,41 @@ public class Console {
         throwable.printStackTrace(System.out);
     }
 
-    public synchronized void action(String name) {
-        newLine();
-        System.out.print("Action " + name);
-        System.out.flush();
-        currentName = name;
-        currentLine = CurrentLine.NAME;
-    }
+    /**
+     * Begins streaming output for the named action.
+     */
+    public void action(String name) {}
 
     /**
-     * Prints the beginning of the named outcome.
+     * Begins streaming output for the named outcome.
      */
-    public synchronized void outcome(String name) {
-        // if the outcome and action names are the same, omit the outcome name
-        if (name.equals(currentName)) {
-            return;
-        }
-
-        currentName = name;
-        newLine();
-        System.out.print(indent + name);
-        System.out.flush();
-        currentLine = CurrentLine.NAME;
-    }
+    public void outcome(String name) {}
 
     /**
      * Appends the action output immediately to the stream when streaming is on,
      * or to a buffer when streaming is off. Buffered output will be held and
      * printed only if the outcome is unsuccessful.
      */
-    public synchronized void streamOutput(String output) {
-        if (stream) {
-            printOutput(output);
-        } else {
-            bufferedOutput.append(output);
-        }
-    }
+    public abstract void streamOutput(String outcomeName, String output);
 
     /**
      * Writes the action's outcome.
      */
-    public synchronized void printResult(Result result, ResultValue resultValue) {
-        if (resultValue == ResultValue.OK) {
-            String prefix = (currentLine == CurrentLine.NAME) ? " " : "\n" + indent;
-            System.out.println(prefix + green("OK (" + result + ")"));
-
-        } else if (resultValue == ResultValue.FAIL) {
-            if (bufferedOutput.length() > 0) {
-                printOutput(bufferedOutput.toString());
-                bufferedOutput.delete(0, bufferedOutput.length());
-            }
-
-            newLine();
-            System.out.println(indent + red("FAIL (" + result + ")"));
-        } else if (resultValue == ResultValue.IGNORE) {
-            if (bufferedOutput.length() > 0) {
-                printOutput(bufferedOutput.toString());
-                bufferedOutput.delete(0, bufferedOutput.length());
-            }
-
-            newLine();
-            System.out.println(indent + yellow("SKIP (" + result + ")"));
+    public synchronized void printResult(String outcomeName, Result result, ResultValue resultValue) {
+        if (currentLine == CurrentLine.NAME) {
+            System.out.print(" ");
+        } else {
+            System.out.print("\n" + indent + outcomeName + " ");
         }
 
-        currentName = null;
+        if (resultValue == ResultValue.OK) {
+            System.out.println(green("OK (" + result + ")"));
+        } else if (resultValue == ResultValue.FAIL) {
+            System.out.println(red("FAIL (" + result + ")"));
+        } else if (resultValue == ResultValue.IGNORE) {
+            System.out.println(yellow("SKIP (" + result + ")"));
+        }
+
         currentLine = CurrentLine.NEW;
     }
 
@@ -175,12 +151,12 @@ public class Console {
     /**
      * Prints the action output with appropriate indentation.
      */
-    private void printOutput(String streamedOutput) {
+    protected void printOutput(CharSequence streamedOutput) {
         if (streamedOutput.length() == 0) {
             return;
         }
 
-        String[] lines = messageToLines(streamedOutput);
+        String[] lines = messageToLines(streamedOutput.toString());
 
         if (currentLine != CurrentLine.STREAMED_OUTPUT) {
             newLine();
@@ -205,7 +181,7 @@ public class Console {
     /**
      * Inserts a linebreak if necessary.
      */
-    private void newLine() {
+    protected void newLine() {
         if (currentLine == CurrentLine.NEW) {
             return;
         } else if (currentLine == CurrentLine.VERBOSE) {
@@ -260,20 +236,87 @@ public class Console {
         return message.split("\r\n|\r|\n", Integer.MAX_VALUE);
     }
 
-    private String green(String message) {
+    protected String green(String message) {
         return color ? ("\u001b[32;1m" + message + "\u001b[0m") : message;
     }
 
-    private String red(String message) {
+    protected String red(String message) {
         return color ? ("\u001b[31;1m" + message + "\u001b[0m") : message;
     }
 
-    private String yellow(String message) {
+    protected String yellow(String message) {
         return color ? ("\u001b[33;1m" + message + "\u001b[0m") : message;
     }
 
     private void eraseCurrentLine() {
         System.out.print(color ? "\u001b[2K\r" : "\n");
         System.out.flush();
+    }
+
+    /**
+     * This console prints output as it's emitted. It supports at most one
+     * action at a time.
+     */
+    private static class StreamingConsole extends Console {
+        private String currentName;
+
+        @Override public synchronized void action(String name) {
+            newLine();
+            System.out.print("Action " + name);
+            System.out.flush();
+            currentName = name;
+            currentLine = CurrentLine.NAME;
+        }
+
+        /**
+         * Prints the beginning of the named outcome.
+         */
+        @Override public synchronized void outcome(String name) {
+            // if the outcome and action names are the same, omit the outcome name
+            if (name.equals(currentName)) {
+                return;
+            }
+
+            currentName = name;
+            super.newLine();
+            System.out.print(indent + name);
+            System.out.flush();
+            currentLine = CurrentLine.NAME;
+        }
+
+        @Override public synchronized void streamOutput(String outcomeName, String output) {
+            super.printOutput(output);
+        }
+    }
+
+    /**
+     * This console buffers output, only printing when a result is found. It
+     * supports multiple concurrent actions.
+     */
+    private static class MultiplexingConsole extends Console {
+        private final Map<String, StringBuilder> bufferedOutputByOutcome = new HashMap<String, StringBuilder>();
+
+        @Override public synchronized void streamOutput(String outcomeName, String output) {
+            StringBuilder buffer = bufferedOutputByOutcome.get(outcomeName);
+            if (buffer == null) {
+                buffer = new StringBuilder();
+                bufferedOutputByOutcome.put(outcomeName, buffer);
+            }
+
+            buffer.append(output);
+        }
+
+        @Override public synchronized void printResult(String outcomeName, Result result, ResultValue resultValue) {
+            newLine();
+            System.out.print(indent + outcomeName);
+            currentLine = CurrentLine.NAME;
+
+            StringBuilder buffer = bufferedOutputByOutcome.remove(outcomeName);
+            if (buffer != null) {
+                printOutput(buffer);
+            }
+
+            super.printResult(outcomeName, result, resultValue);
+        }
     }
 }

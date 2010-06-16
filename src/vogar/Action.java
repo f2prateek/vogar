@@ -102,7 +102,7 @@ public final class Action {
      * Returns an action name appropriate for the given {@code .java} file
      * without first reading the contents of the file.
      */
-    public static final String nameForJavaFile(File javaFile) {
+    public static String nameForJavaFile(File javaFile) {
         String path = javaFile.getAbsolutePath();
         int indexOfTest = path.indexOf(TEST_ROOT);
         path = (indexOfTest != -1)
