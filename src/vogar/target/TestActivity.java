@@ -20,6 +20,8 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.TextView;
+
+import java.util.Collections;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import vogar.Threads;
@@ -46,7 +48,7 @@ public class TestActivity extends Activity {
                 1, Threads.daemonThreadFactory());
         executor.submit(new Runnable() {
             public void run() {
-                new TestRunner().run();
+                new TestRunner(Collections.<String>emptyList()).run();
             }
         });
         executor.shutdown();

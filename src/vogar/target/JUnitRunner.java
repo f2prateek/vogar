@@ -149,7 +149,7 @@ public final class JUnitRunner implements Runner {
                 throw new IllegalStateException();
             }
             current = test;
-            monitor.outcomeStarted(getOutcomeName(test), actionName);
+            monitor.outcomeStarted(JUnitRunner.this, getOutcomeName(test), actionName);
         }
 
         @Override protected void printHeader(long runTime) {}

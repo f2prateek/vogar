@@ -36,7 +36,7 @@ public final class CaliperRunner implements vogar.target.Runner {
     }
 
     public void run(String actionName, Class<?> klass, String[] args, int timeoutSeconds) {
-        monitor.outcomeStarted(actionName, actionName);
+        monitor.outcomeStarted(this, actionName, actionName);
         try {
             Runner.main(testClass.asSubclass(Benchmark.class), args);
         } catch (Exception ex) {

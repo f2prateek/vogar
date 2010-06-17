@@ -42,7 +42,7 @@ public final class TestRunner {
     protected final List<Runner> runners;
     protected final String[] args;
 
-    private TestRunner(List<String> argsList) {
+    TestRunner(List<String> argsList) {
         properties = loadProperties();
         qualifiedName = properties.getProperty(TestProperties.QUALIFIED_NAME);
         qualifiedClassOrPackageName = properties.getProperty(TestProperties.TEST_CLASS_OR_PACKAGE);
@@ -157,7 +157,7 @@ public final class TestRunner {
                     runner = (Runner) runnerClass.newInstance();
                     runner.init(monitor, qualifiedName, qualification, klass);
                 } catch (Exception e) {
-                    monitor.outcomeStarted(qualifiedName, qualifiedName);
+                    monitor.outcomeStarted(null, qualifiedName, qualifiedName);
                     e.printStackTrace();
                     monitor.outcomeFinished(Result.ERROR);
                     monitor.close();
@@ -165,7 +165,7 @@ public final class TestRunner {
                 }
                 runner.run(qualifiedName, klass, args, timeoutSeconds);
             } else {
-                monitor.outcomeStarted(klass.getName(), qualifiedName);
+                monitor.outcomeStarted(null, klass.getName(), qualifiedName);
                 System.out.println("Skipping " + klass.getName() + ": no associated runner class");
                 monitor.outcomeFinished(Result.UNSUPPORTED);
             }

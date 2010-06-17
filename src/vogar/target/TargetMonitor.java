@@ -36,11 +36,11 @@ class TargetMonitor {
             = Pattern.compile("[^\\x09\\x0A\\x0D\\x20-\\xD7FF\\xE000-\\xFFFD]+");
 
     private static final String ns = null; // no namespaces
-    private ServerSocket serverSocket;
+    ServerSocket serverSocket;
     private Socket socket;
     private XmlSerializer serializer;
 
-    public synchronized void await(int port) {
+    public void await(int port) {
         if (socket != null) {
             throw new IllegalStateException();
         }
@@ -62,21 +62,28 @@ class TargetMonitor {
         }
     }
 
-    public synchronized void outcomeStarted(String outcomeName, String actionName) {
+    public void outcomeStarted(Runner runner, String outcomeName, String actionName) {
         try {
-            serializer.startTag(ns, "outcome");
-            serializer.attribute(ns, "name", outcomeName);
-            serializer.attribute(ns, "action", actionName);
-            serializer.flush();
+            synchronized (serializer) {
+                serializer.startTag(ns, "outcome");
+                serializer.attribute(ns, "name", outcomeName);
+                serializer.attribute(ns, "action", actionName);
+                if (runner != null) {
+                  serializer.attribute(ns, "runner", runner.getClass().getName());
+                }
+                serializer.flush();
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public synchronized void output(String text) {
+    public void output(String text) {
         try {
-            serializer.text(sanitize(text));
-            serializer.flush();
+            synchronized (serializer) {
+                serializer.text(sanitize(text));
+                serializer.flush();
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -116,10 +123,12 @@ class TargetMonitor {
         }
     }
 
-    public synchronized void close() {
+    public void close() {
         try {
-            serializer.endTag(ns, "vogar-monitor");
-            serializer.endDocument();
+            synchronized (serializer) {
+                serializer.endTag(ns, "vogar-monitor");
+                serializer.endDocument();
+            }
             socket.close();
             serverSocket.close();
         } catch (IOException e) {

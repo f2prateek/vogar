@@ -135,6 +135,12 @@ class HostMonitor {
      * Handles updates on the outcomes of a target process.
      */
     public interface Handler {
+      
+        /**
+         * @param runnerClass can be null, indicating nothing is actually being
+         *        run (eg, an error is about to occur)
+         */
+        void runnerClass(String runnerClass);
 
         /**
          * Receive a completed outcome.
@@ -150,6 +156,7 @@ class HostMonitor {
     class ClientXmlHandler extends DefaultHandler {
         private final Handler handler;
 
+        private String currentRunnerType;
         private String currentOutcomeName;
         private String currentActionName;
         private Result currentResult;
@@ -164,7 +171,7 @@ class HostMonitor {
          *
          * <?xml version='1.0' encoding='UTF-8' ?>
          * <vogar-monitor>
-         *   <outcome name="java.util.FormatterTest" action="java.util.FormatterTest">
+         *   <outcome name="java.util.FormatterTest" action="java.util.FormatterTest" runner="vogar.target.JUnitRunner">
          *     test output
          *     more test output
          *     <result value="SUCCESS" />
@@ -181,7 +188,9 @@ class HostMonitor {
 
                 currentOutcomeName = attributes.getValue("name");
                 currentActionName = attributes.getValue("action");
+
                 handler.output(currentOutcomeName, "");
+                handler.runnerClass(attributes.getValue("runner"));
                 return;
 
             } else if (qName.equals("result")) {

@@ -38,11 +38,14 @@ import java.util.concurrent.atomic.AtomicReference;
 import vogar.commands.Command;
 import vogar.commands.CommandFailedException;
 import vogar.commands.Mkdir;
+import vogar.target.CaliperRunner;
 
 /**
  * Compiles, installs, runs and reports on actions.
  */
 final class Driver {
+
+    private static final int FOREVER = 60 * 60 * 24 * 28; // four weeks
 
     /**
      * Assign each runner thread a unique ID. Necessary so threads don't
@@ -175,7 +178,7 @@ final class Driver {
         }
         runners.shutdown();
         try {
-            runners.awaitTermination(60 * 60 * 24 * 28, TimeUnit.SECONDS); // four weeks
+            runners.awaitTermination(FOREVER, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             recordOutcome(new Outcome("vogar.Vogar", Result.ERROR, e));
         }
@@ -435,6 +438,12 @@ final class Driver {
              */
             long delay = TimeUnit.SECONDS.toMillis(timeoutForTest + 2);
             killTime = new Date(System.currentTimeMillis() + delay);
+        }
+
+        @Override public void runnerClass(String runnerClass) {
+            if (CaliperRunner.class.getName().equals(runnerClass)) {
+                resetKillTime(FOREVER);
+            }
         }
 
         public void output(String outcomeName, String output) {
