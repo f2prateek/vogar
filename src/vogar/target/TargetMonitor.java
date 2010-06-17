@@ -36,7 +36,7 @@ class TargetMonitor {
             = Pattern.compile("[^\\x09\\x0A\\x0D\\x20-\\xD7FF\\xE000-\\xFFFD]+");
 
     private static final String ns = null; // no namespaces
-    ServerSocket serverSocket;
+    private ServerSocket serverSocket;
     private Socket socket;
     private XmlSerializer serializer;
 

@@ -34,6 +34,9 @@ import org.xml.sax.helpers.DefaultHandler;
  * Connects to a target process to monitor its action.
  */
 class HostMonitor {
+    /** Sometimes we fail to parse XML documents; echo up to this many bytes back to the user when that happens. */
+    private static final int BAD_XML_SNIPPET_SIZE = 1024;
+
     private final long monitorTimeoutSeconds;
 
     HostMonitor(long monitorTimeoutSeconds) {
@@ -53,6 +56,7 @@ class HostMonitor {
                 socket = new Socket("localhost", port);
                 in = new BufferedInputStream(socket.getInputStream());
                 if (checkStream(in)) {
+                    in.mark(BAD_XML_SNIPPET_SIZE);
                     break;
                 }
                 in.close();
@@ -82,6 +86,7 @@ class HostMonitor {
         try {
             SAXParser parser = SAXParserFactory.newInstance().newSAXParser();
             InputSource inputSource = new InputSource(in);
+            inputSource.setEncoding("UTF-8");
             parser.parse(inputSource, new ClientXmlHandler(handler));
         } catch (ParserConfigurationException e) {
             throw new RuntimeException(e);
@@ -89,7 +94,15 @@ class HostMonitor {
             Console.getInstance().verbose("connection error from localhost:" + port + " " + e);
             return false;
         } catch (SAXException e) {
-            Console.getInstance().verbose("received bad XML from localhost:" + port + " " + e);
+            try {
+                in.reset();
+                byte[] offendingXml = new byte[BAD_XML_SNIPPET_SIZE];
+                int bytes = in.available() > 0 ? in.read(offendingXml) : 0;
+                Console.getInstance().warn("received bad XML from localhost:" + port
+                        + " " + new String(offendingXml, 0, bytes, "UTF-8"));
+            } catch (IOException another) {
+                Console.getInstance().warn("received bad XML from localhost:" + port + " " + e);
+            }
             return false;
         }
 
