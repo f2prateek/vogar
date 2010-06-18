@@ -137,8 +137,8 @@ class HostMonitor {
     public interface Handler {
       
         /**
-         * @param runnerClass can be null, indicating nothing is actually being
-         *        run (eg, an error is about to occur)
+         * @param runnerClass can be null, indicating nothing is actually being run. This will
+         *        happen in the event of an impending error.
          */
         void runnerClass(String runnerClass);
 
@@ -171,7 +171,8 @@ class HostMonitor {
          *
          * <?xml version='1.0' encoding='UTF-8' ?>
          * <vogar-monitor>
-         *   <outcome name="java.util.FormatterTest" action="java.util.FormatterTest" runner="vogar.target.JUnitRunner">
+         *   <outcome name="java.util.FormatterTest" action="java.util.FormatterTest" 
+         *            runner="vogar.target.JUnitRunner">
          *     test output
          *     more test output
          *     <result value="SUCCESS" />
