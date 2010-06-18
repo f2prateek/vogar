@@ -156,7 +156,6 @@ class HostMonitor {
     class ClientXmlHandler extends DefaultHandler {
         private final Handler handler;
 
-        private String currentRunnerType;
         private String currentOutcomeName;
         private String currentActionName;
         private Result currentResult;
