@@ -31,7 +31,6 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -68,10 +67,6 @@ public final class Command {
         this.workingDirectory = builder.workingDirectory;
         this.permitNonZeroExitStatus = builder.permitNonZeroExitStatus;
         this.tee = builder.tee;
-    }
-
-    public List<String> getArgs() {
-        return Collections.unmodifiableList(args);
     }
 
     public void start() throws IOException {
@@ -167,8 +162,7 @@ public final class Command {
      * @return a future to retrieve the command's output.
      */
     public Future<List<String>> executeLater() {
-        ExecutorService executor = Executors.newFixedThreadPool(
-                1, Threads.daemonThreadFactory());
+        ExecutorService executor = Threads.fixedThreadsExecutor("command", 1);
         Future<List<String>> result = executor.submit(new Callable<List<String>>() {
             public List<String> call() throws Exception {
                 start();
@@ -229,11 +223,6 @@ public final class Command {
          */
         public Builder workingDirectory(File workingDirectory) {
             this.workingDirectory = workingDirectory;
-            return this;
-        }
-
-        public Builder permitNonZeroExitStatus() {
-            permitNonZeroExitStatus = true;
             return this;
         }
 

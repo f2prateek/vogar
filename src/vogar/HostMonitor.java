@@ -140,7 +140,7 @@ class HostMonitor {
          * @param runnerClass can be null, indicating nothing is actually being run. This will
          *        happen in the event of an impending error.
          */
-        void runnerClass(String runnerClass);
+        void runnerClass(String outcomeName, String runnerClass);
 
         /**
          * Receive a completed outcome.
@@ -190,7 +190,7 @@ class HostMonitor {
                 currentActionName = attributes.getValue("action");
 
                 handler.output(currentOutcomeName, "");
-                handler.runnerClass(attributes.getValue("runner"));
+                handler.runnerClass(currentOutcomeName, attributes.getValue("runner"));
                 return;
 
             } else if (qName.equals("result")) {

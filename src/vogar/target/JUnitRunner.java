@@ -160,9 +160,11 @@ public final class JUnitRunner implements Runner {
 
     private class TimeoutTestResult extends TestResult {
         final ExecutorService executor = Executors.newCachedThreadPool(
-                Threads.daemonThreadFactory());
+                Threads.daemonThreadFactory("junitrunner"));
 
         @Override public void runProtected(Test test, final Protectable p) {
+
+            // Start the test on a background thread.
             final AtomicReference<Thread> executingThreadReference = new AtomicReference<Thread>();
             Future<Throwable> result = executor.submit(new Callable<Throwable>() {
                 public Throwable call() throws Exception {
@@ -176,12 +178,14 @@ public final class JUnitRunner implements Runner {
                 }
             });
 
+            // Wait until either the result arrives or the test times out.
             Throwable thrown;
             try {
-                if (timeoutSeconds == 0) {
-                    thrown = result.get();
-                } else {
-                    thrown = result.get(timeoutSeconds, TimeUnit.SECONDS);
+                thrown = timeoutSeconds == 0
+                        ? result.get()
+                        : result.get(timeoutSeconds, TimeUnit.SECONDS);
+                if (thrown == null) {
+                    return;
                 }
             } catch (TimeoutException e) {
                 Thread executingThread = executingThreadReference.get();
@@ -194,18 +198,13 @@ public final class JUnitRunner implements Runner {
                 thrown = e;
             }
 
-            if (thrown != null) {
-                final Throwable finalThrown = thrown;
-                super.runProtected(test, new Protectable() {
-                    public void protect() throws Throwable {
-                        // TODO: remove the unnecessary wrapping when b/2700761 is fixed
-                        Exception wrapped = new Exception();
-                        wrapped.setStackTrace(new StackTraceElement[0]);
-                        wrapped.initCause(finalThrown);
-                        throw wrapped;
-                    }
-                });
-            }
+            // Report failures to the superclass' runProtected method.
+            final Throwable finalThrown = thrown;
+            super.runProtected(test, new Protectable() {
+                public void protect() throws Throwable {
+                    throw finalThrown;
+                }
+            });
         }
     }
 

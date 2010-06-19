@@ -130,7 +130,7 @@ final class Driver {
         // threads helps for packages that contain many unsupported actions
         final BlockingQueue<Action> readyToRun = new ArrayBlockingQueue<Action>(4);
 
-        ExecutorService builders = Threads.threadPerCpuExecutor();
+        ExecutorService builders = Threads.threadPerCpuExecutor("builder");
 
         int totalToRun = 0;
         for (final Action action : actions.values()) {
@@ -170,7 +170,7 @@ final class Driver {
                 ? ("running actions in parallel (" + numRunnerThreads + " threads)")
                 : ("running actions in serial"));
 
-        ExecutorService runners = Threads.fixedThreadsExecutor(numRunnerThreads);
+        ExecutorService runners = Threads.fixedThreadsExecutor("runner", numRunnerThreads);
 
         final AtomicBoolean prematurelyExhaustedInput = new AtomicBoolean();
         for (int i = 0; i < totalToRun; i++) {
@@ -440,8 +440,9 @@ final class Driver {
             killTime = new Date(System.currentTimeMillis() + delay);
         }
 
-        @Override public void runnerClass(String runnerClass) {
+        @Override public void runnerClass(String outcomeName, String runnerClass) {
             if (CaliperRunner.class.getName().equals(runnerClass)) {
+                Console.getInstance().verbose("running " + outcomeName + " with unlimited timeout");
                 resetKillTime(FOREVER);
             }
         }

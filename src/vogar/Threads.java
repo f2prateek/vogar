@@ -23,23 +23,25 @@ import java.util.concurrent.ThreadFactory;
 /**
  * Utility methods for working with threads.
  */
-public class Threads {
+public final class Threads {
+    private Threads() {}
 
-    public static ThreadFactory daemonThreadFactory() {
+    public static ThreadFactory daemonThreadFactory(final String name) {
         return new ThreadFactory() {
-            public Thread newThread(Runnable r) {
-                Thread thread = new Thread(r, r.toString());
+            private int nextId = 0;
+            public synchronized Thread newThread(Runnable r) {
+                Thread thread = new Thread(r, name + "-" + (nextId++));
                 thread.setDaemon(true);
                 return thread;
             }
         };
     }
 
-    public static ExecutorService threadPerCpuExecutor() {
-        return fixedThreadsExecutor(Runtime.getRuntime().availableProcessors());
+    public static ExecutorService threadPerCpuExecutor(String name) {
+        return fixedThreadsExecutor(name, Runtime.getRuntime().availableProcessors());
     }
 
-    public static ExecutorService fixedThreadsExecutor(int count) {
-        return Executors.newFixedThreadPool(count, daemonThreadFactory());
+    public static ExecutorService fixedThreadsExecutor(String name, int count) {
+        return Executors.newFixedThreadPool(count, daemonThreadFactory(name));
     }
 }
