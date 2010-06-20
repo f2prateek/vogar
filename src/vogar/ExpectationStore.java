@@ -92,12 +92,12 @@ final class ExpectationStore {
                 return expectation;
             }
 
-            int dot = name.lastIndexOf('.');
-            if (dot == -1) {
+            int dotOrHash = Math.max(name.lastIndexOf('.'), name.lastIndexOf('#'));
+            if (dotOrHash == -1) {
                 return null;
             }
 
-            name = name.substring(0, dot);
+            name = name.substring(0, dotOrHash);
         }
     }
 
