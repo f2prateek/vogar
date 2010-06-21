@@ -149,11 +149,11 @@ public final class Vogar {
         System.out.println();
         System.out.println("GENERAL OPTIONS");
         System.out.println();
-        System.out.println("  --mode <activity|device|sim|host>: specify which environment to run in.");
+        System.out.println("  --mode <activity|device|sim|jvm>: specify which environment to run in.");
         System.out.println("      activity: runs in an Android application on a device or emulator");
         System.out.println("      device: runs in a Dalvik VM on a device or emulator");
         System.out.println("      sim: runs in a Dalvik VM on the local desktop.");
-        System.out.println("      host: runs in a Java VM on the local desktop");
+        System.out.println("      jvm: runs in a Java VM on the local desktop");
         System.out.println("      Default is: " + mode);
         System.out.println();
         System.out.println("  --clean: synonym for --clean-before and --clean-after (default).");
@@ -414,7 +414,7 @@ public final class Vogar {
                 : null;
 
         Mode mode;
-        if (this.mode == ModeId.HOST) {
+        if (this.mode == ModeId.JVM) {
             mode = new JavaVm(environment, modeOptions, vmOptions);
         } else if (this.mode == ModeId.SIM) {
             mode = new HostDalvikVm(environment, modeOptions, vmOptions, androidSdk);
@@ -464,14 +464,14 @@ public final class Vogar {
     }
 
     enum ModeId {
-        DEVICE, HOST, ACTIVITY, SIM;
+        DEVICE, JVM, ACTIVITY, SIM;
 
         public boolean acceptsVmArgs() {
             return this != ACTIVITY;
         }
 
         public boolean isHost() {
-            return this == ModeId.HOST || this == ModeId.SIM;
+            return this == ModeId.JVM || this == ModeId.SIM;
         }
 
         public boolean requiresAndroidSdk() {
