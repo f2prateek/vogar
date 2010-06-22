@@ -27,13 +27,15 @@ public class HostDalvikVm extends Vm {
 
     private final AndroidSdk androidSdk;
     private final File dalvikCache;
+    private final boolean valgrind;
     private String base;
 
     public HostDalvikVm(Environment environment, Mode.Options options, Options vmOptions,
-            AndroidSdk androidSdk) {
+            AndroidSdk androidSdk, boolean valgrind) {
         super(environment, options, vmOptions);
         this.androidSdk = androidSdk;
         this.dalvikCache = environment.file("android-data", "dalvik-cache");
+        this.valgrind = valgrind;
     }
 
     @Override protected void installRunner() {
@@ -67,21 +69,27 @@ public class HostDalvikVm extends Vm {
                 new File(base + "/system/framework/framework.jar")
         );
 
-        return new VmCommandBuilder()
+        VmCommandBuilder builder = new VmCommandBuilder()
+                .workingDir(workingDirectory)
+                .temp(workingDirectory)
                 .env("ANDROID_PRINTF_LOG", "tag")
                 .env("ANDROID_LOG_TAGS", "*:w")
                 .env("ANDROID_DATA", dalvikCache.getParent())
                 .env("ANDROID_ROOT", base + "/system")
                 .env("LD_LIBRARY_PATH", base + "/system/lib")
-                .env("DYLD_LIBRARY_PATH", base + "/system/lib")
-                .vmCommand(base + "/system/bin/dalvikvm")
-                .workingDir(workingDirectory)
-                .temp(workingDirectory)
+                .env("DYLD_LIBRARY_PATH", base + "/system/lib");
+        if (valgrind) {
+            builder.vmCommand("valgrind", "--leak-check=full", base + "/system/bin/dalvikvm");
+        } else {
+            builder.vmCommand(base + "/system/bin/dalvikvm");
+        }
+        builder
                 .vmArgs("-Xbootclasspath:" + bootClasspath.toString())
                 .vmArgs("-Duser.home=" + workingDirectory)
                 .vmArgs("-Duser.language=en")
                 .vmArgs("-Duser.region=US")
                 .vmArgs("-Djavax.net.ssl.trustStore=" + base + "/system/etc/security/cacerts.bks");
+        return builder;
     }
 
     @Override protected Classpath getRuntimeClasspath(Action action) {

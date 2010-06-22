@@ -129,6 +129,9 @@ public final class Vogar {
     @Option(names = { "--suggest-classpaths" })
     private boolean suggestClasspaths = false;
 
+    @Option(names = { "--valgrind" })
+    private boolean valgrind = false;
+
     private Vogar() {}
 
     private void printUsage() {
@@ -160,6 +163,8 @@ public final class Vogar {
         System.out.println("      Disable with --no-clean if you want no files removed.");
         System.out.println();
         System.out.println("  --stream: stream output as it is emitted.");
+        System.out.println();
+        System.out.println("  --valgrind: run the VM under valgrind (not supported for all VMs).");
         System.out.println();
         System.out.println("  --timeout <seconds>: maximum execution time of each action before the");
         System.out.println("      runner aborts it. Specifying zero seconds or using --debug will");
@@ -371,6 +376,11 @@ public final class Vogar {
             return false;
         }
 
+        if (valgrind && !mode.supportsValgrind()) {
+            System.out.println("Valgrind is not supported for mode " + mode);
+            return false;
+        }
+
         if (tagName != null) {
             new Tag(tagDir, tagName, tagOverwrite).saveArgs(args);
         }
@@ -417,7 +427,7 @@ public final class Vogar {
         if (this.mode == ModeId.JVM) {
             mode = new JavaVm(environment, modeOptions, vmOptions);
         } else if (this.mode == ModeId.SIM) {
-            mode = new HostDalvikVm(environment, modeOptions, vmOptions, androidSdk);
+            mode = new HostDalvikVm(environment, modeOptions, vmOptions, androidSdk, valgrind);
         } else if (this.mode == ModeId.DEVICE) {
             mode = new DeviceDalvikVm(environment, modeOptions, vmOptions);
         } else if (this.mode == ModeId.ACTIVITY) {
@@ -465,6 +475,10 @@ public final class Vogar {
 
     enum ModeId {
         DEVICE, JVM, ACTIVITY, SIM;
+
+        public boolean supportsValgrind() {
+            return this == SIM;
+        }
 
         public boolean acceptsVmArgs() {
             return this != ACTIVITY;
