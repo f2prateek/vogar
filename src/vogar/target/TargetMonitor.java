@@ -33,7 +33,7 @@ class TargetMonitor {
 
     private static final int ACCEPT_TIMEOUT_MILLIS = 10 * 1000;
     private static final Pattern XML_INVALID_CHARS
-            = Pattern.compile("[^\\x09\\x0A\\x0D\\x20-\\xD7FF\\xE000-\\xFFFD]+");
+            = Pattern.compile("[^\\u0009\\u000A\\u000D\\u0020-\\uD7FF\\uE000-\\uFFFD]+");
 
     private static final String ns = null; // no namespaces
     private ServerSocket serverSocket;
