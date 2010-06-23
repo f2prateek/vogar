@@ -25,15 +25,13 @@ import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
 import org.xmlpull.v1.XmlSerializer;
 import vogar.Result;
-
+import vogar.Strings;
 /**
  * Accepts a connection for a host process to monitor this action.
  */
 class TargetMonitor {
 
     private static final int ACCEPT_TIMEOUT_MILLIS = 10 * 1000;
-    private static final Pattern XML_INVALID_CHARS
-            = Pattern.compile("[^\\u0009\\u000A\\u000D\\u0020-\\uD7FF\\uE000-\\uFFFD]+");
 
     private static final String ns = null; // no namespaces
     private ServerSocket serverSocket;
@@ -78,33 +76,11 @@ class TargetMonitor {
 
     public synchronized void output(String text) {
         try {
-            serializer.text(sanitize(text));
+            serializer.text(Strings.xmlSanitize(text));
             serializer.flush();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    /**
-     * Replaces XML-invalid characters with the corresponding U+XXXX code point escapes.
-     */
-    private static String sanitize(String text) {
-        StringBuffer result = new StringBuffer();
-        Matcher matcher = XML_INVALID_CHARS.matcher(text);
-        while (matcher.find()) {
-            matcher.appendReplacement(result, "");
-            result.append(escapeCodePoint(matcher.group()));
-        }
-        matcher.appendTail(result);
-        return result.toString();
-    }
-
-    private static String escapeCodePoint(CharSequence cs) {
-        StringBuilder result = new StringBuilder();
-        for (int i = 0; i < cs.length(); ++i) {
-            result.append(String.format("U+%04X", (int) cs.charAt(i)));
-        }
-        return result.toString();
     }
 
     public synchronized void outcomeFinished(Result result) {

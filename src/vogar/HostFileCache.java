@@ -18,10 +18,8 @@ package vogar;
 
 import java.io.File;
 import java.util.List;
-
 import vogar.commands.Command;
 import vogar.commands.Mkdir;
-import vogar.commands.Rm;
 
 public class HostFileCache implements FileCache {
     private final File CACHE_ROOT = new File("/tmp/vogar-md5-cache/");

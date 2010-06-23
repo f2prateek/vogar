@@ -19,7 +19,6 @@ package vogar;
 import java.io.File;
 import java.io.FileInputStream;
 import java.security.MessageDigest;
-import vogar.commands.Command;
 
 /**
  * Caches content by MD5.

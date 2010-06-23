@@ -16,14 +16,18 @@
 
 package vogar;
 
+import com.google.common.collect.Lists;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import vogar.commands.AndroidSdk;
 
 /**
@@ -38,6 +42,7 @@ public final class Vogar {
     private final List<String> actionClassesAndPackages = new ArrayList<String>();
     private final List<String> targetArgs = new ArrayList<String>();
     private final OptionParser optionParser = new OptionParser(this);
+    private File configFile = new File(System.getProperty("user.home", ".") + "/.vogarconfig");
 
     @Option(names = { "--expectations" })
     private Set<File> expectationFiles = new LinkedHashSet<File>();
@@ -114,8 +119,11 @@ public final class Vogar {
     @Option(names = { "--device-cache" })
     private boolean deviceCache = true;
 
-    @Option(names = { "--tag-dir" }, savedInTag = false)
-    private File tagDir = new File(System.getProperty("user.home", ".") + "/.vogar/tags/");
+    @Option(names = { "--jar-search-dir" })
+    private List<File> jarSearchDirs = Lists.newArrayList();
+
+    @Option(names = { "--vogar-dir" })
+    private File vogarDir = new File(System.getProperty("user.home", ".") + "/.vogar/");
 
     @Option(names = { "--tag" }, savedInTag = false)
     private String tagName = null;
@@ -123,8 +131,17 @@ public final class Vogar {
     @Option(names = { "--run-tag" }, savedInTag = false)
     private String runTag = null;
 
+    @Option(names = { "--compare-to-tag" }, savedInTag = false)
+    private String compareToTag = null;
+
     @Option(names = { "--tag-overwrite" }, savedInTag = false)
     private boolean tagOverwrite = false;
+
+    @Option(names = { "--record-results" })
+    private boolean recordResults = false;
+
+    @Option(names = { "--results-dir" })
+    private File resultsDir = null;
 
     @Option(names = { "--suggest-classpaths" })
     private boolean suggestClasspaths = false;
@@ -185,8 +202,9 @@ public final class Vogar {
         System.out.println();
         System.out.println("  --sourcepath <directory>: add the directory to the build sourcepath.");
         System.out.println();
-        System.out.println("  --tag-dir <directory>: directory in which to find tags.");
-        System.out.println("      Default is: " + tagDir);
+        System.out.println("  --vogar-dir <directory>: directory in which to find Vogar");
+        System.out.println("      configuration information, caches, saved results, and tags.");
+        System.out.println("      Default is: " + vogarDir);
         System.out.println();
         System.out.println("  --tag <tag name>: creates a tag recording the arguments to this");
         System.out.println("      invocation of Vogar so that it can be rerun later.");
@@ -194,6 +212,15 @@ public final class Vogar {
         System.out.println("  --run-tag <tag name>: runs Vogar with arguments as specified by the");
         System.out.println("      tag. Any arguments supplied for this run will override those");
         System.out.println("      supplied by the tag.");
+        System.out.println();
+        System.out.println("  --compare-to-tag <tag name>: compares the results of this run with");
+        System.out.println("      the results saved when the tag was created. Defaults to the value");
+        System.out.println("      of --run-tag if that argument is given.");
+        System.out.println();
+        System.out.println("  --record-results: record test results for future comparison.");
+        System.out.println();
+        System.out.println("  --results-dir <directory>: read and write (if --record-results used)");
+        System.out.println("      results from and to this directory.");
         System.out.println();
         System.out.println("  --tag-overwrite: allow --tag to overwrite an existing tag.");
         System.out.println();
@@ -224,12 +251,15 @@ public final class Vogar {
         System.out.println("      --no-device-cache to save space on the SD card.");
         System.out.println();
         System.out.println("  --suggest-classpaths: build an index of jar files under the");
-        System.out.println("      directories given in VOGAR_JAR_PATH (a colon separated");
-        System.out.println("      environment variable). If Vogar then fails due to missing");
-        System.out.println("      classes or packages, it will use the index to diagnose the");
-        System.out.println("      problem and suggest a fix.");
+        System.out.println("      directories given by --jar-search-dir arguments. If Vogar then ");
+        System.out.println("      fails due to missing classes or packages, it will use the index to");
+        System.out.println("      diagnose the problem and suggest a fix.");
         System.out.println();
         System.out.println("      Currently only looks for jars called exactly \"classes.jar\".");
+        System.out.println();
+        System.out.println("  --jar-search-dir <directory>: a directory that should be searched for");
+        System.out.println("      jar files to add to the class file index for use with");
+        System.out.println("      --suggest-classpaths.");
         System.out.println();
         System.out.println("  --clean-before: remove working directories before building and");
         System.out.println("      running (default). Disable with --no-clean-before if you are");
@@ -263,12 +293,25 @@ public final class Vogar {
         System.out.println("      concurrently. Vogar will use up to N ports starting with this one,");
         System.out.println("      where N is the number of processors on the host (" + NUM_PROCESSORS + "). ");
         System.out.println();
+        System.out.println("CONFIG FILE");
+        System.out.println();
+        System.out.println("  User-defined default arguments can be specified in ~/.vogarconfig. See");
+        System.out.println("  .vogarconfig.example for an example.");
+        System.out.println();
     }
 
     private boolean parseArgs(String[] args) {
         List<String> actionsAndTargetArgs;
+
+        // extract arguments from config file
+        String[] configArgs = new Config().readFile(configFile);
+
+        // config file args are added first so that in a conflict, the currently supplied
+        // arguments win.
+        actionsAndTargetArgs = optionParser.parse(configArgs);
+
         try {
-            actionsAndTargetArgs = optionParser.parse(args);
+            actionsAndTargetArgs.addAll(optionParser.parse(args));
         } catch (RuntimeException e) {
             System.out.println(e.getMessage());
             return false;
@@ -282,6 +325,7 @@ public final class Vogar {
         if (runTag != null) {
             String oldTag = tagName;
             String[] runTagArgs;
+            File tagDir = new File(vogarDir, "/tags/");
             try {
                 runTagArgs = new Tag(tagDir, runTag, false).getArgs();
                 System.out.println("Executing Vogar with additional arguments from tag \""
@@ -293,11 +337,12 @@ public final class Vogar {
                         + Strings.join(Tag.getAllTags(tagDir), ", "));
                 return false;
             }
-            // rollback changes already made by the optionParser
+            // rollback changes already made by the optionParser to insert tag arguments
             optionParser.reset();
+            actionsAndTargetArgs = optionParser.parse(configArgs);
             // runTags options are applied first so that the current command's arguments win if
             // there is a conflict
-            actionsAndTargetArgs = optionParser.parse(runTagArgs);
+            actionsAndTargetArgs.addAll(optionParser.parse(runTagArgs));
             // tag is the only argument we don't allow to be supplied by the run tag
             tagName = oldTag;
             actionsAndTargetArgs.addAll(optionParser.parse(args));
@@ -382,7 +427,7 @@ public final class Vogar {
         }
 
         if (tagName != null) {
-            new Tag(tagDir, tagName, tagOverwrite).saveArgs(args);
+            new Tag(new File(vogarDir, "/tags/"), tagName, tagOverwrite).saveArgs(args);
         }
 
         return true;
@@ -390,19 +435,22 @@ public final class Vogar {
 
     private void run() {
         Console.init(stream);
-        Console.getInstance().setColor(color);
+        Console.getInstance().setUseColor(color);
         Console.getInstance().setIndent(indent);
         Console.getInstance().setVerbose(verbose);
 
-        ClassFileIndex classFileIndex = new ClassFileIndex();
+        ClassFileIndex classFileIndex = new ClassFileIndex(jarSearchDirs);
         if (suggestClasspaths) {
             classFileIndex.createIndex();
         }
 
+        if (resultsDir == null) {
+            resultsDir = new File(vogarDir, "results/");
+        }
+        
         int numRunners = (stream || this.mode == ModeId.ACTIVITY)
                 ? 1
                 : NUM_PROCESSORS;
-
         Mode.Options modeOptions = new Mode.Options(Classpath.of(buildClasspath), sourcepath,
                 javacArgs, javaHome, firstMonitorPort, timeoutSeconds, useBootClasspath, Classpath.of(classpath));
 
@@ -444,21 +492,33 @@ public final class Vogar {
             return;
         }
 
+        Date currentDate = new Date();
+
         XmlReportPrinter xmlReportPrinter = xmlReportsDirectory != null
-                ? new XmlReportPrinter(xmlReportsDirectory, expectationStore)
+                ? new XmlReportPrinter(xmlReportsDirectory, expectationStore, currentDate)
                 : null;
+
+        // Automatically compare to a tag if we explicitly run it
+        if (runTag != null && compareToTag == null) {
+            compareToTag = runTag;
+        }
 
         int smallTimeoutSeconds = timeoutSeconds;
         Driver driver = new Driver(
                 localTemp,
                 mode,
                 expectationStore,
+                currentDate,
                 xmlReportPrinter,
                 monitorTimeout,
                 firstMonitorPort,
                 smallTimeoutSeconds,
                 smallTimeoutSeconds * LARGE_TIMEOUT_MULTIPLIER,
                 classFileIndex,
+                resultsDir,
+                tagName,
+                compareToTag,
+                recordResults,
                 numRunners);
 
         driver.buildAndRun(actionFiles, actionClassesAndPackages);

@@ -143,7 +143,7 @@ abstract class Mode {
             File jar = compile(action);
             postCompile(action, jar);
         } catch (CommandFailedException e) {
-            return new Outcome(action.getName(), action.getName(),
+            return new Outcome(action.getName(),
                     Result.COMPILE_FAILED, e.getOutputLines());
         } catch (IOException e) {
             return new Outcome(action.getName(), Result.ERROR, e);

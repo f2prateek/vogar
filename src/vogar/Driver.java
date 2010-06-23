@@ -16,6 +16,7 @@
 
 package vogar;
 
+import com.google.common.collect.Sets;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -62,6 +63,7 @@ final class Driver {
 
     private final File localTemp;
     private final ExpectationStore expectationStore;
+    private final Date date;
     private final Mode mode;
     private final XmlReportPrinter reportPrinter;
     private final int firstMonitorPort;
@@ -73,23 +75,31 @@ final class Driver {
 
     private int successes = 0;
     private int failures = 0;
-    private List<String> failureNames = new ArrayList<String>();
     private int skipped = 0;
-    private List<String> skippedNames = new ArrayList<String>();
+    private Set<File> allSuggestedJars = new HashSet<File>();
+
+    private Set<AnnotatedOutcome> annotatedOutcomes = Sets.newHashSet();
 
     private final Map<String, Action> actions = Collections.synchronizedMap(
             new LinkedHashMap<String, Action>());
     private final Map<String, Outcome> outcomes = Collections.synchronizedMap(
             new LinkedHashMap<String, Outcome>());
 
-    private Set<File> allSuggestedJars = new HashSet<File>();
+    private final File resultsDir;
+    private final String tagName;
+    private final String compareToTag;
+    private final boolean recordResults;
 
-    public Driver(File localTemp, Mode mode, ExpectationStore expectationStore,
+    private boolean disableResultRecord = false;
+    
+    public Driver(File localTemp, Mode mode, ExpectationStore expectationStore, Date date,
                   XmlReportPrinter reportPrinter, int monitorTimeoutSeconds, int firstMonitorPort,
                   int smallTimeoutSeconds, int largeTimeoutSeconds, ClassFileIndex classFileIndex,
+                  File resultsDir, String tagName, String compareToTag, boolean recordResults,
                   int numRunnerThreads) {
         this.localTemp = localTemp;
         this.expectationStore = expectationStore;
+        this.date = date;
         this.mode = mode;
         this.reportPrinter = reportPrinter;
         this.monitorTimeoutSeconds = monitorTimeoutSeconds;
@@ -97,6 +107,10 @@ final class Driver {
         this.smallTimeoutSeconds = smallTimeoutSeconds;
         this.largeTimeoutSeconds = largeTimeoutSeconds;
         this.classFileIndex = classFileIndex;
+        this.resultsDir = resultsDir;
+        this.tagName = tagName;
+        this.compareToTag = compareToTag;
+        this.recordResults = recordResults;
         this.numRunnerThreads = numRunnerThreads;
     }
 
@@ -145,7 +159,7 @@ final class Driver {
             }
 
             final int runIndex = totalToRun++;
-            builders.submit(new Runnable() {
+            builders.execute(new Runnable() {
                 public void run() {
                     try {
                         Console.getInstance().verbose("installing action " + runIndex + "; "
@@ -174,7 +188,7 @@ final class Driver {
 
         final AtomicBoolean prematurelyExhaustedInput = new AtomicBoolean();
         for (int i = 0; i < totalToRun; i++) {
-            runners.submit(new ActionRunner(prematurelyExhaustedInput, i, readyToRun));
+            runners.execute(new ActionRunner(prematurelyExhaustedInput, i, readyToRun));
         }
         runners.shutdown();
         try {
@@ -197,15 +211,7 @@ final class Driver {
         mode.shutdown();
         final long t1 = System.currentTimeMillis();
 
-        if (failures > 0) {
-            Collections.sort(failureNames);
-            Console.getInstance().summarizeFailures(failureNames);
-        }
-
-        if (skipped > 0) {
-            Collections.sort(skippedNames);
-            Console.getInstance().summarizeSkips(skippedNames);
-        }
+        Console.getInstance().summarizeOutcomes(annotatedOutcomes);
 
         List<String> jarStringList = new ArrayList<String>();
         for (File jar : allSuggestedJars) {
@@ -256,26 +262,26 @@ final class Driver {
     private synchronized void recordOutcome(Outcome outcome) {
         outcomes.put(outcome.getName(), outcome);
         Expectation expectation = expectationStore.get(outcome);
-        ResultValue resultValue;
-        if (outcome.matters()) {
-            resultValue = expectation.matches(outcome) ? ResultValue.OK : ResultValue.FAIL;
-        } else {
-            resultValue = ResultValue.IGNORE;
-        }
+        ResultValue resultValue = outcome.getResultValue(expectation);
 
         if (resultValue == ResultValue.OK) {
             successes++;
         } else if (resultValue == ResultValue.FAIL) {
             failures++;
-            failureNames.add(outcome.getName());
         } else { // ResultValue.IGNORE
             skipped++;
-            skippedNames.add(outcome.getName());
         }
 
         Result result = outcome.getResult();
         Console.getInstance().outcome(outcome.getName());
         Console.getInstance().printResult(outcome.getName(), result, resultValue);
+
+        OutcomeStore outcomeStore = new OutcomeStore(tagName, compareToTag, resultsDir,
+                recordResults && !disableResultRecord, expectationStore, date);
+        AnnotatedOutcome annotatedOutcome = outcomeStore.read(outcome);
+        outcomeStore.write(outcome, annotatedOutcome.outcomeChanged());
+
+        annotatedOutcomes.add(annotatedOutcome);
 
         suggestJars(outcome);
     }
@@ -285,7 +291,7 @@ final class Driver {
         if (result != Result.COMPILE_FAILED && result != Result.EXEC_FAILED) {
             return;
         }
-        Set<File> suggestedJars = classFileIndex.suggestClasspaths(outcome.getOutputLines());
+        Set<File> suggestedJars = classFileIndex.suggestClasspaths(outcome.getOutput());
 
         // don't suggest adding a jar that's already on the classpath
         suggestedJars.removeAll(mode.getClasspath().getElements());
@@ -395,10 +401,10 @@ final class Driver {
             }
 
             try {
-                addEarlyResult(new Outcome(action.getName(), action.getName(), result.get(), consoleOut.get()));
+                addEarlyResult(new Outcome(action.getName(), result.get(), consoleOut.get()));
             } catch (Exception e) {
                 if (e.getCause() instanceof CommandFailedException) {
-                    addEarlyResult(new Outcome(action.getName(), action.getName(), result.get(),
+                    addEarlyResult(new Outcome(action.getName(), result.get(),
                             ((CommandFailedException) e.getCause()).getOutputLines()));
                 } else if (result.get() == Result.EXEC_TIMEOUT) {
                     addEarlyResult(new Outcome(action.getName(), result.get(),
@@ -441,9 +447,13 @@ final class Driver {
         }
 
         @Override public void runnerClass(String outcomeName, String runnerClass) {
+            // TODO add to Outcome knowledge about what class was used to run it
             if (CaliperRunner.class.getName().equals(runnerClass)) {
                 Console.getInstance().verbose("running " + outcomeName + " with unlimited timeout");
                 resetKillTime(FOREVER);
+                disableResultRecord = true;
+            } else {
+                disableResultRecord = false;
             }
         }
 

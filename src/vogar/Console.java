@@ -16,9 +16,16 @@
 
 package vogar;
 
+import com.google.common.collect.Lists;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Controls, formats and emits output to the command line. This class emits
@@ -40,7 +47,7 @@ public abstract class Console {
 
     private static Console INSTANCE = NULL_CONSOLE;
 
-    private boolean color;
+    private boolean useColor;
     private boolean verbose;
     protected String indent;
     protected CurrentLine currentLine = CurrentLine.NEW;
@@ -59,8 +66,8 @@ public abstract class Console {
         this.indent = indent;
     }
 
-    public void setColor(boolean color) {
-        this.color = color;
+    public void setUseColor(boolean useColor) {
+        this.useColor = useColor;
     }
 
     public void setVerbose(boolean verbose) {
@@ -76,7 +83,7 @@ public abstract class Console {
 
     public synchronized void warn(String message) {
         newLine();
-        System.out.println(yellow("Warning: " + message));
+        System.out.println(colorString("Warning: " + message, Color.YELLOW));
     }
 
     /**
@@ -84,9 +91,9 @@ public abstract class Console {
      */
     public synchronized void warn(String message, List<String> list) {
         newLine();
-        System.out.println(yellow("Warning: " + message));
+        System.out.println(colorString("Warning: " + message, Color.YELLOW));
         for (String item : list) {
-            System.out.println(yellow(indent + item));
+            System.out.println(colorString(indent + item, Color.YELLOW));
         }
     }
 
@@ -129,30 +136,134 @@ public abstract class Console {
         }
 
         if (resultValue == ResultValue.OK) {
-            System.out.println(green("OK (" + result + ")"));
+            System.out.println(colorString("OK (" + result + ")", Color.GREEN));
         } else if (resultValue == ResultValue.FAIL) {
-            System.out.println(red("FAIL (" + result + ")"));
+            System.out.println(colorString("FAIL (" + result + ")", Color.RED));
         } else if (resultValue == ResultValue.IGNORE) {
-            System.out.println(yellow("SKIP (" + result + ")"));
+            System.out.println(colorString("SKIP (" + result + ")", Color.YELLOW));
         }
 
         currentLine = CurrentLine.NEW;
     }
 
-    public synchronized void summarizeFailures(List<String> failureNames) {
+    public synchronized void summarizeOutcomes(Set<AnnotatedOutcome> annotatedOutcomesSet) {
+        List<AnnotatedOutcome> annotatedOutcomes = AnnotatedOutcome.ORDER_BY_NAME.sortedCopy(annotatedOutcomesSet);
+
+        List<String> failures = Lists.newArrayList();
+        List<String> skips = Lists.newArrayList();
+        List<String> successes = Lists.newArrayList();
+
+        // figure out whether each outcome is noteworthy, and add a message to the appropriate list
+        for (AnnotatedOutcome annotatedOutcome : annotatedOutcomes) {
+            if (!annotatedOutcome.isNoteworthy()) {
+                continue;
+            }
+
+            Color color;
+            List<String> list;
+            if (annotatedOutcome.getResultValue() == ResultValue.OK) {
+                color = Color.GREEN;
+                list = successes;
+            } else if (annotatedOutcome.getResultValue() == ResultValue.FAIL) {
+                color = Color.RED;
+                list = failures;
+            } else {
+                color = Color.YELLOW;
+                list = skips;
+            }
+
+            String tagMessage = "";
+            if (annotatedOutcome.hasTag()) {
+                tagMessage = String.format(" [%s at tag %s]",
+                        generateSparkLine(Arrays.asList(annotatedOutcome.getTagResultValue())),
+                        annotatedOutcome.getTagName());
+            }
+
+            Date lastChanged = annotatedOutcome.lastChanged();
+            String timestamp;
+            if (lastChanged == null) {
+                timestamp = colorString("never", Color.YELLOW);
+            } else {
+                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd H:mm:ss");
+                dateFormat.setLenient(true);
+                timestamp = dateFormat.format(lastChanged);
+            }
+
+            String brokeThisMessage = "";
+            ResultValue resultValue = annotatedOutcome.getResultValue();
+            boolean resultValueChanged = resultValue != annotatedOutcome.getMostRecentResultValue();
+            boolean resultValueChangedSinceTag =
+                    annotatedOutcome.hasTag() && annotatedOutcome.getTagResultValue() != resultValue;
+            if (resultValueChanged) {
+                if (resultValue == ResultValue.OK) {
+                    brokeThisMessage = colorString(" (you probably fixed this)", Color.YELLOW);
+                } else {
+                    brokeThisMessage = colorString(" (you probably broke this)", Color.YELLOW);
+                }
+            } else if (resultValueChangedSinceTag) {
+                if (resultValue == ResultValue.OK) {
+                    brokeThisMessage = colorString(" (fixed since tag)", Color.YELLOW);
+                } else {
+                    brokeThisMessage = colorString(" (broken since tag)", Color.YELLOW);
+                }
+            }
+
+            List<ResultValue> previousResultValues = annotatedOutcome.getPreviousResultValues();
+            int numResultValuesToShow = Math.min(10, previousResultValues.size());
+            List<ResultValue> previousResultValuesToShow = new ArrayList<ResultValue>(
+                    previousResultValues.subList(0, numResultValuesToShow));
+            Collections.reverse(previousResultValuesToShow);
+
+            if (!previousResultValuesToShow.isEmpty()) {
+                list.add(String.format("%s%s%s [last %d: %s] [result last changed: %s]%s",
+                            indent,
+                            colorString(annotatedOutcome.getOutcome().getName(), color),
+                            tagMessage,
+                            previousResultValuesToShow.size(),
+                            generateSparkLine(previousResultValuesToShow),
+                            timestamp,
+                            brokeThisMessage));
+            } else {
+                list.add(String.format("%s%s%s",
+                            indent,
+                            colorString(annotatedOutcome.getOutcome().getName(), color),
+                            tagMessage));
+            }
+        }
+
         newLine();
-        System.out.println("Failure summary:");
-        for (String failureName : failureNames) {
-            System.out.println(red(failureName));
+        if (!successes.isEmpty()) {
+            System.out.println("Success summary:");
+            for (String success : successes) {
+                System.out.println(success);
+            }
+        }
+        if (!failures.isEmpty()) {
+            System.out.println("Failure summary:");
+            for (String failure : failures) {
+                System.out.println(failure);
+            }
+        }
+        if (!skips.isEmpty()) {
+            System.out.println("Skips summary:");
+            for (String skip : skips) {
+                System.out.println(skip);
+            }
         }
     }
 
-    public synchronized void summarizeSkips(List<String> skippedNames) {
-        newLine();
-        System.out.println("Skip summary:");
-        for (String skippedName : skippedNames) {
-            System.out.println(yellow(skippedName));
+    private String generateSparkLine(List<ResultValue> resultValues) {
+        StringBuilder sb = new StringBuilder();
+        for (ResultValue resultValue : resultValues) {
+            if (resultValue == ResultValue.OK) {
+                sb.append(colorString("\u2713", Color.GREEN));
+            } else if (resultValue == ResultValue.FAIL) {
+                sb.append(colorString("X", Color.RED));
+            } else {
+                sb.append(colorString("-", Color.YELLOW));
+            }
         }
+        return sb.toString();
     }
 
     /**
@@ -243,20 +354,28 @@ public abstract class Console {
         return message.split("\r\n|\r|\n", Integer.MAX_VALUE);
     }
 
-    protected String green(String message) {
-        return color ? ("\u001b[32;1m" + message + "\u001b[0m") : message;
+    private enum Color {
+        GREEN, RED, YELLOW;
+
+        public int getCode() {
+            switch (this) {
+                case GREEN:
+                    return 32;
+                case RED:
+                    return 31;
+                case YELLOW:
+                    return 33;
+            }
+            throw new IllegalArgumentException(this + " is an invalid color");
+        }
     }
 
-    protected String red(String message) {
-        return color ? ("\u001b[31;1m" + message + "\u001b[0m") : message;
-    }
-
-    protected String yellow(String message) {
-        return color ? ("\u001b[33;1m" + message + "\u001b[0m") : message;
+    protected String colorString(String message, Color color) {
+        return useColor ? ("\u001b[" + color.getCode() + ";1m" + message + "\u001b[0m") : message;
     }
 
     private void eraseCurrentLine() {
-        System.out.print(color ? "\u001b[2K\r" : "\n");
+        System.out.print(useColor ? "\u001b[2K\r" : "\n");
         System.out.flush();
     }
 

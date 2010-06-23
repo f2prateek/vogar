@@ -214,8 +214,8 @@ class HostMonitor {
         @Override public void endElement(String uri, String localName, String qName)
                 throws SAXException {
             if (qName.equals("outcome")) {
-                handler.outcome(new Outcome(currentOutcomeName, currentActionName,
-                        currentResult, Collections.singletonList(output.toString())));
+                handler.outcome(new Outcome(currentOutcomeName, currentResult,
+                        Collections.singletonList(output.toString())));
                 currentOutcomeName = null;
                 currentActionName = null;
                 currentResult = null;

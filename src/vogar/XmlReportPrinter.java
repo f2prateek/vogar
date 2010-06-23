@@ -41,30 +41,41 @@ import org.kxml2.io.KXmlSerializer;
  */
 public class XmlReportPrinter {
 
-    private static final String TESTSUITE = "testsuite";
-    private static final String TESTCASE = "testcase";
-    private static final String ERROR = "error";
-    private static final String FAILURE = "failure";
-    private static final String ATTR_NAME = "name";
-    private static final String ATTR_TIME = "time";
-    private static final String ATTR_ERRORS = "errors";
-    private static final String ATTR_FAILURES = "failures";
-    private static final String ATTR_TESTS = "tests";
-    private static final String ATTR_TYPE = "type";
-    private static final String PROPERTIES = "properties";
-    private static final String ATTR_CLASSNAME = "classname";
-    private static final String TIMESTAMP = "timestamp";
-    private static final String HOSTNAME = "hostname";
-
     /** the XML namespace */
     private static final String ns = null;
 
     private final File directory;
     private final ExpectationStore expectationStore;
+    private final Date date;
+    private final boolean printAll;
 
-    public XmlReportPrinter(File directory, ExpectationStore expectationStore) {
+    public XmlReportPrinter(File directory, ExpectationStore expectationStore, Date date,
+            boolean printAll) {
         this.directory = directory;
         this.expectationStore = expectationStore;
+        this.date = date;
+        this.printAll = printAll;
+    }
+
+    public XmlReportPrinter(File directory, ExpectationStore expectationStore, Date date) {
+        this.directory = directory;
+        this.expectationStore = expectationStore;
+        this.date = date;
+        this.printAll = false;
+    }
+
+    public void generateReport(Outcome outcome, String outputFileName) {
+        String timestamp = getGMTTimestamp();
+        Suite suite = testToSuite(outcome);
+        suite.printReport(timestamp, outputFileName);
+    }
+
+    private String getGMTTimestamp() {
+        SimpleDateFormat dateFormat = new SimpleDateFormat(XmlReportConstants.DATEFORMAT);
+        TimeZone gmt = TimeZone.getTimeZone("GMT");
+        dateFormat.setTimeZone(gmt);
+        dateFormat.setLenient(true);
+        return dateFormat.format(date);
     }
 
     /**
@@ -73,37 +84,31 @@ public class XmlReportPrinter {
     public int generateReports(Collection<Outcome> results) {
         Map<String, Suite> suites = testsToSuites(results);
 
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-        TimeZone gmt = TimeZone.getTimeZone("GMT");
-        dateFormat.setTimeZone(gmt);
-        dateFormat.setLenient(true);
-        String timestamp = dateFormat.format(new Date());
+        String timestamp = getGMTTimestamp();
 
         for (Suite suite : suites.values()) {
-            FileOutputStream stream = null;
-            try {
-                stream = new FileOutputStream(new File(directory, "TEST-" + suite.name + ".xml"));
-
-                KXmlSerializer serializer = new KXmlSerializer();
-                serializer.setOutput(stream, "UTF-8");
-                serializer.startDocument("UTF-8", null);
-                serializer.setFeature(
-                        "http://xmlpull.org/v1/doc/features.html#indent-output", true);
-                suite.print(serializer, timestamp);
-                serializer.endDocument();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            } finally {
-                if (stream != null) {
-                    try {
-                        stream.close();
-                    } catch (IOException ignored) {
-                    }
-                }
-            }
+            String fileName = "TEST-" + suite.name + ".xml";
+            suite.printReport(timestamp, fileName);
         }
 
         return suites.size();
+    }
+
+    private Suite testToSuite(Outcome outcome) {
+        String suiteName = outcome.getSuiteName();
+        Suite suite = new Suite(suiteName);
+        suite.outcomes.add(outcome);
+
+        Expectation expectation = expectationStore.get(outcome);
+        if (!expectation.matches(outcome)) {
+            if (outcome.getResult() == Result.EXEC_FAILED) {
+                suite.failuresCount++;
+            } else {
+                suite.errorsCount++;
+            }
+        }
+
+        return suite;
     }
 
     private Map<String, Suite> testsToSuites(Collection<Outcome> outcomes) {
@@ -144,49 +149,77 @@ public class XmlReportPrinter {
             this.name = name;
         }
 
-        void print(KXmlSerializer serializer, String timestamp) throws IOException {
-            serializer.startTag(ns, TESTSUITE);
-            serializer.attribute(ns, ATTR_NAME, name);
-            serializer.attribute(ns, ATTR_TESTS, Integer.toString(outcomes.size()));
-            serializer.attribute(ns, ATTR_FAILURES, Integer.toString(failuresCount));
-            serializer.attribute(ns, ATTR_ERRORS, Integer.toString(errorsCount));
-            serializer.attribute(ns, ATTR_TIME, "0");
-            serializer.attribute(ns, TIMESTAMP, timestamp);
-            serializer.attribute(ns, HOSTNAME, "localhost");
-            serializer.startTag(ns, PROPERTIES);
-            serializer.endTag(ns, PROPERTIES);
+        private void print(KXmlSerializer serializer, String timestamp) throws IOException {
+            serializer.startTag(ns, XmlReportConstants.TESTSUITE);
+            serializer.attribute(ns, XmlReportConstants.ATTR_NAME, name);
+            serializer.attribute(ns, XmlReportConstants.ATTR_TESTS, Integer.toString(outcomes.size()));
+            serializer.attribute(ns, XmlReportConstants.ATTR_FAILURES, Integer.toString(failuresCount));
+            serializer.attribute(ns, XmlReportConstants.ATTR_ERRORS, Integer.toString(errorsCount));
+            serializer.attribute(ns, XmlReportConstants.ATTR_TIME, "0");
+            serializer.attribute(ns, XmlReportConstants.TIMESTAMP, timestamp);
+            serializer.attribute(ns, XmlReportConstants.HOSTNAME, "localhost");
+            serializer.startTag(ns, XmlReportConstants.PROPERTIES);
+            serializer.endTag(ns, XmlReportConstants.PROPERTIES);
 
             for (Outcome outcome : outcomes) {
                 print(serializer, outcome);
             }
 
-            serializer.endTag(ns, TESTSUITE);
+            serializer.endTag(ns, XmlReportConstants.TESTSUITE);
         }
 
-        void print(KXmlSerializer serializer, Outcome outcome) throws IOException {
-            serializer.startTag(ns, TESTCASE);
-            serializer.attribute(ns, ATTR_NAME, outcome.getTestName());
-            serializer.attribute(ns, ATTR_CLASSNAME, outcome.getSuiteName());
-            serializer.attribute(ns, ATTR_TIME, "0");
+        private void print(KXmlSerializer serializer, Outcome outcome) throws IOException {
+            serializer.startTag(ns, XmlReportConstants.TESTCASE);
+            serializer.attribute(ns, XmlReportConstants.ATTR_NAME, outcome.getTestName());
+            serializer.attribute(ns, XmlReportConstants.ATTR_CLASSNAME, outcome.getSuiteName());
+            serializer.attribute(ns, XmlReportConstants.ATTR_TIME, "0");
 
             Expectation expectation = expectationStore.get(outcome);
-            if (!expectation.matches(outcome)) {
-                String result = outcome.getResult() == Result.EXEC_FAILED ? FAILURE : ERROR;
+            if (printAll || !expectation.matches(outcome)) {
+                String result;
+                switch (outcome.getResult()) {
+                    case EXEC_FAILED:
+                        result = XmlReportConstants.FAILURE;
+                        break;
+                    case SUCCESS:
+                        result = XmlReportConstants.SUCCESS;
+                        break;
+                    default:
+                        result = XmlReportConstants.ERROR;
+                        break;
+                }
                 serializer.startTag(ns, result);
-                serializer.attribute(ns, ATTR_TYPE, outcome.getResult().toString());
-                String text = sanitize(Strings.join(outcome.getOutputLines(), "\n"));
+                serializer.attribute(ns, XmlReportConstants.ATTR_TYPE, outcome.getResult().toString());
+                String text = outcome.getOutput();
                 serializer.text(text);
                 serializer.endTag(ns, result);
             }
 
-            serializer.endTag(ns, TESTCASE);
+            serializer.endTag(ns, XmlReportConstants.TESTCASE);
         }
 
-        /**
-         * Returns the text in a format that is safe for use in an XML document.
-         */
-        private String sanitize(String text) {
-            return text.replace("\0", "<\\0>");
+        void printReport(String timestamp, String fileName) {
+            FileOutputStream stream = null;
+            try {
+                stream = new FileOutputStream(new File(directory, fileName));
+
+                KXmlSerializer serializer = new KXmlSerializer();
+                serializer.setOutput(stream, "UTF-8");
+                serializer.startDocument("UTF-8", null);
+                serializer.setFeature(
+                        "http://xmlpull.org/v1/doc/features.html#indent-output", true);
+                print(serializer, timestamp);
+                serializer.endDocument();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            } finally {
+                if (stream != null) {
+                    try {
+                        stream.close();
+                    } catch (IOException ignored) {
+                    }
+                }
+            }
         }
     }
 }

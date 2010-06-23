@@ -23,7 +23,6 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -32,14 +31,11 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Scanner;
 import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import vogar.commands.Command;
 import vogar.commands.Mkdir;
 
 /**
@@ -59,7 +55,8 @@ public final class ClassFileIndex {
     private final List<String> FAILURE_PATTERN_STRINGS = Arrays.asList(
             ".*package (.*) does not exist.*",
             ".*import (.*);.*",
-            ".*ClassNotFoundException: (\\S*).*"
+            ".*ClassNotFoundException: (\\S*).*",
+            ".*NoClassDefFoundError: Could not initialize class (\\S*).*"
     );
     private final List<Pattern> JAR_PATTERNS = new ArrayList<Pattern>();
     {
@@ -74,31 +71,31 @@ public final class ClassFileIndex {
             this.FAILURE_PATTERNS.add(Pattern.compile(patternString, Pattern.DOTALL));
         }
     }
-    private Map<String, Set<File>> classFileMap;
+    private Map<String, Set<File>> classFileMap = new HashMap<String, Set<File>>();
+    private final List<File> jarSearchDirs;
 
-    public ClassFileIndex() {
-        this.classFileMap = new HashMap<String, Set<File>>();
+    public ClassFileIndex(List<File> jarSearchDirs) {
+        this.jarSearchDirs = jarSearchDirs;
     }
 
-    public Set<File> suggestClasspaths(List<String> testOutput) {
+    public Set<File> suggestClasspaths(String testOutput) {
         Set<File> suggestedClasspaths = new HashSet<File>();
 
-        for (String line : testOutput) {
-            for (Pattern pattern : FAILURE_PATTERNS) {
-                Matcher matcher = pattern.matcher(line);
-                if (!matcher.matches()) {
-                    continue;
-                }
+        for (Pattern pattern : FAILURE_PATTERNS) {
+            Matcher matcher = pattern.matcher(testOutput);
+            if (!matcher.matches()) {
+                continue;
+            }
 
-                for (int i = 1; i <= matcher.groupCount(); i++) {
-                    String missingPackageOrClass = matcher.group(i);
-                    Set<File> containingJars = classFileMap.get(missingPackageOrClass);
-                    if (containingJars != null) {
-                        suggestedClasspaths.addAll(containingJars);
-                    }
+            for (int i = 1; i <= matcher.groupCount(); i++) {
+                String missingPackageOrClass = matcher.group(i);
+                Set<File> containingJars = classFileMap.get(missingPackageOrClass);
+                if (containingJars != null) {
+                    suggestedClasspaths.addAll(containingJars);
                 }
             }
         }
+
         return suggestedClasspaths;
     }
 
@@ -127,31 +124,18 @@ public final class ClassFileIndex {
         Console.getInstance().verbose("building class file index");
 
         // Create index
-        String jarPath = System.getenv("VOGAR_JAR_PATH");
-        if (jarPath == null) {
-            Console.getInstance().warn("VOGAR_JAR_PATH environment variable is not set, "
-                    + "can't create class file index");
-            return;
-        }
-        String[] jarDirs = jarPath.split(":");
-        for (String jarDir : jarDirs) {
-            if (jarDir.isEmpty()) {
-                // protect against trailing or leading colons
-                continue;
-            }
-            File jarDirFile = new File(jarDir);
-
-            if (!jarDirFile.exists()) {
-                Console.getInstance().warn("directory \"" + jarDirFile + "\" on VOGAR_JAR_PATH"
+        for (File jarSearchDir : jarSearchDirs) {
+            if (!jarSearchDir.exists()) {
+                Console.getInstance().warn("directory \"" + jarSearchDir + "\" in jar paths"
                         + " doesn't exist");
                 continue;
             }
 
             // traverse the jar directory, looking for files called ending in .jar
-            Console.getInstance().verbose("looking in " + jarDirFile + " for .jar files");
+            Console.getInstance().verbose("looking in " + jarSearchDir + " for .jar files");
 
             Set<File> jarFiles = new HashSet<File>();
-            getJarFiles(jarFiles, jarDirFile);
+            getJarFiles(jarFiles, jarSearchDir);
             for (File file : jarFiles) {
                 indexJarFile(file);
             }

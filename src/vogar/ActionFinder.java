@@ -19,7 +19,6 @@ package vogar;
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 /**
  * Handles finding actions to perform, given files and classes.

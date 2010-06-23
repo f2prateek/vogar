@@ -82,6 +82,6 @@ final class Expectation {
     }
 
     private boolean patternMatches(Outcome outcome) {
-        return pattern.matcher(Strings.join(outcome.getOutputLines(), "\n")).matches();
+        return pattern.matcher(outcome.getOutput()).matches();
     }
 }

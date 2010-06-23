@@ -20,7 +20,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.HashSet;
 import java.util.Set;
-
 import vogar.commands.AndroidSdk;
 
 public class DeviceFileCache implements FileCache {

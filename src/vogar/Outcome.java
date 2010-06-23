@@ -16,10 +16,12 @@
 
 package vogar;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Ordering;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Arrays;
-import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -29,46 +31,81 @@ import java.util.List;
 final class Outcome {
 
     private final String outcomeName;
-    private final String actionName;
     private final Result result;
-    private final List<String> outputLines;
+    private final String output;
+    private final Date date;
 
-    public Outcome(String outcomeName, String actionName, Result result,
-            List<String> outputLines) {
+    public static final Ordering<Outcome> ORDER_BY_NAME = new Ordering<Outcome>() {
+        @Override public int compare(Outcome a, Outcome b) {
+            return a.getName().compareTo(b.getName());
+        }
+    };
+
+    public Outcome(String outcomeName, Result result, List<String> outputLines, Date date) {
         this.outcomeName = outcomeName;
-        this.actionName = actionName;
         this.result = result;
-        this.outputLines = outputLines;
+        this.output = sanitizeOutputLines(outputLines);
+        this.date = date;
     }
 
-    public Outcome(String actionName, Result result, String outputLine) {
-        this.outcomeName = actionName;
-        this.actionName = actionName;
+    public Outcome(String outcomeName, Result result, List<String> outputLines) {
+        this.outcomeName = outcomeName;
         this.result = result;
-        this.outputLines = Collections.singletonList(outputLine);
+        this.output = sanitizeOutputLines(outputLines);
+        this.date = new Date();
     }
 
-    public Outcome(String actionName, Result result, Throwable throwable) {
-        this.outcomeName = actionName;
-        this.actionName = actionName;
+    public Outcome(String outcomeName, Result result, String outputLine, Date date) {
+        this.outcomeName = outcomeName;
         this.result = result;
-        this.outputLines = throwableToLines(throwable);
+        this.output = sanitizeOutputLine(outputLine);
+        this.date = date;
+    }
+
+    public Outcome(String outcomeName, Result result, String outputLine) {
+        this.outcomeName = outcomeName;
+        this.result = result;
+        this.output = sanitizeOutputLine(outputLine);
+        this.date = new Date();
+    }
+
+    public Outcome(String outcomeName, Result result, Throwable throwable) {
+        this.outcomeName = outcomeName;
+        this.result = result;
+        this.output = sanitizeOutputLines(throwableToLines(throwable));
+        this.date = new Date();
+    }
+
+    private String sanitizeOutputLines(List<String> outputLines) {
+        List<String> sanitizedStrings = Lists.newArrayList();
+        for (String line : outputLines) {
+            sanitizedStrings.add(sanitizeOutputLine(line));
+        }
+        return Strings.join(sanitizedStrings, "\n");
+    }
+
+    private String sanitizeOutputLine(String outputLine) {
+        return Strings.xmlSanitize(outputLine.replaceAll("\r\n?", "\n"));
+    }
+
+    public Date getDate() {
+        return date;
     }
 
     public String getName() {
         return outcomeName;
     }
 
-    public String getActionName() {
-        return actionName;
-    }
-
     public Result getResult() {
         return result;
     }
 
+    public String getOutput() {
+        return output;
+    }
+
     public List<String> getOutputLines() {
-        return outputLines;
+        return Arrays.asList(output.split("\n"));
     }
 
     private static List<String> throwableToLines(Throwable t) {
@@ -105,7 +142,36 @@ final class Outcome {
      *
      * For example, for a test skipped because it is unsupported, we don't care about the result.
      */
-    public boolean matters() {
+    private boolean matters() {
         return result != Result.UNSUPPORTED;
+    }
+
+    public ResultValue getResultValue(Expectation expectation) {
+        if (matters()) {
+            return expectation.matches(this) ? ResultValue.OK : ResultValue.FAIL;
+        }
+        return ResultValue.IGNORE;
+    }
+
+    public String getPath() {
+        return Strings.join(outcomeName.split("\\.|#"), "/");
+    }
+
+    @Override public boolean equals(Object o) {
+        if (o instanceof Outcome) {
+            Outcome outcome = (Outcome) o;
+            return outcomeName.equals(outcome.outcomeName)
+                    && result == outcome.result
+                    && output.equals(outcome.output);
+        }
+        return false;
+    }
+
+    @Override public int hashCode() {
+        int hashCode = 17;
+        hashCode = 37 * hashCode + outcomeName.hashCode();
+        hashCode  = 37 * hashCode + result.hashCode();
+        hashCode = 37 * hashCode + output.hashCode();
+        return hashCode;
     }
 }
