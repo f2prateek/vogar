@@ -19,6 +19,7 @@ package vogar.commands;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -41,14 +42,24 @@ import vogar.Strings;
  * Android SDK commands such as adb, aapt and dx.
  */
 public class AndroidSdk {
+
+    // $BOOTCLASSPATH defined by system/core/rootdir/init.rc
+    public static final String[] BOOTCLASSPATH = new String[] { "core",
+                                                                "ext",
+                                                                "framework",
+                                                                "android.policy",
+                                                                "services",
+                                                                "core-junit",
+                                                                "bouncycastle" };
+
     private final Md5Cache dexCache;
-    private final Md5Cache pushCache;
-    private boolean deviceCache = false;
+    private Md5Cache pushCache;
     private Set<File> mkdirCache = new HashSet<File>();
 
     private static final Comparator<File> ORDER_BY_NAME = new Comparator<File>() {
         public int compare(File a, File b) {
-            // TODO: this should be a numeric comparison, but we don't need to worry until version 10.
+            // TODO: this should be a numeric comparison, but we don't
+            // need to worry until version 10.
             return a.getName().compareTo(b.getName());
         }
     };
@@ -60,14 +71,13 @@ public class AndroidSdk {
         BANNED_NAMES.add("javalib");
     }
 
-    private final File androidClasses;
+    private final File[] androidClasses;
     private final File androidToolsDir;
 
-    private AndroidSdk(File androidClasses, File androidToolsDir) {
+    private AndroidSdk(File[] androidClasses, File androidToolsDir) {
         this.androidClasses = androidClasses;
         this.androidToolsDir = androidToolsDir;
         dexCache = new Md5Cache("dex", new HostFileCache());
-        pushCache = new Md5Cache("pushed", new DeviceFileCache(this));
     }
 
     public static AndroidSdk getFromPath() {
@@ -100,15 +110,22 @@ public class AndroidSdk {
             File newestPlatform = platforms.get(platforms.size() - 1);
             Console.getInstance().verbose("using android platform: " + newestPlatform);
 
-            return new AndroidSdk(new File(newestPlatform, "android.jar"), new File(newestPlatform, "tools"));
+            return new AndroidSdk(new File[] { new File(newestPlatform, "android.jar") },
+                                  new File(newestPlatform, "tools"));
 
         } else if ("bin".equals(parentFileName)) {
             File sourceRoot = adb.getParentFile().getParentFile()
                     .getParentFile().getParentFile().getParentFile();
             Console.getInstance().verbose("using android build tree: " + sourceRoot);
-            File coreClasses = new File(sourceRoot
-                    + "/out/target/common/obj/JAVA_LIBRARIES/core_intermediates/classes.jar");
-            return new AndroidSdk(coreClasses, null);
+
+            File[] androidClasses = new File[BOOTCLASSPATH.length];
+            for (int i = 0; i < BOOTCLASSPATH.length; i++) {
+                String jar = BOOTCLASSPATH[i];
+                androidClasses[i] = new File(sourceRoot,
+                                             "out/target/common/obj/JAVA_LIBRARIES/"
+                                             + jar + "_intermediates/classes.jar");
+            }
+            return new AndroidSdk(androidClasses, null);
 
         } else {
             throw new RuntimeException("Couldn't derive Android home from " + adb);
@@ -130,12 +147,12 @@ public class AndroidSdk {
         return supportSrc.exists() ? Arrays.asList(supportSrc) : Collections.<File>emptyList();
     }
 
-    public File getAndroidClasses() {
+    public File[] getAndroidClasses() {
         return androidClasses;
     }
 
-    public void setDeviceCache(boolean deviceCache) {
-        this.deviceCache = deviceCache;
+    public void setDeviceCache(DeviceFileCache deviceCache) {
+        this.pushCache = new Md5Cache("pushed", deviceCache);
     }
 
     /**
@@ -202,12 +219,15 @@ public class AndroidSdk {
     }
 
     public void packageApk(File apk, File manifest) {
-        new Command(toolPath("aapt"),
-                "package",
-                "-F", apk.getPath(),
-                "-M", manifest.getPath(),
-                "-I", androidClasses.getPath())
-                .execute();
+        List<String> aapt = new ArrayList<String>(Arrays.asList(toolPath("aapt"),
+                                                                "package",
+                                                                "-F", apk.getPath(),
+                                                                "-M", manifest.getPath()));
+        for (File jar : androidClasses) {
+            aapt.add("-I");
+            aapt.add(jar.getPath());
+        }
+        new Command(aapt).execute();
     }
 
     public void addToApk(File apk, File dex) {
@@ -288,7 +308,7 @@ public class AndroidSdk {
         Command fallbackCommand = new Command("adb", "push", local.getPath(), remote.getPath());
         mkdirs(remote.getParentFile());
         // don't yet cache directories (only used by jtreg tests)
-        if (deviceCache && local.isFile()) {
+        if (pushCache != null && local.isFile()) {
             String key = pushCache.makeKey(local);
             boolean cacheHit = pushCache.getFromCache(remote, key);
             if (cacheHit) {
@@ -312,6 +332,10 @@ public class AndroidSdk {
 
     public void forwardTcp(int localPort, int devicePort) {
         new Command("adb", "forward", "tcp:" + localPort, "tcp:" + devicePort).execute();
+    }
+
+    public void remount() {
+        new Command("adb", "remount").execute();
     }
 
     public void waitForDevice() {
@@ -343,8 +367,8 @@ public class AndroidSdk {
             try {
                 output = command.executeWithTimeout(remainingSeconds);
             } catch (TimeoutException e) {
-                throw new RuntimeException("Timed out after " + timeoutSeconds +
-                                           " seconds waiting for file " + path, e);
+                throw new RuntimeException("Timed out after " + timeoutSeconds
+                                           + " seconds waiting for file " + path, e);
             }
             try {
                 Thread.sleep(millisPerSecond);

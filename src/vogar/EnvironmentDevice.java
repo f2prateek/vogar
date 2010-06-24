@@ -27,8 +27,9 @@ class EnvironmentDevice extends Environment {
     final int firstMonitorPort;
     final int numRunners;
 
-    EnvironmentDevice(boolean cleanBefore, boolean cleanAfter, Integer debugPort, int firstMonitorPort,
-                      int numRunners, File localTemp, File runnerDir, AndroidSdk androidSdk) {
+    EnvironmentDevice(boolean cleanBefore, boolean cleanAfter, Integer debugPort,
+                      int firstMonitorPort, int numRunners, File localTemp, File runnerDir,
+                      AndroidSdk androidSdk) {
         super(cleanBefore, cleanAfter, debugPort, localTemp);
         this.androidSdk = androidSdk;
         this.runnerDir = runnerDir;
@@ -51,10 +52,11 @@ class EnvironmentDevice extends Environment {
     @Override void prepare() {
         androidSdk.waitForDevice();
         androidSdk.waitForNonEmptyDirectory(runnerDir.getParentFile(), 5 * 60);
+        androidSdk.remount();
         if (cleanBefore) {
             androidSdk.rm(runnerDir);
         }
-        androidSdk.mkdir(runnerDir);
+        androidSdk.mkdirs(runnerDir);
         androidSdk.mkdir(vogarTemp);
         androidSdk.mkdir(dalvikCache);
         for (int i = 0; i < numRunners; i++) {

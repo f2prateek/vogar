@@ -23,11 +23,12 @@ import java.util.Set;
 import vogar.commands.AndroidSdk;
 
 public class DeviceFileCache implements FileCache {
-    private final File CACHE_ROOT = new File("/sdcard/tmp/vogar-md5-cache/");
+    private final File cacheRoot;
     private final AndroidSdk androidSdk;
     private Set<File> cachedFiles;
 
-    public DeviceFileCache(AndroidSdk androidSdk) {
+    public DeviceFileCache(File deviceRunnerDir, AndroidSdk androidSdk) {
+        this.cacheRoot = new File(deviceRunnerDir, "md5-cache");
         this.androidSdk = androidSdk;
         // filled lazily
         this.cachedFiles = null;
@@ -36,26 +37,26 @@ public class DeviceFileCache implements FileCache {
     public boolean existsInCache(String key) {
         if (cachedFiles == null) {
             try {
-                cachedFiles = androidSdk.ls(CACHE_ROOT);
+                cachedFiles = androidSdk.ls(cacheRoot);
                 Console.getInstance().verbose("indexed on-device cache: " + cachedFiles.size()
                         + " entries.");
             } catch (FileNotFoundException e) {
-                // CACHE_ROOT probably just hasn't been created yet.
+                // cacheRoot probably just hasn't been created yet.
                 cachedFiles = new HashSet<File>();
             }
         }
-        File cachedFile = new File(CACHE_ROOT, key);
+        File cachedFile = new File(cacheRoot, key);
         return cachedFiles.contains(cachedFile);
     }
 
     public void copyFromCache(String key, File destination) {
-        File cachedFile = new File(CACHE_ROOT, key);
+        File cachedFile = new File(cacheRoot, key);
         androidSdk.cp(cachedFile, destination);
     }
 
     public void copyToCache(File source, String key) {
-        File cachedFile = new File(CACHE_ROOT, key);
-        androidSdk.mkdirs(CACHE_ROOT);
+        File cachedFile = new File(cacheRoot, key);
+        androidSdk.mkdirs(cacheRoot);
         // Copy it onto the same file system first, then atomically move it into place.
         // That way, if we fail, we don't leave anything dangerous lying around.
         File temporary = new File(cachedFile + ".tmp");

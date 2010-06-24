@@ -89,8 +89,8 @@ public final class Vogar {
     @Option(names = { "--debug" })
     private Integer debugPort;
 
-    @Option(names = { "--device-runner-dir" })
-    private File deviceRunnerDir = new File("/sdcard/vogar");
+    @Option(names = { "--device-dir" })
+    private File deviceDir = new File("/sdcard/vogar");
 
     @Option(names = { "--vm-arg" })
     private List<String> vmArgs = new ArrayList<String>();
@@ -232,9 +232,9 @@ public final class Vogar {
         System.out.println("      This port must be free both on the device and on the local");
         System.out.println("      system. Disables the timeout specified by --timeout-seconds.");
         System.out.println();
-        System.out.println("  --device-runner-dir <directory>: use the specified directory for");
+        System.out.println("  --device-dir <directory>: use the specified directory for");
         System.out.println("      on-device temporary files and code.");
-        System.out.println("      Default is: " + deviceRunnerDir);
+        System.out.println("      Default is: " + deviceDir);
         System.out.println();
         System.out.println("  --vm-arg <argument>: include the specified argument when spawning a");
         System.out.println("      virtual machine. Examples: -Xint:fast, -ea, -Xmx16M");
@@ -447,7 +447,7 @@ public final class Vogar {
         if (resultsDir == null) {
             resultsDir = new File(vogarDir, "results/");
         }
-        
+
         int numRunners = (stream || this.mode == ModeId.ACTIVITY)
                 ? 1
                 : NUM_PROCESSORS;
@@ -457,7 +457,9 @@ public final class Vogar {
         AndroidSdk androidSdk = null;
         if (mode.requiresAndroidSdk()) {
             androidSdk = AndroidSdk.getFromPath();
-            androidSdk.setDeviceCache(deviceCache);
+            if (deviceCache) {
+                androidSdk.setDeviceCache(new DeviceFileCache(deviceDir, androidSdk));
+            }
             modeOptions.buildClasspath.addAll(androidSdk.getAndroidClasses());
         }
 
@@ -465,7 +467,7 @@ public final class Vogar {
         Environment environment = mode.isHost()
                 ? new EnvironmentHost(cleanBefore, cleanAfter, debugPort, localTemp)
                 : new EnvironmentDevice(cleanBefore, cleanAfter, debugPort, firstMonitorPort, numRunners, localTemp,
-                        deviceRunnerDir, androidSdk);
+                        new File(deviceDir, "run"), androidSdk);
 
         Vm.Options vmOptions = (mode.acceptsVmArgs())
                 ? new Vm.Options(vmArgs, targetArgs)

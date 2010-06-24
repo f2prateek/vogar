@@ -17,6 +17,8 @@
 package vogar;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import vogar.commands.AndroidSdk;
 import vogar.commands.Mkdir;
 
@@ -63,11 +65,11 @@ public class HostDalvikVm extends Vm {
     }
 
     @Override protected VmCommandBuilder newVmCommandBuilder(File workingDirectory) {
-        Classpath bootClasspath = Classpath.of(
-                new File(base + "/system/framework/core.jar"),
-                new File(base + "/system/framework/ext.jar"),
-                new File(base + "/system/framework/framework.jar")
-        );
+        List<File> jars = new ArrayList<File>();
+        for (String jar : AndroidSdk.BOOTCLASSPATH) {
+            jars.add(new File(base, "system/framework/" + jar + ".jar"));
+        }
+        Classpath bootClasspath = Classpath.of(jars);
 
         VmCommandBuilder builder = new VmCommandBuilder()
                 .workingDir(workingDirectory)
