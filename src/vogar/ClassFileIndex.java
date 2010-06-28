@@ -71,7 +71,7 @@ public final class ClassFileIndex {
             this.FAILURE_PATTERNS.add(Pattern.compile(patternString, Pattern.DOTALL));
         }
     }
-    private Map<String, Set<File>> classFileMap = new HashMap<String, Set<File>>();
+    private final Map<String, Set<File>> classFileMap = new HashMap<String, Set<File>>();
     private final List<File> jarSearchDirs;
 
     public ClassFileIndex(List<File> jarSearchDirs) {
@@ -100,7 +100,7 @@ public final class ClassFileIndex {
     }
 
     /**
-     * Search through the VOGAR_JAR_PATH to find .jars to index.
+     * Search through the jar search directories to find .jars to index.
      *
      * If this has already been done, instead just use the cached version in .vogar
      */

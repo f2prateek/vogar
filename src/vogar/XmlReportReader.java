@@ -16,6 +16,7 @@
 
 package vogar;
 
+import com.google.common.collect.ImmutableSet;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileReader;
@@ -23,12 +24,9 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
@@ -36,14 +34,12 @@ import org.kxml2.io.KXmlParser;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
-public class XmlReportReader {
+public final class XmlReportReader {
 
-    private final static Set<String> resultTagNames = new HashSet<String>();
-    static {
-        resultTagNames.add(XmlReportConstants.FAILURE);
-        resultTagNames.add(XmlReportConstants.ERROR);
-        resultTagNames.add(XmlReportConstants.SUCCESS);
-    }
+    private final static Set<String> resultTagNames = ImmutableSet.of(
+        XmlReportConstants.FAILURE,
+        XmlReportConstants.ERROR,
+        XmlReportConstants.SUCCESS);
 
     public Collection<Outcome> readSuiteReport(File xmlReport) {
         FileInputStream stream = null;

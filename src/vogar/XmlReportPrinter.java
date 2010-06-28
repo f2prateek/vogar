@@ -47,6 +47,10 @@ public class XmlReportPrinter {
     private final File directory;
     private final ExpectationStore expectationStore;
     private final Date date;
+    /**
+     * true if successful tests should have their output printed (e.g. something with success
+     * signature "SUCCESS (EXEC_FAILED)" would not normally be printed).
+     */
     private final boolean printAll;
 
     public XmlReportPrinter(File directory, ExpectationStore expectationStore, Date date,

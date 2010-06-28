@@ -16,17 +16,14 @@
 
 package vogar;
 
-import com.google.common.collect.Sets;
+import com.google.common.collect.Lists;
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -70,33 +67,29 @@ final class Driver {
     private final int monitorTimeoutSeconds;
     private final int smallTimeoutSeconds;
     private final int largeTimeoutSeconds;
+    private final JarSuggestions jarSuggestions;
     private final ClassFileIndex classFileIndex;
     private final int numRunnerThreads;
 
     private int successes = 0;
     private int failures = 0;
     private int skipped = 0;
-    private Set<File> allSuggestedJars = new HashSet<File>();
 
-    private Set<AnnotatedOutcome> annotatedOutcomes = Sets.newHashSet();
+    private List<AnnotatedOutcome> annotatedOutcomes = Lists.newArrayList();
 
     private final Map<String, Action> actions = Collections.synchronizedMap(
             new LinkedHashMap<String, Action>());
     private final Map<String, Outcome> outcomes = Collections.synchronizedMap(
             new LinkedHashMap<String, Outcome>());
 
-    private final File resultsDir;
-    private final String tagName;
-    private final String compareToTag;
-    private final boolean recordResults;
-
+    private final OutcomeStore outcomeStore;
     private boolean disableResultRecord = false;
 
     public Driver(File localTemp, Mode mode, ExpectationStore expectationStore, Date date,
                   XmlReportPrinter reportPrinter, int monitorTimeoutSeconds, int firstMonitorPort,
                   int smallTimeoutSeconds, int largeTimeoutSeconds, ClassFileIndex classFileIndex,
-                  File resultsDir, String tagName, String compareToTag, boolean recordResults,
-                  int numRunnerThreads) {
+                  File resultsDir, File tagDir, String tagName, String compareToTag,
+                  boolean recordResults, int numRunnerThreads) {
         this.localTemp = localTemp;
         this.expectationStore = expectationStore;
         this.date = date;
@@ -107,11 +100,10 @@ final class Driver {
         this.smallTimeoutSeconds = smallTimeoutSeconds;
         this.largeTimeoutSeconds = largeTimeoutSeconds;
         this.classFileIndex = classFileIndex;
-        this.resultsDir = resultsDir;
-        this.tagName = tagName;
-        this.compareToTag = compareToTag;
-        this.recordResults = recordResults;
+        this.jarSuggestions = new JarSuggestions();
         this.numRunnerThreads = numRunnerThreads;
+        this.outcomeStore = new OutcomeStore(tagDir, tagName, compareToTag, resultsDir,
+                recordResults, expectationStore, date);
     }
 
     /**
@@ -213,12 +205,10 @@ final class Driver {
 
         Console.getInstance().summarizeOutcomes(annotatedOutcomes);
 
-        List<String> jarStringList = new ArrayList<String>();
-        for (File jar : allSuggestedJars) {
-            jarStringList.add(jar.getPath());
-        }
+        List<String> jarStringList = jarSuggestions.getStringList();
         if (!jarStringList.isEmpty()) {
-            Console.getInstance().warn("consider adding the following to the classpath:",
+            Console.getInstance().warn(
+                    "consider adding the following to the classpath:",
                     jarStringList);
         }
 
@@ -276,36 +266,23 @@ final class Driver {
         Console.getInstance().outcome(outcome.getName());
         Console.getInstance().printResult(outcome.getName(), result, resultValue);
 
-        OutcomeStore outcomeStore = new OutcomeStore(tagName, compareToTag, resultsDir,
-                recordResults && !disableResultRecord, expectationStore, date);
         AnnotatedOutcome annotatedOutcome = outcomeStore.read(outcome);
-        outcomeStore.write(outcome, annotatedOutcome.outcomeChanged());
+        if (!disableResultRecord) {
+            outcomeStore.write(outcome, annotatedOutcome.outcomeChanged());
+        }
 
         annotatedOutcomes.add(annotatedOutcome);
 
-        suggestJars(outcome);
-    }
-
-    private void suggestJars(Outcome outcome) {
-        Result result = outcome.getResult();
-        if (result != Result.COMPILE_FAILED && result != Result.EXEC_FAILED) {
-            return;
-        }
-        Set<File> suggestedJars = classFileIndex.suggestClasspaths(outcome.getOutput());
-
-        // don't suggest adding a jar that's already on the classpath
-        suggestedJars.removeAll(mode.getClasspath().getElements());
-
-        if (!suggestedJars.isEmpty()) {
-            allSuggestedJars.addAll(suggestedJars);
-            List<String> jarStringList = new ArrayList<String>();
-            for (File jar : suggestedJars) {
-                jarStringList.add(jar.getPath());
-            }
+        JarSuggestions singleOutcomeJarSuggestions = new JarSuggestions();
+        singleOutcomeJarSuggestions.addSuggestionsFromOutcome(outcome, classFileIndex,
+                mode.getClasspath());
+        List<String> jarStringList = singleOutcomeJarSuggestions.getStringList();
+        if (!jarStringList.isEmpty()) {
             Console.getInstance().warn(
                     "may have failed because some of these jars are missing from the classpath:",
                     jarStringList);
         }
+        jarSuggestions.addSuggestions(singleOutcomeJarSuggestions);
     }
 
     /**

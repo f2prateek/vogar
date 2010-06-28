@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 The Android Open Source Project
+ * Copyright (C) 2010 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,11 +21,17 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-public class AnnotatedOutcome {
+/**
+ * Contains an outcome for a test, along with some metadata pertaining to the history of this test,
+ * including a list of previous outcomes, an outcome corresponding to the tag Vogar is being run
+ * with, if applicable, and the expectation for this test, so that result value information is
+ * available.
+ */
+public final class AnnotatedOutcome {
     /** sorts outcomes in reverse chronological order */
     private static final Ordering<Outcome> ORDER_BY_DATE = new Ordering<Outcome>() {
         public int compare(Outcome outcome1, Outcome outcome2) {
-            return outcome2.getDate().compareTo(outcome1.getDate());
+            return outcome1.getDate().compareTo(outcome2.getDate());
         }
     };
     public static Ordering<AnnotatedOutcome> ORDER_BY_NAME = new Ordering<AnnotatedOutcome>() {
@@ -36,46 +42,19 @@ public class AnnotatedOutcome {
 
     private final Expectation expectation;
     private final Outcome outcome;
-    /** the result value of this outcome (kept only so that it need not be repeatedly recomputed) */
-    private final ResultValue resultValue;
-    /** a list of previous outcomes for the same action, sorted in reverse chronological order */
+    /** a list of previous outcomes for the same action, sorted in chronological order */
     private final List<Outcome> previousOutcomes;
-    /**
-     * a list of previous result values for the same action, sorted in reverse chronological order
-     * (this is kept only so they don't have to be repeatedly recomputed from previousOutcomes)
-     */
-    private final List<ResultValue> previousResultValues;
     /** will be null if not comparing to a tag */
     private final String tagName;
     private final Outcome tagOutcome;
-    private final ResultValue tagResultValue;
-    /** the last time the result value changed, or null if it's never changed in recorded history */
-    private final Date lastChanged;
 
     AnnotatedOutcome(Outcome outcome, Expectation expectation,
             List<Outcome> previousOutcomes, String tagName, Outcome tagOutcome) {
         this.expectation = expectation;
-
         this.outcome = outcome;
-        this.resultValue = this.outcome.getResultValue(expectation);
-
         this.previousOutcomes = ORDER_BY_DATE.sortedCopy(previousOutcomes);
-        this.previousResultValues = new ArrayList<ResultValue>();
-        Date lastChanged = null;
-        for (Outcome previousOutcome : this.previousOutcomes) {
-            ResultValue previousOutcomeResultValue = previousOutcome.getResultValue(expectation);
-            previousResultValues.add(previousOutcomeResultValue);
-            // only assign lastChanged the first time
-            if (previousOutcomeResultValue != this.resultValue && lastChanged == null) {
-                lastChanged = previousOutcome.getDate();
-            }
-        }
-        this.lastChanged = lastChanged;
-
         this.tagName = tagName;
         this.tagOutcome = tagOutcome;
-        this.tagResultValue =
-                this.tagOutcome == null ? null : this.tagOutcome.getResultValue(expectation);
     }
 
     public Outcome getOutcome() {
@@ -87,18 +66,25 @@ public class AnnotatedOutcome {
     }
 
     public ResultValue getResultValue() {
-        return resultValue;
+        return outcome.getResultValue(expectation);
     }
 
     public List<ResultValue> getPreviousResultValues() {
+        List<ResultValue> previousResultValues = new ArrayList<ResultValue>();
+        for (Outcome previousOutcome : previousOutcomes) {
+            previousResultValues.add(previousOutcome.getResultValue(expectation));
+        }
         return previousResultValues;
     }
 
-    public ResultValue getMostRecentResultValue() {
-        if (previousResultValues.isEmpty()) {
-            return null;
-        }
-        return previousResultValues.get(0);
+    /**
+     * Returns the most recent result value of a run of this test (before the current run).
+     */
+    public ResultValue getMostRecentResultValue(ResultValue defaultValue) {
+        List<ResultValue> previousResultValues = getPreviousResultValues();
+        return previousResultValues.isEmpty() ?
+                defaultValue :
+                previousResultValues.get(previousResultValues.size() - 1);
     }
 
     public boolean hasTag() {
@@ -110,35 +96,49 @@ public class AnnotatedOutcome {
     }
 
     public ResultValue getTagResultValue() {
-        return tagResultValue;
+        return tagOutcome == null ? null : tagOutcome.getResultValue(expectation);
     }
 
     /**
-     * Returns whether the outcome is noteworthy given the result value and previous history.
+     * Returns true if the outcome is noteworthy given the result value and previous history.
      */
     public boolean isNoteworthy() {
-        return resultValue != ResultValue.OK || recentlyChanged() || changedSinceTag();
+        return getResultValue() != ResultValue.OK || recentlyChanged() || changedSinceTag();
     }
 
     public boolean outcomeChanged() {
-        return previousOutcomes.isEmpty() || !outcome.equals(previousOutcomes.get(0));
+        return previousOutcomes.isEmpty()
+                || !outcome.equals(previousOutcomes.get(previousOutcomes.size() - 1));
     }
 
     /**
-     * Returns whether the outcome recently changed in result value.
+     * Returns true if the outcome recently changed in result value.
      */
     private boolean recentlyChanged() {
+        List<ResultValue> previousResultValues = getPreviousResultValues();
         if (previousResultValues.isEmpty()) {
             return false;
         }
-        return previousResultValues.get(0) != resultValue;
+        return previousResultValues.get(previousResultValues.size() - 1) != getResultValue();
     }
 
     private boolean changedSinceTag() {
-        return tagResultValue != null && tagResultValue != resultValue;
+        ResultValue tagResultValue = getTagResultValue();
+        return tagResultValue != null && tagResultValue != getResultValue();
     }
 
+    /**
+     * Returns the last time the result value changed, or null if it's never changed in recorded
+     * history.
+     */
     public Date lastChanged() {
+        Date lastChanged = null;
+        ResultValue resultValue = getResultValue();
+        for (Outcome previousOutcome : previousOutcomes) {
+            if (previousOutcome.getResultValue(expectation) != resultValue) {
+                lastChanged = previousOutcome.getDate();
+            }
+        }
         return lastChanged;
     }
 }

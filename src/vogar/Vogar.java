@@ -24,10 +24,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
-import java.util.regex.Pattern;
 import vogar.commands.AndroidSdk;
 
 /**
@@ -124,6 +122,9 @@ public final class Vogar {
 
     @Option(names = { "--vogar-dir" })
     private File vogarDir = new File(System.getProperty("user.home", ".") + "/.vogar/");
+
+    @Option(names = { "--tag-dir" })
+    private File tagDir = null;
 
     @Option(names = { "--tag" }, savedInTag = false)
     private String tagName = null;
@@ -304,11 +305,15 @@ public final class Vogar {
         List<String> actionsAndTargetArgs;
 
         // extract arguments from config file
-        String[] configArgs = new Config().readFile(configFile);
+        String[] configArgs = optionParser.readFile(configFile);
 
         // config file args are added first so that in a conflict, the currently supplied
         // arguments win.
         actionsAndTargetArgs = optionParser.parse(configArgs);
+        if (!actionsAndTargetArgs.isEmpty()) {
+            throw new RuntimeException(
+                    "actions or targets given in .vogarconfig: " + actionsAndTargetArgs);
+        }
 
         try {
             actionsAndTargetArgs.addAll(optionParser.parse(args));
@@ -325,7 +330,9 @@ public final class Vogar {
         if (runTag != null) {
             String oldTag = tagName;
             String[] runTagArgs;
-            File tagDir = new File(vogarDir, "/tags/");
+            if (tagDir == null) {
+                tagDir = new File(vogarDir, "/tags/");
+            }
             try {
                 runTagArgs = new Tag(tagDir, runTag, false).getArgs();
                 System.out.println("Executing Vogar with additional arguments from tag \""
@@ -427,7 +434,10 @@ public final class Vogar {
         }
 
         if (tagName != null) {
-            new Tag(new File(vogarDir, "/tags/"), tagName, tagOverwrite).saveArgs(args);
+            if (tagDir == null) {
+                tagDir = new File(vogarDir, "/tags/");
+            }
+            new Tag(tagDir, tagName, tagOverwrite).saveArgs(args);
         }
 
         return true;
@@ -446,6 +456,9 @@ public final class Vogar {
 
         if (resultsDir == null) {
             resultsDir = new File(vogarDir, "results/");
+        }
+        if (tagDir == null) {
+            tagDir = new File(vogarDir, "results/tags/");
         }
 
         int numRunners = (stream || this.mode == ModeId.ACTIVITY)
@@ -518,6 +531,7 @@ public final class Vogar {
                 smallTimeoutSeconds * LARGE_TIMEOUT_MULTIPLIER,
                 classFileIndex,
                 resultsDir,
+                tagDir,
                 tagName,
                 compareToTag,
                 recordResults,

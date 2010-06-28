@@ -16,7 +16,9 @@
 
 package vogar;
 
+import com.google.common.collect.Lists;
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -202,6 +204,39 @@ public class OptionParser {
         this.optionSource = optionSource;
         this.optionMap = makeOptionMap();
         this.defaultOptionMap = new HashMap<Field, Object>();
+    }
+
+    public String[] readFile(File configFile) {
+         if (!configFile.exists()) {
+            return new String[0];
+        }
+
+        List<String> configFileLines;
+        try {
+            configFileLines = Strings.readFileLines(configFile);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        List<String> argsList = Lists.newArrayList();
+        for (String rawLine : configFileLines) {
+            // strip leading and trailing spaces
+            String line = rawLine.replaceFirst("\\s*$", "").replaceFirst("^\\s*", "");
+
+            // allow comments and blank lines
+            if (line.startsWith("#") || line.isEmpty()) {
+                continue;
+            }
+            int space = line.indexOf(' ');
+            if (space == -1) {
+                argsList.add(line);
+            } else {
+                argsList.add(line.substring(0, space));
+                argsList.add(line.substring(space + 1).trim());
+            }
+        }
+
+        return argsList.toArray(new String[argsList.size()]);
     }
 
     /**

@@ -52,15 +52,7 @@ public class Strings {
     }
 
     public static List<String> readFileLines(File f) throws IOException {
-        BufferedReader in =
-                new BufferedReader(new InputStreamReader(new FileInputStream(f), "UTF-8"));
-        List<String> list = Lists.newArrayList();
-        String line;
-        while ((line = in.readLine()) != null) {
-            list.add(line);
-        }
-        in.close();
-        return list;
+        return Arrays.asList(readFile(f).split("\n"));
     }
 
     public static String join(Object[] objects, String delimiter) {
@@ -98,7 +90,7 @@ public class Strings {
      * Replaces XML-invalid characters with the corresponding U+XXXX code point escapes.
      */
     public static String xmlSanitize(String text) {
-        StringBuffer result = new StringBuffer();
+        StringBuffer result = new StringBuffer(); // needed for appendReplacement
         Matcher matcher = XML_INVALID_CHARS.matcher(text);
         while (matcher.find()) {
             matcher.appendReplacement(result, "");

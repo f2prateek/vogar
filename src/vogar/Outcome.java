@@ -17,7 +17,6 @@
 package vogar;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Arrays;
@@ -34,19 +33,6 @@ final class Outcome {
     private final Result result;
     private final String output;
     private final Date date;
-
-    public static final Ordering<Outcome> ORDER_BY_NAME = new Ordering<Outcome>() {
-        @Override public int compare(Outcome a, Outcome b) {
-            return a.getName().compareTo(b.getName());
-        }
-    };
-
-    public Outcome(String outcomeName, Result result, List<String> outputLines, Date date) {
-        this.outcomeName = outcomeName;
-        this.result = result;
-        this.output = sanitizeOutputLines(outputLines);
-        this.date = date;
-    }
 
     public Outcome(String outcomeName, Result result, List<String> outputLines) {
         this.outcomeName = outcomeName;
@@ -153,8 +139,12 @@ final class Outcome {
         return ResultValue.IGNORE;
     }
 
+    /**
+     * Returns a filesystem db path for this outcome. For example, a path for an outcome with name
+     * "foo.bar.baz#testName" would be "foo/bar/baz/testName".
+     */
     public String getPath() {
-        return Strings.join(outcomeName.split("\\.|#"), "/");
+        return outcomeName.replaceAll("[\\.#]", "/");
     }
 
     @Override public boolean equals(Object o) {

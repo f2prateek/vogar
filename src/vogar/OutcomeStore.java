@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 The Android Open Source Project
+ * Copyright (C) 2010 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,23 +28,29 @@ import java.util.List;
 import vogar.commands.Mkdir;
 import vogar.commands.Rm;
 
-// TODO add description of directory structures for the tag and auto stores
-public class OutcomeStore {
+/**
+ * TODO add description of directory structures for the tag and auto stores
+ */
+public final class OutcomeStore {
     private static final SimpleDateFormat fileNameDateFormat =
             new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssz");
 
+    private static final String TAG_FILENAME = "canonical.xml";
+
+    private final File tagResultsDir;
     private final String tagName;
     private final String compareToTag;
-    private final File resultsDir;
+    private final File autoResultsDir;
     private final boolean recordResults;
     private final ExpectationStore expectationStore;
     private final Date date;
 
-    OutcomeStore(String tagName, String compareToTag, File resultsDir, boolean recordResults,
-            ExpectationStore expectationStore, Date date) {
+    OutcomeStore(File tagDir, String tagName, String compareToTag, File resultsDir,
+            boolean recordResults, ExpectationStore expectationStore, Date date) {
+        this.tagResultsDir = new File(tagDir, "results/");
         this.tagName = tagName;
         this.compareToTag = compareToTag;
-        this.resultsDir = resultsDir;
+        this.autoResultsDir = new File(resultsDir, "auto/");
         this.recordResults = recordResults;
         this.expectationStore = expectationStore;
         this.date = date;
@@ -57,8 +63,8 @@ public class OutcomeStore {
         Outcome tagOutcome = null;
         XmlReportReader reportReader = new XmlReportReader();
         if (compareToTag != null) {
-            String tagOutputFileName = "canonical.xml";
-            File tagResultsDir = new File(resultsDir, "tags/" + compareToTag + "/");
+            String tagOutputFileName = TAG_FILENAME;
+            File tagResultsDir = new File(this.tagResultsDir, compareToTag);
             File tagOutcomeResultsDir = new File(tagResultsDir, outcome.getPath());
             File tagFile = new File(tagOutcomeResultsDir, tagOutputFileName);
             if (tagFile.exists()) {
@@ -69,7 +75,7 @@ public class OutcomeStore {
             }
         }
         // read automatically recorded results (if they exist)
-        File outcomeResultDir = new File(resultsDir, "auto/" + outcome.getPath());
+        File outcomeResultDir = new File(autoResultsDir, outcome.getPath());
         List<Outcome> previousOutcomes = new ArrayList<Outcome>();
         if (outcomeResultDir.exists()) {
             FilenameFilter xmlFilter = new FilenameFilter() {
@@ -90,7 +96,7 @@ public class OutcomeStore {
     }
 
     public void write(Outcome outcome, boolean hasChanged) {
-        File outcomeResultDir = new File(resultsDir, "auto/" + outcome.getPath());
+        File outcomeResultDir = new File(autoResultsDir, outcome.getPath());
 
         // record the outcome's result (only if the outcome has changed)
         if (hasChanged && recordResults) {
@@ -106,18 +112,19 @@ public class OutcomeStore {
 
         // record the outcome's result to a tag (if applicable)
         if (tagName != null) {
-            String tagOutputFileName = "canonical.xml";
-            File tagResultsDir = new File(resultsDir, "tags/" + tagName + "/");
-            File tagOutcomeResultDir =
-                    new File(tagResultsDir, outcome.getPath());
-            if (tagResultsDir.exists()) {
-                new Rm().file(new File(tagOutcomeResultDir, tagOutputFileName));
+            String tagOutputFileName = TAG_FILENAME;
+            File tagDir = new File(this.tagResultsDir, tagName);
+            File tagOutcomeResultDir = new File(tagDir, outcome.getPath());
+            File outcomeTagFile = new File(tagOutcomeResultDir, tagOutputFileName);
+            if (outcomeTagFile.exists()) {
+                new Rm().file(outcomeTagFile);
             }
-            new Mkdir().mkdirs(tagOutcomeResultDir);
+            if (!tagOutcomeResultDir.mkdirs() && !tagOutcomeResultDir.exists()) {
+                throw new RuntimeException("Failed to create directory " + tagOutcomeResultDir);
+            }
             XmlReportPrinter tagSingleReportPrinter =
                     new XmlReportPrinter(tagOutcomeResultDir, expectationStore, date, true);
             tagSingleReportPrinter.generateReport(outcome, tagOutputFileName);
         }
     }
-
 }

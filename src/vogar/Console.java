@@ -18,14 +18,12 @@ package vogar;
 
 import com.google.common.collect.Lists;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Controls, formats and emits output to the command line. This class emits
@@ -146,37 +144,32 @@ public abstract class Console {
         currentLine = CurrentLine.NEW;
     }
 
-    public synchronized void summarizeOutcomes(Set<AnnotatedOutcome> annotatedOutcomesSet) {
-        List<AnnotatedOutcome> annotatedOutcomes = AnnotatedOutcome.ORDER_BY_NAME.sortedCopy(annotatedOutcomesSet);
+    public synchronized void summarizeOutcomes(Collection<AnnotatedOutcome> annotatedOutcomes) {
+        List<AnnotatedOutcome> annotatedOutcomesSorted =
+                AnnotatedOutcome.ORDER_BY_NAME.sortedCopy(annotatedOutcomes);
 
         List<String> failures = Lists.newArrayList();
         List<String> skips = Lists.newArrayList();
         List<String> successes = Lists.newArrayList();
 
         // figure out whether each outcome is noteworthy, and add a message to the appropriate list
-        for (AnnotatedOutcome annotatedOutcome : annotatedOutcomes) {
+        for (AnnotatedOutcome annotatedOutcome : annotatedOutcomesSorted) {
             if (!annotatedOutcome.isNoteworthy()) {
                 continue;
             }
 
             Color color;
             List<String> list;
-            if (annotatedOutcome.getResultValue() == ResultValue.OK) {
+            ResultValue resultValue = annotatedOutcome.getResultValue();
+            if (resultValue == ResultValue.OK) {
                 color = Color.GREEN;
                 list = successes;
-            } else if (annotatedOutcome.getResultValue() == ResultValue.FAIL) {
+            } else if (resultValue == ResultValue.FAIL) {
                 color = Color.RED;
                 list = failures;
             } else {
                 color = Color.YELLOW;
                 list = skips;
-            }
-
-            String tagMessage = "";
-            if (annotatedOutcome.hasTag()) {
-                tagMessage = String.format(" [%s at tag %s]",
-                        generateSparkLine(Arrays.asList(annotatedOutcome.getTagResultValue())),
-                        annotatedOutcome.getTagName());
             }
 
             Date lastChanged = annotatedOutcome.lastChanged();
@@ -190,8 +183,8 @@ public abstract class Console {
             }
 
             String brokeThisMessage = "";
-            ResultValue resultValue = annotatedOutcome.getResultValue();
-            boolean resultValueChanged = resultValue != annotatedOutcome.getMostRecentResultValue();
+            boolean resultValueChanged =
+                    resultValue != annotatedOutcome.getMostRecentResultValue(null);
             boolean resultValueChangedSinceTag =
                     annotatedOutcome.hasTag() && annotatedOutcome.getTagResultValue() != resultValue;
             if (resultValueChanged) {
@@ -208,27 +201,29 @@ public abstract class Console {
                 }
             }
 
-            List<ResultValue> previousResultValues = annotatedOutcome.getPreviousResultValues();
-            int numResultValuesToShow = Math.min(10, previousResultValues.size());
-            List<ResultValue> previousResultValuesToShow = new ArrayList<ResultValue>(
-                    previousResultValues.subList(0, numResultValuesToShow));
-            Collections.reverse(previousResultValuesToShow);
+            List<ResultValue> previousResultValues =
+                    annotatedOutcome.getPreviousResultValues();
+            int numPreviousResultValues = previousResultValues.size();
+            int numResultValuesToShow = Math.min(10, numPreviousResultValues);
+            List<ResultValue> previousResultValuesToShow = previousResultValues.subList(numPreviousResultValues - numResultValuesToShow,
+                            numPreviousResultValues);
 
-            if (!previousResultValuesToShow.isEmpty()) {
-                list.add(String.format("%s%s%s [last %d: %s] [result last changed: %s]%s",
-                            indent,
-                            colorString(annotatedOutcome.getOutcome().getName(), color),
-                            tagMessage,
-                            previousResultValuesToShow.size(),
-                            generateSparkLine(previousResultValuesToShow),
-                            timestamp,
-                            brokeThisMessage));
-            } else {
-                list.add(String.format("%s%s%s",
-                            indent,
-                            colorString(annotatedOutcome.getOutcome().getName(), color),
-                            tagMessage));
+            StringBuilder sb = new StringBuilder();
+            sb.append(indent);
+            sb.append(colorString(annotatedOutcome.getOutcome().getName(), color));
+            if (annotatedOutcome.hasTag()) {
+                sb.append(String.format(" [%s at tag %s]",
+                        generateSparkLine(Arrays.asList(annotatedOutcome.getTagResultValue())),
+                        annotatedOutcome.getTagName()));
             }
+            if (!previousResultValuesToShow.isEmpty()) {
+                sb.append(String.format(" [last %d: %s] [result last changed: %s]",
+                        previousResultValuesToShow.size(),
+                        generateSparkLine(previousResultValuesToShow),
+                        timestamp));
+            }
+            sb.append(brokeThisMessage);
+            list.add(sb.toString());
         }
 
         newLine();
@@ -355,18 +350,16 @@ public abstract class Console {
     }
 
     private enum Color {
-        GREEN, RED, YELLOW;
+        GREEN(32), RED(31), YELLOW(33);
+
+        final int code;
+
+        Color(int code) {
+            this.code = code;
+        }
 
         public int getCode() {
-            switch (this) {
-                case GREEN:
-                    return 32;
-                case RED:
-                    return 31;
-                case YELLOW:
-                    return 33;
-            }
-            throw new IllegalArgumentException(this + " is an invalid color");
+            return code;
         }
     }
 

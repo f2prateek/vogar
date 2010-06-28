@@ -64,7 +64,8 @@ public class Tag {
     public void saveArgs(String[] args) {
         File argsFile = new File(argsDir, tag);
         if (!tagOverwrite && argsFile.exists()) {
-            throw new RuntimeException("Tag \"" + tag + "\" already exists");
+            throw new RuntimeException("Tag \"" + tag + "\" already exists, add "
+                    + "\"--tag-overwrite\" to override");
         }
         new Mkdir().mkdirs(argsFile.getParentFile());
         BufferedWriter tagWriter;
