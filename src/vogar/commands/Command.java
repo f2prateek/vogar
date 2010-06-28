@@ -182,6 +182,10 @@ public final class Command {
         }
     }
 
+    public int getExitValue() {
+        return process.exitValue();
+    }
+
     @Override public String toString() {
         String envString = !env.isEmpty() ? (Strings.join(env.entrySet(), " ") + " ") : "";
         return envString + Strings.join(args, " ");

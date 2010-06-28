@@ -59,7 +59,7 @@ final class Driver {
         }
     };
 
-    private Timer actionTimeoutTimer = new Timer("action timeout", true);
+    private final Timer actionTimeoutTimer = new Timer("action timeout", true);
 
     private final File localTemp;
     private final ExpectationStore expectationStore;
@@ -91,7 +91,7 @@ final class Driver {
     private final boolean recordResults;
 
     private boolean disableResultRecord = false;
-    
+
     public Driver(File localTemp, Mode mode, ExpectationStore expectationStore, Date date,
                   XmlReportPrinter reportPrinter, int monitorTimeoutSeconds, int firstMonitorPort,
                   int smallTimeoutSeconds, int largeTimeoutSeconds, ClassFileIndex classFileIndex,
@@ -357,8 +357,14 @@ final class Driver {
                 return;
             }
 
-            execute(action);
-            mode.cleanup(action);
+            String threadName = Thread.currentThread().getName();
+            Thread.currentThread().setName("runner-" + action.getName());
+            try {
+                execute(action);
+                mode.cleanup(action);
+            } finally {
+                Thread.currentThread().setName(threadName);
+            }
         }
 
         /**
@@ -383,7 +389,7 @@ final class Driver {
 
             if (timeoutSeconds != 0) {
                 resetKillTime(timeoutSeconds);
-                scheduleTaskKiller(command, result, timeoutSeconds);
+                scheduleTaskKiller(command, action, result, timeoutSeconds);
             }
 
             HostMonitor hostMonitor = new HostMonitor(monitorTimeoutSeconds);
@@ -415,19 +421,20 @@ final class Driver {
             }
         }
 
-        private void scheduleTaskKiller(
-                final Command command, final AtomicReference<Result> result, final int timeoutSeconds) {
+        private void scheduleTaskKiller(final Command command, final Action action,
+                final AtomicReference<Result> result, final int timeoutSeconds) {
             actionTimeoutTimer.schedule(new TimerTask() {
                 @Override public void run() {
                     // if the kill time has been pushed back, reschedule
                     if (System.currentTimeMillis() < killTime.getTime()) {
-                        scheduleTaskKiller(command, result, timeoutSeconds);
+                        scheduleTaskKiller(command, action, result, timeoutSeconds);
                         return;
                     }
                     if (result.compareAndSet(null, Result.EXEC_TIMEOUT)) {
-                        Console.getInstance().verbose("killing command that timed out after "
+                        Console.getInstance().verbose("killing " + action + " because it timed out after "
                                 + timeoutSeconds + " seconds: " + command);
                         command.destroy();
+                        Console.getInstance().verbose("killed " + action + " returned " + command.getExitValue());
                     }
                 }
             }, killTime);
