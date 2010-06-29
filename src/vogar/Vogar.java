@@ -40,7 +40,12 @@ public final class Vogar {
     private final List<String> actionClassesAndPackages = new ArrayList<String>();
     private final List<String> targetArgs = new ArrayList<String>();
     private final OptionParser optionParser = new OptionParser(this);
-    private File configFile = new File(System.getProperty("user.home", ".") + "/.vogarconfig");
+    private File configFile = Vogar.dotFile(".vogarconfig");
+
+    static File dotFile (String name) {
+        return new File(System.getProperty("user.home", "."), name);
+    }
+
 
     @Option(names = { "--expectations" })
     private Set<File> expectationFiles = new LinkedHashSet<File>();
@@ -121,7 +126,7 @@ public final class Vogar {
     private List<File> jarSearchDirs = Lists.newArrayList();
 
     @Option(names = { "--vogar-dir" })
-    private File vogarDir = new File(System.getProperty("user.home", ".") + "/.vogar/");
+    private File vogarDir = Vogar.dotFile(".vogar/");
 
     @Option(names = { "--tag-dir" })
     private File tagDir = null;

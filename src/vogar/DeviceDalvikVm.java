@@ -24,6 +24,8 @@ import vogar.commands.AndroidSdk;
  */
 final class DeviceDalvikVm extends Vm {
 
+    private static final File USER_HOME = new File("/sdcard");
+
     DeviceDalvikVm(Environment environment, Mode.Options options, Vm.Options vmOptions) {
         super(environment, options, vmOptions);
     }
@@ -34,6 +36,17 @@ final class DeviceDalvikVm extends Vm {
 
     private AndroidSdk getSdk() {
         return getEnvironmentDevice().androidSdk;
+    }
+
+    @Override protected void prepare() {
+        super.prepare();
+        // push ~/.caliperrc to device if found
+        String caliperrc = ".caliperrc";
+        File host = Vogar.dotFile(caliperrc);
+        if (host.exists()) {
+            File target = new File(USER_HOME, caliperrc);
+            getSdk().push(host, target);
+        }
     }
 
     @Override protected void installRunner() {
@@ -65,7 +78,7 @@ final class DeviceDalvikVm extends Vm {
     @Override protected VmCommandBuilder newVmCommandBuilder(File workingDirectory) {
         return new VmCommandBuilder()
                 .vmCommand("adb", "shell", getEnvironmentDevice().getAndroidData(), "dalvikvm")
-                .vmArgs("-Duser.home=/sdcard")
+                .vmArgs("-Duser.home=" + USER_HOME)
                 .vmArgs("-Duser.name=" + AndroidSdk.getDeviceUserName())
                 .vmArgs("-Duser.language=en")
                 .vmArgs("-Duser.region=US")
