@@ -411,7 +411,6 @@ final class Driver {
                         Console.getInstance().verbose("killing " + action + " because it timed out after "
                                 + timeoutSeconds + " seconds: " + command);
                         command.destroy();
-                        Console.getInstance().verbose("killed " + action + " returned " + command.getExitValue());
                     }
                 }
             }, killTime);

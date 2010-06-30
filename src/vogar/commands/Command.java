@@ -177,13 +177,20 @@ public final class Command {
      * Destroys the underlying process and closes its associated streams.
      */
     public void destroy() {
-        if (process != null) {
-            process.destroy();
+        if (process == null) {
+            return;
         }
-    }
 
-    public int getExitValue() {
-        return process.exitValue();
+        process.destroy();
+        try {
+            process.waitFor();
+            int exitValue = process.exitValue();
+            Console.getInstance().verbose("received exit value " + exitValue + " from destroyed command " + this);
+        } catch (IllegalThreadStateException destroyUnsuccessful) {
+            Console.getInstance().warn("couldn't destroy " + this);
+        } catch (InterruptedException e) {
+            Console.getInstance().warn("couldn't destroy " + this);
+        }
     }
 
     @Override public String toString() {
