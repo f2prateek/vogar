@@ -175,6 +175,7 @@ public final class TestRunner {
     }
 
     public static void main(String[] args) {
-        new TestRunner(new ArrayList<String>(Arrays.asList(args))).run();
+        TestRunner testRunner = new TestRunner(new ArrayList<String>(Arrays.asList(args)));
+        testRunner.run(testRunner.args);
     }
 }
