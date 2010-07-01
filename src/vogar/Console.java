@@ -64,8 +64,11 @@ public abstract class Console {
         this.indent = indent;
     }
 
-    public void setUseColor(boolean useColor) {
+    public void setUseColor(boolean useColor, int passColor, int warnColor, int failColor) {
         this.useColor = useColor;
+        Color.PASS.setCode(passColor);
+        Color.WARN.setCode(warnColor);
+        Color.FAIL.setCode(failColor);
     }
 
     public void setVerbose(boolean verbose) {
@@ -81,7 +84,7 @@ public abstract class Console {
 
     public synchronized void warn(String message) {
         newLine();
-        System.out.println(colorString("Warning: " + message, Color.YELLOW));
+        System.out.println(colorString("Warning: " + message, Color.WARN));
     }
 
     /**
@@ -89,9 +92,9 @@ public abstract class Console {
      */
     public synchronized void warn(String message, List<String> list) {
         newLine();
-        System.out.println(colorString("Warning: " + message, Color.YELLOW));
+        System.out.println(colorString("Warning: " + message, Color.WARN));
         for (String item : list) {
-            System.out.println(colorString(indent + item, Color.YELLOW));
+            System.out.println(colorString(indent + item, Color.WARN));
         }
     }
 
@@ -134,11 +137,11 @@ public abstract class Console {
         }
 
         if (resultValue == ResultValue.OK) {
-            System.out.println(colorString("OK (" + result + ")", Color.GREEN));
+            System.out.println(colorString("OK (" + result + ")", Color.PASS));
         } else if (resultValue == ResultValue.FAIL) {
-            System.out.println(colorString("FAIL (" + result + ")", Color.RED));
+            System.out.println(colorString("FAIL (" + result + ")", Color.FAIL));
         } else if (resultValue == ResultValue.IGNORE) {
-            System.out.println(colorString("SKIP (" + result + ")", Color.YELLOW));
+            System.out.println(colorString("SKIP (" + result + ")", Color.WARN));
         }
 
         currentLine = CurrentLine.NEW;
@@ -162,20 +165,20 @@ public abstract class Console {
             List<String> list;
             ResultValue resultValue = annotatedOutcome.getResultValue();
             if (resultValue == ResultValue.OK) {
-                color = Color.GREEN;
+                color = Color.PASS;
                 list = successes;
             } else if (resultValue == ResultValue.FAIL) {
-                color = Color.RED;
+                color = Color.FAIL;
                 list = failures;
             } else {
-                color = Color.YELLOW;
+                color = Color.WARN;
                 list = skips;
             }
 
             Date lastChanged = annotatedOutcome.lastChanged();
             String timestamp;
             if (lastChanged == null) {
-                timestamp = colorString("never", Color.YELLOW);
+                timestamp = colorString("never", Color.WARN);
             } else {
                 SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd H:mm:ss");
                 dateFormat.setLenient(true);
@@ -188,18 +191,18 @@ public abstract class Console {
                     annotatedOutcome.hasTag() && annotatedOutcome.getTagResultValue() != resultValue;
             if (mostRecentResultValue != null && resultValue != mostRecentResultValue) {
                 if (resultValue == ResultValue.OK) {
-                    brokeThisMessage = colorString(" (you probably fixed this)", Color.YELLOW);
+                    brokeThisMessage = colorString(" (you probably fixed this)", Color.WARN);
                 } else {
-                    brokeThisMessage = colorString(" (you probably broke this)", Color.YELLOW);
+                    brokeThisMessage = colorString(" (you probably broke this)", Color.WARN);
                 }
             } else if (resultValueChangedSinceTag) {
                 if (resultValue == ResultValue.OK) {
-                    brokeThisMessage = colorString(" (fixed since tag)", Color.YELLOW);
+                    brokeThisMessage = colorString(" (fixed since tag)", Color.WARN);
                 } else {
-                    brokeThisMessage = colorString(" (broken since tag)", Color.YELLOW);
+                    brokeThisMessage = colorString(" (broken since tag)", Color.WARN);
                 }
             } else if (mostRecentResultValue == null) {
-                brokeThisMessage = colorString(" (no test history available)", Color.YELLOW);
+                brokeThisMessage = colorString(" (no test history available)", Color.WARN);
             }
 
             List<ResultValue> previousResultValues =
@@ -252,11 +255,11 @@ public abstract class Console {
         StringBuilder sb = new StringBuilder();
         for (ResultValue resultValue : resultValues) {
             if (resultValue == ResultValue.OK) {
-                sb.append(colorString("\u2713", Color.GREEN));
+                sb.append(colorString("\u2713", Color.PASS));
             } else if (resultValue == ResultValue.FAIL) {
-                sb.append(colorString("X", Color.RED));
+                sb.append(colorString("X", Color.FAIL));
             } else {
-                sb.append(colorString("-", Color.YELLOW));
+                sb.append(colorString("-", Color.WARN));
             }
         }
         return sb.toString();
@@ -351,16 +354,16 @@ public abstract class Console {
     }
 
     private enum Color {
-        GREEN(32), RED(31), YELLOW(33);
+        PASS, FAIL, WARN;
 
-        final int code;
-
-        Color(int code) {
-            this.code = code;
-        }
+        int code = 0;
 
         public int getCode() {
             return code;
+        }
+
+        public void setCode(int code) {
+            this.code = code;
         }
     }
 

@@ -89,6 +89,15 @@ public final class Vogar {
     @Option(names = { "--color" })
     private boolean color = true;
 
+    @Option(names = { "--pass-color" })
+    private int passColor = 32; // green
+
+    @Option(names = { "--warn-color" })
+    private int warnColor = 33; // yellow
+
+    @Option(names = { "--fail-color" })
+    private int failColor = 31; // red
+
     @Option(names = { "--debug" })
     private Integer debugPort;
 
@@ -281,6 +290,15 @@ public final class Vogar {
         System.out.println();
         System.out.println("  --color: format output in technicolor.");
         System.out.println();
+        System.out.println("  --pass-color: ANSI color code to use for passes.");
+        System.out.println("      Default: 32 (green)");
+        System.out.println();
+        System.out.println("  --warn-color: ANSI color code to use for warnings.");
+        System.out.println("      Default: 33 (yellow)");
+        System.out.println();
+        System.out.println("  --fail-color: ANSI color code to use for failures.");
+        System.out.println("      Default: 31 (red)");
+        System.out.println();
         System.out.println("  --expectations <file>: include the specified file when looking for");
         System.out.println("      action expectations. The file should include qualified action names");
         System.out.println("      and the corresponding expected output.");
@@ -454,7 +472,7 @@ public final class Vogar {
 
     private void run() {
         Console.init(stream);
-        Console.getInstance().setUseColor(color);
+        Console.getInstance().setUseColor(color, passColor, warnColor, failColor);
         Console.getInstance().setIndent(indent);
         Console.getInstance().setVerbose(verbose);
 
