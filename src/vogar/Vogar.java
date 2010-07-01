@@ -209,8 +209,12 @@ public final class Vogar {
         System.out.println("  --sourcepath <directory>: add the directory to the build sourcepath.");
         System.out.println();
         System.out.println("  --vogar-dir <directory>: directory in which to find Vogar");
-        System.out.println("      configuration information, caches, saved results, and tags.");
+        System.out.println("      configuration information, caches, saved results, and tags,");
+        System.out.println("      unless they've been put explicitly elsewhere.");
         System.out.println("      Default is: " + vogarDir);
+        System.out.println();
+        System.out.println("  --tag-dir <directory>: directory in which to find tag information.");
+        System.out.println("      Default is: " + vogarDir + "/tags/");
         System.out.println();
         System.out.println("  --tag <tag name>: creates a tag recording the arguments to this");
         System.out.println("      invocation of Vogar so that it can be rerun later.");

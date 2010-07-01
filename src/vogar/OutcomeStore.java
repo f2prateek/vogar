@@ -25,6 +25,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.TimeZone;
 import vogar.commands.Mkdir;
 import vogar.commands.Rm;
 
@@ -32,8 +33,7 @@ import vogar.commands.Rm;
  * TODO add description of directory structures for the tag and auto stores
  */
 public final class OutcomeStore {
-    private static final SimpleDateFormat fileNameDateFormat =
-            new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssz");
+    private static final String FILE_NAME_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssz";
 
     private static final String TAG_FILENAME = "canonical.xml";
 
@@ -104,7 +104,10 @@ public final class OutcomeStore {
             new Mkdir().mkdirs(outcomeResultDir);
             XmlReportPrinter singleReportPrinter =
                     new XmlReportPrinter(outcomeResultDir, expectationStore, date, true);
-            String timestamp = fileNameDateFormat.format(date);
+            SimpleDateFormat dateFormat = new SimpleDateFormat(FILE_NAME_DATE_FORMAT);
+            dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
+            dateFormat.setLenient(true);
+            String timestamp = dateFormat.format(date);
 
             String outputFileName = timestamp + ".xml";
             singleReportPrinter.generateReport(outcome, outputFileName);
