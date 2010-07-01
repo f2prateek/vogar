@@ -183,11 +183,10 @@ public abstract class Console {
             }
 
             String brokeThisMessage = "";
-            boolean resultValueChanged =
-                    resultValue != annotatedOutcome.getMostRecentResultValue(null);
+            ResultValue mostRecentResultValue = annotatedOutcome.getMostRecentResultValue(null);
             boolean resultValueChangedSinceTag =
                     annotatedOutcome.hasTag() && annotatedOutcome.getTagResultValue() != resultValue;
-            if (resultValueChanged) {
+            if (mostRecentResultValue != null && resultValue != mostRecentResultValue) {
                 if (resultValue == ResultValue.OK) {
                     brokeThisMessage = colorString(" (you probably fixed this)", Color.YELLOW);
                 } else {
@@ -199,6 +198,8 @@ public abstract class Console {
                 } else {
                     brokeThisMessage = colorString(" (broken since tag)", Color.YELLOW);
                 }
+            } else if (mostRecentResultValue == null) {
+                brokeThisMessage = colorString(" (no test history available)", Color.YELLOW);
             }
 
             List<ResultValue> previousResultValues =
