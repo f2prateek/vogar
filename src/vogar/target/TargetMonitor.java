@@ -19,8 +19,6 @@ package vogar.target;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
 import org.xmlpull.v1.XmlSerializer;
@@ -64,7 +62,6 @@ class TargetMonitor {
         try {
             serializer.startTag(ns, "outcome");
             serializer.attribute(ns, "name", outcomeName);
-            serializer.attribute(ns, "action", actionName);
             if (runner != null) {
               serializer.attribute(ns, "runner", runner.getClass().getName());
             }

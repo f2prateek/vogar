@@ -364,13 +364,14 @@ final class Driver {
             Future<List<String>> consoleOut = command.executeLater();
             final AtomicReference<Result> result = new AtomicReference<Result>();
 
+            HostMonitor hostMonitor = new HostMonitor(monitorTimeoutSeconds, firstMonitorPort);
+
             if (timeoutSeconds != 0) {
                 resetKillTime(timeoutSeconds);
-                scheduleTaskKiller(command, action, result, timeoutSeconds);
+                scheduleTaskKiller(command, hostMonitor, action, result, timeoutSeconds);
             }
 
-            HostMonitor hostMonitor = new HostMonitor(monitorTimeoutSeconds);
-            boolean completedNormally = hostMonitor.monitor(monitorPort(firstMonitorPort), this);
+            boolean completedNormally = hostMonitor.connect() && hostMonitor.monitor(this);
             if (completedNormally) {
                 if (result.compareAndSet(null, Result.SUCCESS)) {
                     command.destroy();
@@ -398,19 +399,20 @@ final class Driver {
             }
         }
 
-        private void scheduleTaskKiller(final Command command, final Action action,
+        private void scheduleTaskKiller(final Command command, final HostMonitor hostMonitor, final Action action,
                 final AtomicReference<Result> result, final int timeoutSeconds) {
             actionTimeoutTimer.schedule(new TimerTask() {
                 @Override public void run() {
                     // if the kill time has been pushed back, reschedule
                     if (System.currentTimeMillis() < killTime.getTime()) {
-                        scheduleTaskKiller(command, action, result, timeoutSeconds);
+                        scheduleTaskKiller(command, hostMonitor, action, result, timeoutSeconds);
                         return;
                     }
                     if (result.compareAndSet(null, Result.EXEC_TIMEOUT)) {
                         Console.getInstance().verbose("killing " + action + " because it timed out after "
                                 + timeoutSeconds + " seconds: " + command);
                         command.destroy();
+                        hostMonitor.close();
                     }
                 }
             }, killTime);

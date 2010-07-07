@@ -38,30 +38,35 @@ class HostMonitor {
     private static final int BAD_XML_SNIPPET_SIZE = 1024;
 
     private final long monitorTimeoutSeconds;
+    private final int port;
+    private Socket socket;
+    private InputStream in;
 
-    HostMonitor(long monitorTimeoutSeconds) {
+    HostMonitor(long monitorTimeoutSeconds, int port) {
         this.monitorTimeoutSeconds = monitorTimeoutSeconds;
+        this.port = port;
     }
 
     /**
      * Connect to the target process on the given port, read all of its
      * outcomes into {@code handler}, and disconnect.
      */
-    public boolean monitor(int port, Handler handler) {
-        Socket socket;
-        InputStream in;
+    public boolean connect() {
         int attempt = 0;
         do {
             try {
-                socket = new Socket("localhost", port);
-                in = new BufferedInputStream(socket.getInputStream());
-                if (checkStream(in)) {
+                Socket socketToCheck = new Socket("localhost", port);
+                InputStream inToCheck = new BufferedInputStream(socketToCheck.getInputStream());
+                if (checkStream(inToCheck)) {
+                    socket = socketToCheck;
+                    in = inToCheck;
                     in.mark(BAD_XML_SNIPPET_SIZE);
-                    break;
+                    Console.getInstance().verbose("action monitor connected to " + socket.getRemoteSocketAddress());
+                    return true;
                 }
-                in.close();
-                socket.close();
-            } catch (ConnectException recoverable) {
+                inToCheck.close();
+                socketToCheck.close();
+            } catch (ConnectException ignored) {
             } catch (IOException e) {
                 Console.getInstance().info("Failed to connect to localhost:" + port, e);
                 return false;
@@ -73,15 +78,36 @@ class HostMonitor {
                 return false;
             }
 
-            Console.getInstance().verbose("connection " + attempt + " to localhost:" + port
-                    + " failed; retrying in 1s");
+            Console.getInstance().verbose("connection " + attempt + " to localhost:"
+                    + port + " failed; retrying in 1s");
             try {
                 Thread.sleep(1000);
-            } catch (InterruptedException e) {
+            } catch (InterruptedException ignored) {
             }
         } while (true);
+    }
 
-        Console.getInstance().verbose("action monitor connected to " + socket.getRemoteSocketAddress());
+    /**
+     * Somewhere between the host and client process, broken socket connections
+     * are being accepted. Before we try to do any work on such a connection,
+     * check it to make sure it's not dead!
+     *
+     * TODO: file a bug (against adb?) for this
+     */
+    private boolean checkStream(InputStream in) throws IOException {
+        in.mark(1);
+        if (in.read() == -1) {
+            return false;
+        } else {
+            in.reset();
+            return true;
+        }
+    }
+
+    public boolean monitor(Handler handler) {
+        if (socket == null || in == null) {
+            throw new IllegalStateException();
+        }
 
         try {
             SAXParser parser = SAXParserFactory.newInstance().newSAXParser();
@@ -106,28 +132,26 @@ class HostMonitor {
             return false;
         }
 
-        try {
-            socket.close();
-        } catch (IOException ignored) {
-        }
-
+        close();
         return true;
     }
 
     /**
-     * Somewhere between the host and client process, broken socket connections
-     * are being accepted. Before we try to do any work on such a connection,
-     * check it to make sure it's not dead!
-     *
-     * TODO: file a bug (against adb?) for this
+     * Close this host monitor. This may be called by other threads to violently
+     * release the host socket and thread.
      */
-    private boolean checkStream(InputStream in) throws IOException {
-        in.mark(1);
-        if (in.read() == -1) {
-            return false;
-        } else {
-            in.reset();
-            return true;
+    public void close() {
+        Socket s = socket;
+        if (s == null) {
+            return;
+        }
+
+        try {
+            s.close();
+        } catch (IOException ignored) {
+        } finally {
+            socket = null;
+            in = null;
         }
     }
 
@@ -135,7 +159,7 @@ class HostMonitor {
      * Handles updates on the outcomes of a target process.
      */
     public interface Handler {
-      
+
         /**
          * @param runnerClass can be null, indicating nothing is actually being run. This will
          *        happen in the event of an impending error.
@@ -157,7 +181,6 @@ class HostMonitor {
         private final Handler handler;
 
         private String currentOutcomeName;
-        private String currentActionName;
         private Result currentResult;
         private StringBuilder output = new StringBuilder();
 
@@ -170,7 +193,7 @@ class HostMonitor {
          *
          * <?xml version='1.0' encoding='UTF-8' ?>
          * <vogar-monitor>
-         *   <outcome name="java.util.FormatterTest" action="java.util.FormatterTest" 
+         *   <outcome name="java.util.FormatterTest" action="java.util.FormatterTest"
          *            runner="vogar.target.JUnitRunner">
          *     test output
          *     more test output
@@ -187,15 +210,11 @@ class HostMonitor {
                 }
 
                 currentOutcomeName = attributes.getValue("name");
-                currentActionName = attributes.getValue("action");
-
                 handler.output(currentOutcomeName, "");
                 handler.runnerClass(currentOutcomeName, attributes.getValue("runner"));
-                return;
 
             } else if (qName.equals("result")) {
                 currentResult = Result.valueOf(attributes.getValue("value"));
-                return;
 
             } else if (!qName.equals("vogar-monitor")) {
                 throw new IllegalArgumentException("Unrecognized: " + qName);
@@ -217,7 +236,6 @@ class HostMonitor {
                 handler.outcome(new Outcome(currentOutcomeName, currentResult,
                         Collections.singletonList(output.toString())));
                 currentOutcomeName = null;
-                currentActionName = null;
                 currentResult = null;
                 output.delete(0, output.length());
             }
