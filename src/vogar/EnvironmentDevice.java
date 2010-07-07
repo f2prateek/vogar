@@ -51,7 +51,8 @@ class EnvironmentDevice extends Environment {
 
     @Override void prepare() {
         androidSdk.waitForDevice();
-        androidSdk.waitForNonEmptyDirectory(runnerDir.getParentFile(), 5 * 60);
+        // Even if runner dir is /vogar/run, the grandparent will be / (and non-null)
+        androidSdk.waitForNonEmptyDirectory(runnerDir.getParentFile().getParentFile(), 5 * 60);
         androidSdk.remount();
         if (cleanBefore) {
             androidSdk.rm(runnerDir);
