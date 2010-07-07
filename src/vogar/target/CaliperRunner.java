@@ -16,9 +16,9 @@
 
 package vogar.target;
 
-import com.google.caliper.Benchmark;
 import com.google.caliper.Runner;
 import com.google.caliper.SimpleBenchmark;
+import com.google.common.collect.ObjectArrays;
 import vogar.Result;
 
 /**
@@ -38,7 +38,7 @@ public final class CaliperRunner implements vogar.target.Runner {
     public void run(String actionName, Class<?> klass, String[] args, int timeoutSeconds) {
         monitor.outcomeStarted(this, actionName, actionName);
         try {
-            Runner.main(testClass.asSubclass(Benchmark.class), args);
+            new Runner().run(ObjectArrays.concat(testClass.getName(), args));
         } catch (Exception ex) {
             ex.printStackTrace();
         }
