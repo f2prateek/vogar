@@ -135,7 +135,7 @@ public final class Vogar {
     private List<File> jarSearchDirs = Lists.newArrayList();
 
     @Option(names = { "--vogar-dir" })
-    private File vogarDir = Vogar.dotFile(".vogar/");
+    private File vogarDir = Vogar.dotFile(".vogar");
 
     @Option(names = { "--tag-dir" })
     private File tagDir = null;
@@ -223,7 +223,7 @@ public final class Vogar {
         System.out.println("      Default is: " + vogarDir);
         System.out.println();
         System.out.println("  --tag-dir <directory>: directory in which to find tag information.");
-        System.out.println("      Default is: " + vogarDir + "/tags/");
+        System.out.println("      Default is: " + vogarDir + "/tags");
         System.out.println();
         System.out.println("  --tag <tag name>: creates a tag recording the arguments to this");
         System.out.println("      invocation of Vogar so that it can be rerun later.");
@@ -358,7 +358,7 @@ public final class Vogar {
             String oldTag = tagName;
             String[] runTagArgs;
             if (tagDir == null) {
-                tagDir = new File(vogarDir, "/tags/");
+                tagDir = new File(vogarDir, "/tags");
             }
             try {
                 runTagArgs = new Tag(tagDir, runTag, false).getArgs();
@@ -462,7 +462,7 @@ public final class Vogar {
 
         if (tagName != null) {
             if (tagDir == null) {
-                tagDir = new File(vogarDir, "/tags/");
+                tagDir = new File(vogarDir, "/tags");
             }
             new Tag(tagDir, tagName, tagOverwrite).saveArgs(args);
         }
@@ -482,10 +482,10 @@ public final class Vogar {
         }
 
         if (resultsDir == null) {
-            resultsDir = new File(vogarDir, "results/");
+            resultsDir = new File(vogarDir, "results");
         }
         if (tagDir == null) {
-            tagDir = new File(vogarDir, "results/tags/");
+            tagDir = new File(vogarDir, "results/tags");
         }
 
         int numRunners = (stream || this.mode == ModeId.ACTIVITY)

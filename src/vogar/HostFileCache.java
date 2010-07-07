@@ -22,7 +22,7 @@ import vogar.commands.Command;
 import vogar.commands.Mkdir;
 
 public class HostFileCache implements FileCache {
-    private final File CACHE_ROOT = new File("/tmp/vogar-md5-cache/");
+    private final File CACHE_ROOT = new File("/tmp/vogar-md5-cache");
 
     private void cp(File source, File destination) {
         List<String> rawResult = new Command.Builder().args("cp", source, destination).execute();

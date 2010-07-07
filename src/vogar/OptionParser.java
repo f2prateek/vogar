@@ -220,8 +220,7 @@ public class OptionParser {
 
         List<String> argsList = Lists.newArrayList();
         for (String rawLine : configFileLines) {
-            // strip leading and trailing spaces
-            String line = rawLine.replaceFirst("\\s*$", "").replaceFirst("^\\s*", "");
+            String line = rawLine.trim();
 
             // allow comments and blank lines
             if (line.startsWith("#") || line.isEmpty()) {

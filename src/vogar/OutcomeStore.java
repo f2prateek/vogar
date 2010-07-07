@@ -47,10 +47,10 @@ public final class OutcomeStore {
 
     OutcomeStore(File tagDir, String tagName, String compareToTag, File resultsDir,
             boolean recordResults, ExpectationStore expectationStore, Date date) {
-        this.tagResultsDir = new File(tagDir, "results/");
+        this.tagResultsDir = new File(tagDir, "results");
         this.tagName = tagName;
         this.compareToTag = compareToTag;
-        this.autoResultsDir = new File(resultsDir, "auto/");
+        this.autoResultsDir = new File(resultsDir, "auto");
         this.recordResults = recordResults;
         this.expectationStore = expectationStore;
         this.date = date;
