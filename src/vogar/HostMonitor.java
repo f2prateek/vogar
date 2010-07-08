@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.ConnectException;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.Collections;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
@@ -67,6 +68,7 @@ class HostMonitor {
                 inToCheck.close();
                 socketToCheck.close();
             } catch (ConnectException ignored) {
+            } catch (SocketException ignored) {
             } catch (IOException e) {
                 Console.getInstance().info("Failed to connect to localhost:" + port, e);
                 return false;

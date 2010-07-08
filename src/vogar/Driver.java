@@ -366,12 +366,13 @@ final class Driver {
 
             HostMonitor hostMonitor = new HostMonitor(monitorTimeoutSeconds, firstMonitorPort);
 
-            if (timeoutSeconds != 0) {
+            boolean connected = hostMonitor.connect();
+            if (connected && timeoutSeconds != 0) {
                 resetKillTime(timeoutSeconds);
                 scheduleTaskKiller(command, hostMonitor, action, result, timeoutSeconds);
             }
 
-            boolean completedNormally = hostMonitor.connect() && hostMonitor.monitor(this);
+            boolean completedNormally = connected && hostMonitor.monitor(this);
             if (completedNormally) {
                 if (result.compareAndSet(null, Result.SUCCESS)) {
                     command.destroy();
