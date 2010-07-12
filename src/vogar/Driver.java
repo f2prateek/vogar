@@ -364,7 +364,7 @@ final class Driver {
             Future<List<String>> consoleOut = command.executeLater();
             final AtomicReference<Result> result = new AtomicReference<Result>();
 
-            HostMonitor hostMonitor = new HostMonitor(monitorTimeoutSeconds, firstMonitorPort);
+            HostMonitor hostMonitor = new HostMonitor(monitorTimeoutSeconds, monitorPort(firstMonitorPort));
 
             boolean connected = hostMonitor.connect();
             if (connected && timeoutSeconds != 0) {
