@@ -60,7 +60,6 @@ final class Driver {
 
     private final File localTemp;
     private final ExpectationStore expectationStore;
-    private final Date date;
     private final Mode mode;
     private final XmlReportPrinter reportPrinter;
     private final int firstMonitorPort;
@@ -92,7 +91,6 @@ final class Driver {
                   boolean recordResults, int numRunnerThreads) {
         this.localTemp = localTemp;
         this.expectationStore = expectationStore;
-        this.date = date;
         this.mode = mode;
         this.reportPrinter = reportPrinter;
         this.monitorTimeoutSeconds = monitorTimeoutSeconds;
@@ -299,6 +297,7 @@ final class Driver {
         private final int count;
         private final BlockingQueue<Action> readyToRun;
         private volatile Date killTime;
+        private volatile String outcomeName;
 
         public ActionRunner(AtomicBoolean prematurelyExhaustedInput, int count, BlockingQueue<Action> readyToRun) {
             this.prematurelyExhaustedInput = prematurelyExhaustedInput;
@@ -411,7 +410,7 @@ final class Driver {
                     }
                     if (result.compareAndSet(null, Result.EXEC_TIMEOUT)) {
                         Console.getInstance().verbose("killing " + action + " because it timed out after "
-                                + timeoutSeconds + " seconds: " + command);
+                                + timeoutSeconds + " seconds. Current outcome is " + outcomeName);
                         command.destroy();
                         hostMonitor.close();
                     }
@@ -429,10 +428,11 @@ final class Driver {
              * end up killing the whole process.
              */
             long delay = TimeUnit.SECONDS.toMillis(timeoutForTest + 2);
-            killTime = new Date(System.currentTimeMillis() + delay);
+            this.killTime = new Date(System.currentTimeMillis() + delay);
         }
 
         @Override public void runnerClass(String outcomeName, String runnerClass) {
+            this.outcomeName = outcomeName;
             // TODO add to Outcome knowledge about what class was used to run it
             if (CaliperRunner.class.getName().equals(runnerClass)) {
                 Console.getInstance().verbose("running " + outcomeName + " with unlimited timeout");
@@ -449,7 +449,8 @@ final class Driver {
         }
 
         public void outcome(Outcome outcome) {
-            resetKillTime(smallTimeoutSeconds); // TODO: support flexible timeouts for JUnit tests
+            // TODO: support flexible timeouts for JUnit tests
+            resetKillTime(smallTimeoutSeconds);
             recordOutcome(outcome);
         }
     }
