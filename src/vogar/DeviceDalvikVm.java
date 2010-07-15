@@ -83,6 +83,7 @@ final class DeviceDalvikVm extends Vm {
                 .vmArgs("-Duser.language=en")
                 .vmArgs("-Duser.region=US")
                 .vmArgs("-Djavax.net.ssl.trustStore=/system/etc/security/cacerts.bks")
+                .maxLength(1024)
                 .temp(getEnvironmentDevice().vogarTemp);
     }
 

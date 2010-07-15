@@ -97,6 +97,7 @@ public abstract class Vm extends Mode {
         private Integer debugPort;
         private String mainClass;
         private PrintStream output;
+        private int maxLength = -1;
         private List<String> vmCommand = Collections.singletonList("java");
         private List<String> vmArgs = new ArrayList<String>();
         private List<String> args = new ArrayList<String>();
@@ -152,6 +153,11 @@ public abstract class Vm extends Mode {
             return this;
         }
 
+        public VmCommandBuilder maxLength(int maxLength) {
+            this.maxLength = maxLength;
+            return this;
+        }
+
         public VmCommandBuilder vmArgs(String... vmArgs) {
             return vmArgs(Arrays.asList(vmArgs));
         }
@@ -202,7 +208,7 @@ public abstract class Vm extends Mode {
             builder.args(args);
 
             builder.tee(output);
-
+            builder.maxLength(maxLength);
             return builder.build();
         }
     }

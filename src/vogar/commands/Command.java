@@ -67,6 +67,13 @@ public final class Command {
         this.workingDirectory = builder.workingDirectory;
         this.permitNonZeroExitStatus = builder.permitNonZeroExitStatus;
         this.tee = builder.tee;
+        if (builder.maxLength != -1) {
+            String string = toString();
+            if (string.length() > builder.maxLength) {
+                throw new IllegalStateException("Maximum command length " + builder.maxLength
+                                                + " exceeded by: " + string);
+            }
+        }
     }
 
     public void start() throws IOException {
@@ -204,6 +211,7 @@ public final class Command {
         private File workingDirectory;
         private boolean permitNonZeroExitStatus = false;
         private PrintStream tee = null;
+        private int maxLength = -1;
 
         public Builder args(Object... objects) {
             for (Object object : objects) {
@@ -239,6 +247,11 @@ public final class Command {
 
         public Builder tee(PrintStream printStream) {
             tee = printStream;
+            return this;
+        }
+
+        public Builder maxLength(int maxLength) {
+            this.maxLength = maxLength;
             return this;
         }
 
