@@ -423,11 +423,11 @@ final class Driver {
          */
         private void resetKillTime(int timeoutForTest) {
             /*
-             * Give the target process an extra 2 seconds to self-timeout and report
+             * Give the target process an extra full timeout to self-timeout and report
              * the error. This way, when a JUnit test has one slow method, we don't
              * end up killing the whole process.
              */
-            long delay = TimeUnit.SECONDS.toMillis(timeoutForTest + 2);
+            long delay = TimeUnit.SECONDS.toMillis(timeoutForTest * 2);
             this.killTime = new Date(System.currentTimeMillis() + delay);
         }
 
