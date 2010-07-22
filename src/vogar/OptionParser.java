@@ -82,7 +82,7 @@ import vogar.util.Strings;
  *
  * Enum types are supported. Input may be in either CONSTANT_CASE or
  * lower_case.
- * 
+ *
  * The fields corresponding to options are updated as their options
  * are processed. Any remaining positional arguments are returned as a
  * List<String>.
@@ -208,7 +208,7 @@ public class OptionParser {
     }
 
     public String[] readFile(File configFile) {
-         if (!configFile.exists()) {
+        if (!configFile.exists()) {
             return new String[0];
         }
 
@@ -512,7 +512,11 @@ public class OptionParser {
         }
 
         Object translate(String valueText) {
-            return Enum.valueOf((Class) enumType, valueText.toUpperCase());
+            try {
+                return Enum.valueOf((Class) enumType, valueText.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                return null;
+            }
         }
     }
 
