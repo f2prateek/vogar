@@ -25,7 +25,7 @@ public interface HostMonitor {
 
     boolean connect();
 
-    boolean monitor(Handler handler);
+    boolean monitor();
 
     void close();
 

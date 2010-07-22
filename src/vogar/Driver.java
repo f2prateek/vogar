@@ -37,7 +37,6 @@ import vogar.commands.Command;
 import vogar.commands.CommandFailedException;
 import vogar.commands.Mkdir;
 import vogar.monitor.HostMonitor;
-import vogar.monitor.SocketHostMonitor;
 import vogar.target.CaliperRunner;
 import vogar.util.Threads;
 import vogar.util.TimeUtilities;
@@ -287,7 +286,7 @@ final class Driver {
     /**
      * Runs a single action and reports the result.
      */
-    private class ActionRunner implements Runnable, SocketHostMonitor.Handler {
+    private class ActionRunner implements Runnable, HostMonitor.Handler {
 
         /**
          * All action runners share this atomic boolean. Whenever any of them
@@ -360,12 +359,11 @@ final class Driver {
                 return;
             }
 
+            HostMonitor hostMonitor = mode.createHostMonitor(
+                    action, monitorPort(firstMonitorPort), this);
             final Command command = mode.createActionCommand(action, monitorPort(-1));
             Future<List<String>> consoleOut = command.executeLater();
             final AtomicReference<Result> result = new AtomicReference<Result>();
-
-            HostMonitor hostMonitor = mode.environment.newHostMonitor(
-                    monitorPort(firstMonitorPort));
 
             boolean connected = hostMonitor.connect();
             if (connected && timeoutSeconds != 0) {
@@ -373,7 +371,7 @@ final class Driver {
                 scheduleTaskKiller(command, hostMonitor, action, result, timeoutSeconds);
             }
 
-            boolean completedNormally = connected && hostMonitor.monitor(this);
+            boolean completedNormally = connected && hostMonitor.monitor();
             if (completedNormally) {
                 if (result.compareAndSet(null, Result.SUCCESS)) {
                     command.destroy();
@@ -382,7 +380,8 @@ final class Driver {
             }
 
             if (result.compareAndSet(null, Result.ERROR)) {
-                Console.getInstance().verbose("killing " + action + " because it could not be monitored.");
+                Console.getInstance().verbose(
+                        "killing " + action + " because it could not be monitored.");
                 command.destroy();
             }
 
@@ -401,8 +400,9 @@ final class Driver {
             }
         }
 
-        private void scheduleTaskKiller(final Command command, final HostMonitor hostMonitor, final Action action,
-                final AtomicReference<Result> result, final int timeoutSeconds) {
+        private void scheduleTaskKiller(final Command command, final HostMonitor hostMonitor,
+                final Action action, final AtomicReference<Result> result,
+                final int timeoutSeconds) {
             actionTimeoutTimer.schedule(new TimerTask() {
                 @Override public void run() {
                     // if the kill time has been pushed back, reschedule
@@ -411,8 +411,9 @@ final class Driver {
                         return;
                     }
                     if (result.compareAndSet(null, Result.EXEC_TIMEOUT)) {
-                        Console.getInstance().verbose("killing " + action + " because it timed out after "
-                                + timeoutSeconds + " seconds. Current outcome is " + outcomeName);
+                        Console.getInstance().verbose("killing " + action + " because it timed out "
+                                + "after " + timeoutSeconds + " seconds. Current outcome is "
+                                + outcomeName);
                         command.destroy();
                         hostMonitor.close();
                     }

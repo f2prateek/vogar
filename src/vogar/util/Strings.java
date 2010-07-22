@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.Reader;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
@@ -38,10 +39,9 @@ public class Strings {
     private static final Pattern XML_INVALID_CHARS
             = Pattern.compile("[^\\u0009\\u000A\\u000D\\u0020-\\uD7FF\\uE000-\\uFFFD]+");
 
-    public static String readFile(File f) throws IOException {
+    public static String readStream(Reader reader) throws IOException {
         StringBuilder result = new StringBuilder();
-        BufferedReader in =
-                new BufferedReader(new InputStreamReader(new FileInputStream(f), "UTF-8"));
+        BufferedReader in = new BufferedReader(reader);
         String line;
         while ((line = in.readLine()) != null) {
             result.append(line);
@@ -49,6 +49,10 @@ public class Strings {
         }
         in.close();
         return result.toString();
+    }
+
+    public static String readFile(File f) throws IOException {
+        return readStream(new InputStreamReader(new FileInputStream(f), "UTF-8"));
     }
 
     public static List<String> readFileLines(File f) throws IOException {
@@ -63,7 +67,7 @@ public class Strings {
         return list;
     }
 
-    public static String join(Object[] objects, String delimiter) {
+    public static String join(String delimiter, Object... objects) {
         return join(Arrays.asList(objects), delimiter);
     }
 

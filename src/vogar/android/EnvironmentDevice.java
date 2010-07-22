@@ -30,8 +30,8 @@ public final class EnvironmentDevice extends Environment {
 
     public EnvironmentDevice(boolean cleanBefore, boolean cleanAfter, Integer debugPort,
             int firstMonitorPort, int numRunners, File localTemp, File runnerDir,
-            AndroidSdk androidSdk, int monitorTimeoutSeconds) {
-        super(cleanBefore, cleanAfter, debugPort, localTemp, monitorTimeoutSeconds);
+            AndroidSdk androidSdk) {
+        super(cleanBefore, cleanAfter, debugPort, localTemp);
         this.androidSdk = androidSdk;
         this.runnerDir = runnerDir;
         this.vogarTemp = new File(runnerDir, "tmp");

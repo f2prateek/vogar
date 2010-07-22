@@ -39,17 +39,22 @@ import vogar.Result;
  * sockets.
  */
 public final class SocketHostMonitor implements HostMonitor {
-    /** Sometimes we fail to parse XML documents; echo up to this many bytes back to the user when that happens. */
+    /**
+     * Sometimes we fail to parse XML documents; echo up to this many bytes back to the user when
+     * that happens.
+     */
     private static final int BAD_XML_SNIPPET_SIZE = 1024;
 
     private final long monitorTimeoutSeconds;
     private final int port;
     private Socket socket;
     private InputStream in;
+    private Handler handler;
 
-    public SocketHostMonitor(long monitorTimeoutSeconds, int port) {
+    public SocketHostMonitor(long monitorTimeoutSeconds, int port, Handler handler) {
         this.monitorTimeoutSeconds = monitorTimeoutSeconds;
         this.port = port;
+        this.handler = handler;
     }
 
     /**
@@ -110,7 +115,7 @@ public final class SocketHostMonitor implements HostMonitor {
         }
     }
 
-    @Override public boolean monitor(Handler handler) {
+    @Override public boolean monitor() {
         if (socket == null || in == null) {
             throw new IllegalStateException();
         }

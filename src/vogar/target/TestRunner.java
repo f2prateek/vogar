@@ -28,6 +28,7 @@ import java.util.Set;
 import vogar.Result;
 import vogar.TestProperties;
 import vogar.monitor.SocketTargetMonitor;
+import vogar.monitor.TargetMonitor;
 
 /**
  * Runs an action, in process on the target.
@@ -43,7 +44,7 @@ public final class TestRunner {
     protected final List<Runner> runners;
     protected final String[] args;
 
-    TestRunner(List<String> argsList) {
+    public TestRunner(List<String> argsList) {
         properties = loadProperties();
         qualifiedName = properties.getProperty(TestProperties.QUALIFIED_NAME);
         qualifiedClassOrPackageName = properties.getProperty(TestProperties.TEST_CLASS_OR_PACKAGE);
@@ -110,6 +111,12 @@ public final class TestRunner {
         final SocketTargetMonitor monitor = new SocketTargetMonitor();
         monitor.await(monitorPort);
 
+        run(monitor, args);
+
+        monitor.close();
+    }
+
+    public void run(final TargetMonitor monitor, String... args) {
         PrintStream monitorPrintStream = new PrintStream(System.out) {
             @Override public void print(String str) {
                 super.print(str);
@@ -161,7 +168,6 @@ public final class TestRunner {
                     monitor.outcomeStarted(null, qualifiedName, qualifiedName);
                     e.printStackTrace();
                     monitor.outcomeFinished(Result.ERROR);
-                    monitor.close();
                     return;
                 }
                 runner.run(qualifiedName, klass, args, timeoutSeconds);
@@ -171,8 +177,6 @@ public final class TestRunner {
                 monitor.outcomeFinished(Result.UNSUPPORTED);
             }
         }
-
-        monitor.close();
     }
 
     public static void main(String[] args) {

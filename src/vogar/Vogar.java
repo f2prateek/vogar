@@ -370,11 +370,11 @@ public final class Vogar {
                 runTagArgs = new Tag(tagDir, runTag, false).getArgs();
                 System.out.println("Executing Vogar with additional arguments from tag \""
                         + runTag + "\":");
-                System.out.println(Strings.join(runTagArgs, " "));
+                System.out.println(Strings.join(" ", (Object[]) runTagArgs));
             } catch (FileNotFoundException e) {
                 System.out.println("Tag \"" + runTag + "\" doesn't exist");
                 System.out.println("Existing tags are: "
-                        + Strings.join(Tag.getAllTags(tagDir), ", "));
+                        + Strings.join(", ", (Object[]) Tag.getAllTags(tagDir)));
                 return false;
             }
             // rollback changes already made by the optionParser to insert tag arguments
@@ -498,7 +498,8 @@ public final class Vogar {
                 ? 1
                 : NUM_PROCESSORS;
         Mode.Options modeOptions = new Mode.Options(Classpath.of(buildClasspath), sourcepath,
-                javacArgs, javaHome, firstMonitorPort, timeoutSeconds, useBootClasspath, Classpath.of(classpath));
+                javacArgs, javaHome, firstMonitorPort, monitorTimeout, timeoutSeconds,
+                useBootClasspath, Classpath.of(classpath));
 
         AndroidSdk androidSdk = null;
         if (mode.requiresAndroidSdk()) {
@@ -511,26 +512,30 @@ public final class Vogar {
 
         File localTemp = new File("/tmp/vogar/" + UUID.randomUUID());
         Environment environment = mode.isHost()
-                ? new EnvironmentHost(cleanBefore, cleanAfter, debugPort, localTemp, monitorTimeout)
-                : new EnvironmentDevice(cleanBefore, cleanAfter, debugPort, firstMonitorPort, 
-                        numRunners, localTemp, new File(deviceDir, "run"), androidSdk,
-                        monitorTimeout);
+                ? new EnvironmentHost(cleanBefore, cleanAfter, debugPort, localTemp)
+                : new EnvironmentDevice(cleanBefore, cleanAfter, debugPort, firstMonitorPort,
+                        numRunners, localTemp, new File(deviceDir, "run"), androidSdk);
 
         Vm.Options vmOptions = (mode.acceptsVmArgs())
                 ? new Vm.Options(vmArgs, targetArgs)
                 : null;
 
         Mode mode;
-        if (this.mode == ModeId.JVM) {
-            mode = new JavaVm(environment, modeOptions, vmOptions);
-        } else if (this.mode == ModeId.SIM) {
-            mode = new HostDalvikVm(environment, modeOptions, vmOptions, androidSdk, valgrind);
-        } else if (this.mode == ModeId.DEVICE) {
-            mode = new DeviceDalvikVm(environment, modeOptions, vmOptions);
-        } else if (this.mode == ModeId.ACTIVITY) {
-            mode = new ActivityMode(environment, modeOptions);
-        } else {
-            throw new AssertionError();
+        switch (this.mode) {
+            case JVM:
+                mode = new JavaVm(environment, modeOptions, vmOptions);
+                break;
+            case SIM:
+                mode = new HostDalvikVm(environment, modeOptions, vmOptions, androidSdk, valgrind);
+                break;
+            case DEVICE:
+                mode = new DeviceDalvikVm(environment, modeOptions, vmOptions);
+                break;
+            case ACTIVITY:
+                mode = new ActivityMode(environment, modeOptions);
+                break;
+            default:
+                throw new AssertionError();
         }
 
         ExpectationStore expectationStore;
@@ -583,18 +588,18 @@ public final class Vogar {
     }
 
     enum ModeId {
-        DEVICE, JVM, ACTIVITY, SIM;
+        DEVICE, JVM, ACTIVITY, SIM, CRORE;
 
         public boolean supportsValgrind() {
             return this == SIM;
         }
 
         public boolean acceptsVmArgs() {
-            return this != ACTIVITY;
+            return this != ACTIVITY && this != CRORE;
         }
 
         public boolean isHost() {
-            return this == ModeId.JVM || this == ModeId.SIM;
+            return this == JVM || this == SIM || this == CRORE;
         }
 
         public boolean requiresAndroidSdk() {

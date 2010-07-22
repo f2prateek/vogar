@@ -20,11 +20,10 @@ import java.io.File;
 import vogar.commands.Command;
 import vogar.commands.Mkdir;
 
-class EnvironmentHost extends Environment {
+final class EnvironmentHost extends Environment {
 
-    EnvironmentHost(boolean cleanBefore, boolean cleanAfter,
-            Integer debugPort, File localTemp, int monitorTimeoutSeconds) {
-        super(cleanBefore, cleanAfter, debugPort, localTemp, monitorTimeoutSeconds);
+    EnvironmentHost(boolean cleanBefore, boolean cleanAfter, Integer debugPort, File localTemp) {
+        super(cleanBefore, cleanAfter, debugPort, localTemp);
     }
 
     @Override public void prepare() {}
