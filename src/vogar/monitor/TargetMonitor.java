@@ -14,22 +14,19 @@
  * limitations under the License.
  */
 
-package vogar.target;
+package vogar.monitor;
 
-import vogar.monitor.TargetMonitor;
+import vogar.Result;
+import vogar.target.Runner;
 
 /**
- * Interface between the generic TestRunner and the more specific
- * backend implementations that know about specific types of tests.
+ * Send state to the host process.
  */
-public interface Runner {
+public interface TargetMonitor {
 
-    /**
-     * Returns true if this runner can exercise {@code klass}.
-     */
-    boolean supports(Class<?> klass);
+    void outcomeStarted(Runner runner, String outcomeName, String actionName);
 
-    void init(TargetMonitor monitor, String actionName, String qualification, Class<?> klass);
+    void output(String text);
 
-    void run(String actionName, Class<?> klass, String[] args, int timeoutSeconds);
+    void outcomeFinished(Result result);
 }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package vogar;
+package vogar.monitor;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
@@ -30,11 +30,15 @@ import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
+import vogar.Console;
+import vogar.Outcome;
+import vogar.Result;
 
 /**
- * Connects to a target process to monitor its action.
+ * Connects to a target process to monitor its action using XML over raw
+ * sockets.
  */
-class HostMonitor {
+public final class SocketHostMonitor implements HostMonitor {
     /** Sometimes we fail to parse XML documents; echo up to this many bytes back to the user when that happens. */
     private static final int BAD_XML_SNIPPET_SIZE = 1024;
 
@@ -43,7 +47,7 @@ class HostMonitor {
     private Socket socket;
     private InputStream in;
 
-    HostMonitor(long monitorTimeoutSeconds, int port) {
+    public SocketHostMonitor(long monitorTimeoutSeconds, int port) {
         this.monitorTimeoutSeconds = monitorTimeoutSeconds;
         this.port = port;
     }
@@ -52,7 +56,7 @@ class HostMonitor {
      * Connect to the target process on the given port, read all of its
      * outcomes into {@code handler}, and disconnect.
      */
-    public boolean connect() {
+    @Override public boolean connect() {
         int attempt = 0;
         do {
             try {
@@ -106,7 +110,7 @@ class HostMonitor {
         }
     }
 
-    public boolean monitor(Handler handler) {
+    @Override public boolean monitor(Handler handler) {
         if (socket == null || in == null) {
             throw new IllegalStateException();
         }
@@ -142,7 +146,7 @@ class HostMonitor {
      * Close this host monitor. This may be called by other threads to violently
      * release the host socket and thread.
      */
-    public void close() {
+    @Override public void close() {
         Socket s = socket;
         if (s == null) {
             return;
@@ -155,28 +159,6 @@ class HostMonitor {
             socket = null;
             in = null;
         }
-    }
-
-    /**
-     * Handles updates on the outcomes of a target process.
-     */
-    public interface Handler {
-
-        /**
-         * @param runnerClass can be null, indicating nothing is actually being run. This will
-         *        happen in the event of an impending error.
-         */
-        void runnerClass(String outcomeName, String runnerClass);
-
-        /**
-         * Receive a completed outcome.
-         */
-        void outcome(Outcome outcome);
-
-        /**
-         * Receive partial output from an action being executed.
-         */
-        void output(String outcomeName, String output);
     }
 
     class ClientXmlHandler extends DefaultHandler {

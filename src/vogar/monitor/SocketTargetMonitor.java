@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package vogar.target;
+package vogar.monitor;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -23,11 +23,14 @@ import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
 import org.xmlpull.v1.XmlSerializer;
 import vogar.Result;
+import vogar.target.Runner;
 import vogar.util.Strings;
+
 /**
- * Accepts a connection for a host process to monitor this action.
+ * Accepts a connection from the host process. Once connected, XML is sent over
+ * raw sockets.
  */
-class TargetMonitor {
+public final class SocketTargetMonitor implements TargetMonitor {
 
     private static final int ACCEPT_TIMEOUT_MILLIS = 10 * 1000;
 
@@ -58,7 +61,7 @@ class TargetMonitor {
         }
     }
 
-    public synchronized void outcomeStarted(Runner runner, String outcomeName, String actionName) {
+    @Override public synchronized void outcomeStarted(Runner runner, String outcomeName, String actionName) {
         try {
             serializer.startTag(ns, "outcome");
             serializer.attribute(ns, "name", outcomeName);
@@ -71,7 +74,7 @@ class TargetMonitor {
         }
     }
 
-    public synchronized void output(String text) {
+    @Override public synchronized void output(String text) {
         try {
             serializer.text(Strings.xmlSanitize(text));
             serializer.flush();
@@ -80,7 +83,7 @@ class TargetMonitor {
         }
     }
 
-    public synchronized void outcomeFinished(Result result) {
+    @Override public synchronized void outcomeFinished(Result result) {
         try {
             serializer.startTag(ns, "result");
             serializer.attribute(ns, "value", result.name());

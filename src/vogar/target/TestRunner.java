@@ -27,6 +27,7 @@ import java.util.Properties;
 import java.util.Set;
 import vogar.Result;
 import vogar.TestProperties;
+import vogar.monitor.SocketTargetMonitor;
 
 /**
  * Runs an action, in process on the target.
@@ -106,7 +107,7 @@ public final class TestRunner {
     }
 
     public void run(String... args) {
-        final TargetMonitor monitor = new TargetMonitor();
+        final SocketTargetMonitor monitor = new SocketTargetMonitor();
         monitor.await(monitorPort);
 
         PrintStream monitorPrintStream = new PrintStream(System.out) {

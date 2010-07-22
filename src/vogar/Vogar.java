@@ -511,9 +511,10 @@ public final class Vogar {
 
         File localTemp = new File("/tmp/vogar/" + UUID.randomUUID());
         Environment environment = mode.isHost()
-                ? new EnvironmentHost(cleanBefore, cleanAfter, debugPort, localTemp)
-                : new EnvironmentDevice(cleanBefore, cleanAfter, debugPort, firstMonitorPort, numRunners, localTemp,
-                        new File(deviceDir, "run"), androidSdk);
+                ? new EnvironmentHost(cleanBefore, cleanAfter, debugPort, localTemp, monitorTimeout)
+                : new EnvironmentDevice(cleanBefore, cleanAfter, debugPort, firstMonitorPort, 
+                        numRunners, localTemp, new File(deviceDir, "run"), androidSdk,
+                        monitorTimeout);
 
         Vm.Options vmOptions = (mode.acceptsVmArgs())
                 ? new Vm.Options(vmArgs, targetArgs)
@@ -558,7 +559,6 @@ public final class Vogar {
                 expectationStore,
                 currentDate,
                 xmlReportPrinter,
-                monitorTimeout,
                 firstMonitorPort,
                 smallTimeoutSeconds,
                 smallTimeoutSeconds * LARGE_TIMEOUT_MULTIPLIER,

@@ -28,7 +28,7 @@ import vogar.util.Strings;
  * An outcome of an action. Some actions may have multiple outcomes. For
  * example, JUnit tests have one outcome for each test method.
  */
-final class Outcome {
+public final class Outcome {
 
     private final String outcomeName;
     private final Result result;

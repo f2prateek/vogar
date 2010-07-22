@@ -23,8 +23,8 @@ import vogar.commands.Mkdir;
 class EnvironmentHost extends Environment {
 
     EnvironmentHost(boolean cleanBefore, boolean cleanAfter,
-            Integer debugPort, File localTemp) {
-        super(cleanBefore, cleanAfter, debugPort, localTemp);
+            Integer debugPort, File localTemp, int monitorTimeoutSeconds) {
+        super(cleanBefore, cleanAfter, debugPort, localTemp, monitorTimeoutSeconds);
     }
 
     @Override public void prepare() {}

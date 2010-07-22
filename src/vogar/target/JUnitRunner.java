@@ -36,6 +36,7 @@ import junit.runner.TestSuiteLoader;
 import junit.textui.ResultPrinter;
 import vogar.ClassAnalyzer;
 import vogar.Result;
+import vogar.monitor.TargetMonitor;
 import vogar.util.Threads;
 
 /**

@@ -36,6 +36,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import vogar.commands.Command;
 import vogar.commands.CommandFailedException;
 import vogar.commands.Mkdir;
+import vogar.monitor.HostMonitor;
+import vogar.monitor.SocketHostMonitor;
 import vogar.target.CaliperRunner;
 import vogar.util.Threads;
 import vogar.util.TimeUtilities;
@@ -65,7 +67,6 @@ final class Driver {
     private final Mode mode;
     private final XmlReportPrinter reportPrinter;
     private final int firstMonitorPort;
-    private final int monitorTimeoutSeconds;
     private final int smallTimeoutSeconds;
     private final int largeTimeoutSeconds;
     private final JarSuggestions jarSuggestions;
@@ -87,15 +88,13 @@ final class Driver {
     private boolean disableResultRecord = false;
 
     public Driver(File localTemp, Mode mode, ExpectationStore expectationStore, Date date,
-                  XmlReportPrinter reportPrinter, int monitorTimeoutSeconds, int firstMonitorPort,
-                  int smallTimeoutSeconds, int largeTimeoutSeconds, ClassFileIndex classFileIndex,
-                  File resultsDir, File tagDir, String tagName, String compareToTag,
-                  boolean recordResults, int numRunnerThreads) {
+            XmlReportPrinter reportPrinter, int firstMonitorPort, int smallTimeoutSeconds,
+            int largeTimeoutSeconds, ClassFileIndex classFileIndex, File resultsDir, File tagDir,
+            String tagName, String compareToTag, boolean recordResults, int numRunnerThreads) {
         this.localTemp = localTemp;
         this.expectationStore = expectationStore;
         this.mode = mode;
         this.reportPrinter = reportPrinter;
-        this.monitorTimeoutSeconds = monitorTimeoutSeconds;
         this.firstMonitorPort = firstMonitorPort;
         this.smallTimeoutSeconds = smallTimeoutSeconds;
         this.largeTimeoutSeconds = largeTimeoutSeconds;
@@ -288,7 +287,7 @@ final class Driver {
     /**
      * Runs a single action and reports the result.
      */
-    private class ActionRunner implements Runnable, HostMonitor.Handler {
+    private class ActionRunner implements Runnable, SocketHostMonitor.Handler {
 
         /**
          * All action runners share this atomic boolean. Whenever any of them
@@ -365,7 +364,8 @@ final class Driver {
             Future<List<String>> consoleOut = command.executeLater();
             final AtomicReference<Result> result = new AtomicReference<Result>();
 
-            HostMonitor hostMonitor = new HostMonitor(monitorTimeoutSeconds, monitorPort(firstMonitorPort));
+            HostMonitor hostMonitor = mode.environment.newHostMonitor(
+                    monitorPort(firstMonitorPort));
 
             boolean connected = hostMonitor.connect();
             if (connected && timeoutSeconds != 0) {

@@ -19,6 +19,7 @@ package vogar.target;
 import java.lang.reflect.Method;
 import vogar.ClassAnalyzer;
 import vogar.Result;
+import vogar.monitor.TargetMonitor;
 
 /**
  * Runs a Java class with a main method. This includes jtreg tests.

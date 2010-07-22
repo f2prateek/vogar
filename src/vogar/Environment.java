@@ -18,6 +18,8 @@ package vogar;
 
 import java.io.File;
 import vogar.commands.Rm;
+import vogar.monitor.HostMonitor;
+import vogar.monitor.SocketHostMonitor;
 import vogar.util.Strings;
 
 /**
@@ -28,12 +30,15 @@ public abstract class Environment {
     final boolean cleanAfter;
     final Integer debugPort;
     private final File localTemp;
+    private final int monitorTimeoutSeconds;
 
-    protected Environment(boolean cleanBefore, boolean cleanAfter, Integer debugPort, File localTemp) {
+    protected Environment(boolean cleanBefore, boolean cleanAfter, Integer debugPort,
+            File localTemp, int monitorTimeoutSeconds) {
         this.cleanBefore = cleanBefore;
         this.cleanAfter = cleanAfter;
         this.debugPort = debugPort;
         this.localTemp = localTemp;
+        this.monitorTimeoutSeconds = monitorTimeoutSeconds;
     }
 
     public boolean cleanBefore() {
@@ -70,6 +75,10 @@ public abstract class Environment {
             Console.getInstance().verbose("clean " + action.getName());
             new Rm().directoryTree(file(action));
         }
+    }
+
+    protected HostMonitor newHostMonitor(int monitorPort) {
+        return new SocketHostMonitor(monitorTimeoutSeconds, monitorPort);
     }
 
     public final File file(Object... path) {

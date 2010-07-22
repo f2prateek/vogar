@@ -20,6 +20,7 @@ import com.google.caliper.Runner;
 import com.google.caliper.SimpleBenchmark;
 import com.google.common.collect.ObjectArrays;
 import vogar.Result;
+import vogar.monitor.TargetMonitor;
 
 /**
  * Runs a <a href="http://code.google.com/p/caliper/">Caliper</a> benchmark.
