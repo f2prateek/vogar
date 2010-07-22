@@ -36,7 +36,7 @@ import vogar.Console;
 import vogar.DeviceFileCache;
 import vogar.HostFileCache;
 import vogar.Md5Cache;
-import vogar.Strings;
+import vogar.util.Strings;
 
 /**
  * Android SDK commands such as adb, aapt and dx.

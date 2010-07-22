@@ -401,14 +401,14 @@ public abstract class Console {
             }
 
             currentName = name;
-            super.newLine();
+            newLine();
             System.out.print(indent + name);
             System.out.flush();
             currentLine = CurrentLine.NAME;
         }
 
         @Override public synchronized void streamOutput(String outcomeName, String output) {
-            super.printOutput(output);
+            printOutput(output);
         }
     }
 

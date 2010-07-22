@@ -23,7 +23,7 @@ import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
 import org.xmlpull.v1.XmlSerializer;
 import vogar.Result;
-import vogar.Strings;
+import vogar.util.Strings;
 /**
  * Accepts a connection for a host process to monitor this action.
  */

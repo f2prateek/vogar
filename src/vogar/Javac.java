@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import vogar.commands.Command;
+import vogar.util.Strings;
 
 /**
  * A javac command.

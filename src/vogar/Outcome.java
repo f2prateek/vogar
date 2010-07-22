@@ -17,6 +17,8 @@
 package vogar;
 
 import com.google.common.collect.Lists;
+import vogar.util.Strings;
+
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Arrays;

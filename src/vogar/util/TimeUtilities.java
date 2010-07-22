@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package vogar;
+package vogar.util;
 
 /**
  * Utilities to make it easier to work with ISO 8601 dates and times.

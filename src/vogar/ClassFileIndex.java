@@ -37,6 +37,7 @@ import java.util.jar.JarFile;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import vogar.commands.Mkdir;
+import vogar.util.Strings;
 
 /**
  * Indexes the locations of commonly used classes to assist in constructing correct Vogar commands.

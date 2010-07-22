@@ -35,8 +35,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import vogar.Console;
-import vogar.Strings;
-import vogar.Threads;
+import vogar.util.Strings;
+import vogar.util.Threads;
 
 /**
  * An out of process executable.

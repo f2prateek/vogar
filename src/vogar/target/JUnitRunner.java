@@ -36,7 +36,7 @@ import junit.runner.TestSuiteLoader;
 import junit.textui.ResultPrinter;
 import vogar.ClassAnalyzer;
 import vogar.Result;
-import vogar.Threads;
+import vogar.util.Threads;
 
 /**
  * Adapts a JUnit test for use by vogar.

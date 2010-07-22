@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import vogar.commands.AndroidSdk;
+import vogar.util.Strings;
 
 /**
  * Command line interface for running benchmarks and tests on dalvik.

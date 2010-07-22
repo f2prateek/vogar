@@ -16,6 +16,8 @@
 
 package vogar;
 
+import vogar.util.Strings;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.regex.Matcher;

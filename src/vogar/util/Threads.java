@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-package vogar;
+package vogar.util;
+
+import vogar.Console;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;

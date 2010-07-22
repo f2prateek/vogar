@@ -22,7 +22,7 @@ import android.util.Log;
 import android.widget.TextView;
 import java.util.Collections;
 import java.util.concurrent.ExecutorService;
-import vogar.Threads;
+import vogar.util.Threads;
 
 /**
  * Runs a user-supplied {@code main(String[] args)} method in the context of an

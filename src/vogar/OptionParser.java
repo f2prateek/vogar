@@ -17,6 +17,8 @@
 package vogar;
 
 import com.google.common.collect.Lists;
+import vogar.util.Strings;
+
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
