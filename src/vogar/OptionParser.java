@@ -17,8 +17,6 @@
 package vogar;
 
 import com.google.common.collect.Lists;
-import vogar.util.Strings;
-
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -31,6 +29,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import vogar.util.Strings;
 
 /**
  * Parses command line options.

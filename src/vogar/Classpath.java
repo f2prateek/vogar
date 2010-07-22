@@ -16,13 +16,12 @@
 
 package vogar;
 
-import vogar.util.Strings;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import vogar.util.Strings;
 
 /**
  * A list of jar files and directories.

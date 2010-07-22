@@ -16,12 +16,11 @@
 
 package vogar;
 
-import vogar.util.Strings;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import vogar.util.Strings;
 
 /**
  * A {@code .java} file for execution as an action.

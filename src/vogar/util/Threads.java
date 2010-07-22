@@ -16,13 +16,12 @@
 
 package vogar.util;
 
-import vogar.Console;
-
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import vogar.Console;
 
 /**
  * Utility methods for working with threads.

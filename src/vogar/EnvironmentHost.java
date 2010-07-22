@@ -27,9 +27,9 @@ class EnvironmentHost extends Environment {
         super(cleanBefore, cleanAfter, debugPort, localTemp);
     }
 
-    @Override void prepare() {}
+    @Override public void prepare() {}
 
-    @Override protected void prepareUserDir(Action action) {
+    @Override public void prepareUserDir(Action action) {
         File actionUserDir = actionUserDir(action);
 
         // if the user dir exists, cp would copy the files to the wrong place

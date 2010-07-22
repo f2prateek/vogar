@@ -23,57 +23,69 @@ import vogar.util.Strings;
 /**
  * A target runtime environment such as a remote device or the local host
  */
-abstract class Environment {
+public abstract class Environment {
     final boolean cleanBefore;
     final boolean cleanAfter;
     final Integer debugPort;
     private final File localTemp;
 
-    Environment (boolean cleanBefore, boolean cleanAfter, Integer debugPort, File localTemp) {
+    protected Environment(boolean cleanBefore, boolean cleanAfter, Integer debugPort, File localTemp) {
         this.cleanBefore = cleanBefore;
         this.cleanAfter = cleanAfter;
         this.debugPort = debugPort;
         this.localTemp = localTemp;
     }
 
+    public boolean cleanBefore() {
+        return cleanBefore;
+    }
+
+    public boolean cleanAfter() {
+        return cleanAfter;
+    }
+
+    public Integer getDebugPort() {
+        return debugPort;
+    }
+
     /**
      * Initializes the temporary directories and harness necessary to run
      * actions.
      */
-    abstract void prepare();
+    public abstract void prepare();
 
     /**
      * Prepares the directory from which the action will be executed. Some
      * actions expect to read data files from the current working directory;
      * this step should ensure such files are available.
      */
-    abstract void prepareUserDir(Action action);
+    public abstract void prepareUserDir(Action action);
 
     /**
      * Deletes files and releases any resources required for the execution of
      * the given action.
      */
-    void cleanup(Action action) {
+    public void cleanup(Action action) {
         if (cleanAfter) {
             Console.getInstance().verbose("clean " + action.getName());
             new Rm().directoryTree(file(action));
         }
     }
 
-    final File file(Object... path) {
+    public final File file(Object... path) {
         return new File(localTemp + "/" + Strings.join(path, "/"));
     }
 
-    final File hostJar(Object nameOrAction) {
+    public final File hostJar(Object nameOrAction) {
         return file(nameOrAction, nameOrAction + ".jar");
     }
 
-    final File actionUserDir(Action action) {
+    public final File actionUserDir(Action action) {
         File testTemp = new File(localTemp, "userDir");
         return new File(testTemp, action.getName());
     }
 
-    void shutdown() {
+    public void shutdown() {
         if (cleanAfter) {
             new Rm().directoryTree(localTemp);
         }

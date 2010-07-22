@@ -45,7 +45,7 @@ public abstract class Vm extends Mode {
     }
     final Options vmOptions;
 
-    Vm(Environment environment, Mode.Options options, Vm.Options vmOptions) {
+    protected Vm(Environment environment, Mode.Options options, Vm.Options vmOptions) {
         super(environment, options);
         this.vmOptions = vmOptions;
     }

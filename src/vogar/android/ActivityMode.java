@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package vogar;
+package vogar.android;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -24,17 +24,23 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Properties;
+import vogar.Action;
+import vogar.Classpath;
+import vogar.Console;
+import vogar.Environment;
+import vogar.Mode;
+import vogar.TestProperties;
 import vogar.commands.Command;
 
 /**
  * Runs an action in the context of an android.app.Activity on a device
  */
-final class ActivityMode extends Mode {
+public final class ActivityMode extends Mode {
     private static final String TEST_ACTIVITY_CLASS = "vogar.target.TestActivity";
 
     private File keystore;
 
-    ActivityMode(Environment environment, Options options) {
+    public ActivityMode(Environment environment, Options options) {
         super(environment, options);
     }
 
@@ -92,7 +98,7 @@ final class ActivityMode extends Mode {
         File dex = environment.file(action, "classes.dex");
         Classpath classesToDex = Classpath.of(actionJar);
         classesToDex.addAll(this.classpath);
-        getEnvironmentDevice().androidSdk.dex(dex, classesToDex);
+        getEnvironmentDevice().getAndroidSdk().dex(dex, classesToDex);
         return dex;
     }
 
@@ -132,9 +138,9 @@ final class ActivityMode extends Mode {
         }
 
         File apk = environment.file(action, action + ".apk");
-        getEnvironmentDevice().androidSdk.packageApk(apk, androidManifestFile);
-        getEnvironmentDevice().androidSdk.addToApk(apk, dex);
-        getEnvironmentDevice().androidSdk.addToApk(apk, environment.file(action, "classes", TestProperties.FILE));
+        getEnvironmentDevice().getAndroidSdk().packageApk(apk, androidManifestFile);
+        getEnvironmentDevice().getAndroidSdk().addToApk(apk, dex);
+        getEnvironmentDevice().getAndroidSdk().addToApk(apk, environment.file(action, "classes", TestProperties.FILE));
         return apk;
     }
 
@@ -154,13 +160,13 @@ final class ActivityMode extends Mode {
 
     private void installApk(Action action, File apkSigned) {
         // install the local apk ona the device
-        getEnvironmentDevice().androidSdk.uninstall(packageName(action));
-        getEnvironmentDevice().androidSdk.install(apkSigned);
+        getEnvironmentDevice().getAndroidSdk().uninstall(packageName(action));
+        getEnvironmentDevice().getAndroidSdk().install(apkSigned);
     }
 
     @Override protected void fillInProperties(Properties properties, Action action) {
         super.fillInProperties(properties, action);
-        properties.setProperty(TestProperties.DEVICE_RUNNER_DIR, getEnvironmentDevice().runnerDir.getPath());
+        properties.setProperty(TestProperties.DEVICE_RUNNER_DIR, getEnvironmentDevice().getRunnerDir().getPath());
     }
 
     @Override protected Command createActionCommand(Action action, int monitorPort) {
@@ -174,10 +180,10 @@ final class ActivityMode extends Mode {
                 "-n", (packageName(action) + "/" + TEST_ACTIVITY_CLASS));
     }
 
-    @Override void cleanup(Action action) {
+    @Override public void cleanup(Action action) {
         super.cleanup(action);
-        if (environment.cleanAfter) {
-            getEnvironmentDevice().androidSdk.uninstall(action.getName());
+        if (environment.cleanAfter()) {
+            getEnvironmentDevice().getAndroidSdk().uninstall(action.getName());
         }
     }
 }

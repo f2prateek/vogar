@@ -14,19 +14,25 @@
  * limitations under the License.
  */
 
-package vogar;
+package vogar.android;
 
 import java.io.File;
-import vogar.commands.AndroidSdk;
+import vogar.Action;
+import vogar.Classpath;
+import vogar.Console;
+import vogar.Environment;
+import vogar.Mode;
+import vogar.Vm;
+import vogar.Vogar;
 
 /**
  * Execute actions on a Dalvik VM using an Android device or emulator.
  */
-final class DeviceDalvikVm extends Vm {
+public final class DeviceDalvikVm extends Vm {
 
     private static final File USER_HOME = new File("/sdcard");
 
-    DeviceDalvikVm(Environment environment, Mode.Options options, Vm.Options vmOptions) {
+    public DeviceDalvikVm(Environment environment, Mode.Options options, Vm.Options vmOptions) {
         super(environment, options, vmOptions);
     }
 

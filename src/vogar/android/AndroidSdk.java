@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package vogar.commands;
+package vogar.android;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -33,9 +33,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import vogar.Classpath;
 import vogar.Console;
-import vogar.DeviceFileCache;
 import vogar.HostFileCache;
 import vogar.Md5Cache;
+import vogar.commands.Command;
+import vogar.commands.CommandFailedException;
+import vogar.commands.Mkdir;
 import vogar.util.Strings;
 
 /**

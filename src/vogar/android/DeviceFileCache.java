@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-package vogar;
+package vogar.android;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.HashSet;
 import java.util.Set;
-import vogar.commands.AndroidSdk;
+import vogar.Console;
+import vogar.FileCache;
 
 public class DeviceFileCache implements FileCache {
     private final File cacheRoot;

@@ -35,13 +35,13 @@ import vogar.commands.Mkdir;
  * either on the host or a device or within a specific context such as within an
  * Activity.
  */
-abstract class Mode {
+public abstract class Mode {
 
     private static final Pattern JAVA_SOURCE_PATTERN = Pattern.compile("\\/(\\w)+\\.java$");
 
     protected final Environment environment;
 
-    protected static class Options {
+    public static class Options {
         protected final Classpath buildClasspath;
         protected final List<File> sourcepath;
         protected final List<String> javacArgs;
@@ -79,7 +79,7 @@ abstract class Mode {
      */
     protected final Classpath classpath = new Classpath();
 
-    Mode(Environment environment, Options modeOptions) {
+    protected Mode(Environment environment, Options modeOptions) {
         this.environment = environment;
         this.modeOptions = modeOptions;
         this.classpath.addAll(modeOptions.classpath);
@@ -228,7 +228,7 @@ abstract class Mode {
      * Deletes files and releases any resources required for the execution of
      * the given action.
      */
-    void cleanup(Action action) {
+    public void cleanup(Action action) {
         environment.cleanup(action);
     }
 

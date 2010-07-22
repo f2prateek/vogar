@@ -26,7 +26,12 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import vogar.commands.AndroidSdk;
+import vogar.android.ActivityMode;
+import vogar.android.AndroidSdk;
+import vogar.android.DeviceDalvikVm;
+import vogar.android.DeviceFileCache;
+import vogar.android.EnvironmentDevice;
+import vogar.android.HostDalvikVm;
 import vogar.util.Strings;
 
 /**
@@ -43,7 +48,7 @@ public final class Vogar {
     private final OptionParser optionParser = new OptionParser(this);
     private File configFile = Vogar.dotFile(".vogarconfig");
 
-    static File dotFile (String name) {
+    public static File dotFile (String name) {
         return new File(System.getProperty("user.home", "."), name);
     }
 

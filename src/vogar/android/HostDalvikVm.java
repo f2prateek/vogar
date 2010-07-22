@@ -14,12 +14,17 @@
  * limitations under the License.
  */
 
-package vogar;
+package vogar.android;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import vogar.commands.AndroidSdk;
+import vogar.Action;
+import vogar.Classpath;
+import vogar.Console;
+import vogar.Environment;
+import vogar.Mode;
+import vogar.Vm;
 import vogar.commands.Mkdir;
 
 /**

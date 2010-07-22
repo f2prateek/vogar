@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-package vogar;
+package vogar.android;
 
 import java.io.File;
-import vogar.commands.AndroidSdk;
+import vogar.Action;
+import vogar.Environment;
 
-class EnvironmentDevice extends Environment {
+public final class EnvironmentDevice extends Environment {
     final AndroidSdk androidSdk;
     final File runnerDir;
     final File vogarTemp;
@@ -27,7 +28,7 @@ class EnvironmentDevice extends Environment {
     final int firstMonitorPort;
     final int numRunners;
 
-    EnvironmentDevice(boolean cleanBefore, boolean cleanAfter, Integer debugPort,
+    public EnvironmentDevice(boolean cleanBefore, boolean cleanAfter, Integer debugPort,
                       int firstMonitorPort, int numRunners, File localTemp, File runnerDir,
                       AndroidSdk androidSdk) {
         super(cleanBefore, cleanAfter, debugPort, localTemp);
@@ -37,6 +38,14 @@ class EnvironmentDevice extends Environment {
         this.dalvikCache = new File(runnerDir.getParentFile(), "dalvik-cache");
         this.firstMonitorPort = firstMonitorPort;
         this.numRunners = numRunners;
+    }
+
+    public AndroidSdk getAndroidSdk() {
+        return androidSdk;
+    }
+
+    public File getRunnerDir() {
+        return runnerDir;
     }
 
     /**
@@ -49,12 +58,12 @@ class EnvironmentDevice extends Environment {
         return "ANDROID_DATA=" + dalvikCache.getParentFile();
     }
 
-    @Override void prepare() {
+    @Override public void prepare() {
         androidSdk.waitForDevice();
         // Even if runner dir is /vogar/run, the grandparent will be / (and non-null)
         androidSdk.waitForNonEmptyDirectory(runnerDir.getParentFile().getParentFile(), 5 * 60);
         androidSdk.remount();
-        if (cleanBefore) {
+        if (cleanBefore()) {
             androidSdk.rm(runnerDir);
         }
         androidSdk.mkdirs(runnerDir);
@@ -63,12 +72,12 @@ class EnvironmentDevice extends Environment {
         for (int i = 0; i < numRunners; i++) {
             androidSdk.forwardTcp(firstMonitorPort + i, firstMonitorPort + i);
         }
-        if (debugPort != null) {
-            androidSdk.forwardTcp(debugPort, debugPort);
+        if (getDebugPort() != null) {
+            androidSdk.forwardTcp(getDebugPort(), getDebugPort());
         }
     }
 
-    @Override protected void prepareUserDir(Action action) {
+    @Override public void prepareUserDir(Action action) {
         File actionClassesDirOnDevice = actionClassesDirOnDevice(action);
         androidSdk.mkdir(actionClassesDirOnDevice);
         File resourcesDirectory = action.getResourcesDirectory();
@@ -82,16 +91,16 @@ class EnvironmentDevice extends Environment {
         return new File(runnerDir, action.getName());
     }
 
-    @Override void cleanup(Action action) {
+    @Override public void cleanup(Action action) {
         super.cleanup(action);
-        if (cleanAfter) {
+        if (cleanAfter()) {
             androidSdk.rm(actionClassesDirOnDevice(action));
         }
     }
 
-    @Override void shutdown() {
+    @Override public void shutdown() {
         super.shutdown();
-        if (cleanAfter) {
+        if (cleanAfter()) {
             androidSdk.rm(runnerDir);
         }
     }
