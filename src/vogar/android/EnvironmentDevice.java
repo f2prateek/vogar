@@ -16,9 +16,16 @@
 
 package vogar.android;
 
+import com.google.common.base.Predicate;
+import com.google.common.collect.Collections2;
 import java.io.File;
 import vogar.Action;
+import vogar.Console;
 import vogar.Environment;
+import java.io.FileFilter;
+import java.io.FileNotFoundException;
+import java.util.Collection;
+import vogar.commands.Mkdir;
 
 public final class EnvironmentDevice extends Environment {
     final AndroidSdk androidSdk;
@@ -91,7 +98,45 @@ public final class EnvironmentDevice extends Environment {
         return new File(runnerDir, action.getName());
     }
 
+    /**
+     * Scans {@code dir} for xml files to grab.
+     */
+    private void retrieveFiles(File destination, File source, FileFilter filenameFilter)
+            throws FileNotFoundException {
+        for (File file : androidSdk.ls(source)) {
+            if (filenameFilter.accept(file)) {
+                Console.getInstance().warn("Moving " + file.getPath() + " to "
+                        + destination.getPath());
+                new Mkdir().mkdirs(destination);
+                androidSdk.pull(file, destination);
+            }
+        }
+
+        // special case check if this directory exists so that we retrieve results on Caliper
+        // failure.
+        // TODO figure out which files are directories, and recurse.
+        Collection<File> dirs = Collections2.filter(androidSdk.ls(source), new Predicate<File>() {
+            public boolean apply(File file) {
+                return file.getName().equals("caliper-results");
+            }
+        });
+        for (File subDir : dirs) {
+            retrieveFiles(new File(destination, subDir.getName()), subDir, filenameFilter);
+        }
+    }
+
     @Override public void cleanup(Action action) {
+        try {
+            retrieveFiles(new File("./vogar-results"), actionClassesDirOnDevice(action),
+                    new FileFilter() {
+                        @Override
+                        public boolean accept(File file) {
+                            return file.getName().endsWith(".xml");
+                        }
+                    });
+        } catch (FileNotFoundException e) {
+            Console.getInstance().info("Failed to retrieve all files: ", e);
+        }
         super.cleanup(action);
         if (cleanAfter()) {
             androidSdk.rm(actionClassesDirOnDevice(action));

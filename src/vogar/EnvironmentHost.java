@@ -17,6 +17,7 @@
 package vogar;
 
 import java.io.File;
+import java.io.FileFilter;
 import vogar.commands.Command;
 import vogar.commands.Mkdir;
 
@@ -46,5 +47,37 @@ final class EnvironmentHost extends Environment {
         }
 
         action.setUserDir(actionUserDir);
+    }
+
+    /**
+     * Recursively scans {@code dir} for xml files to grab.
+     */
+    private void retrieveFiles(File destination, File source, FileFilter filenameFilter) {
+        for (File file : source.listFiles(filenameFilter)) {
+            Console.getInstance().warn("Moving " + file.getPath() + " to "
+                        + destination.getPath());
+            new Mkdir().mkdirs(destination);
+            new Command("cp", file.getPath(), destination.getPath()).execute();
+        }
+
+        FileFilter directoryFilter = new FileFilter() {
+            public boolean accept(File file) {
+                return file.isDirectory();
+            }
+        };
+
+        for (File subDir : source.listFiles(directoryFilter)) {
+            retrieveFiles(new File(destination, subDir.getName()), subDir, filenameFilter);
+        }
+    }
+
+    @Override public void cleanup(Action action) {
+        retrieveFiles(new File("./vogar-results"), action.getUserDir(), new FileFilter() {
+            @Override
+            public boolean accept(File file) {
+                return file.getName().endsWith(".xml") && file.isFile();
+            }
+        });
+        super.cleanup(action);
     }
 }

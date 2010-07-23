@@ -306,6 +306,10 @@ public class AndroidSdk {
         return files;
     }
 
+    public void pull(File remote, File local) {
+        new Command("adb", "pull", remote.getPath(), local.getPath()).execute();
+    }
+
     public void push(File local, File remote) {
         Command fallbackCommand = new Command("adb", "push", local.getPath(), remote.getPath());
         mkdirs(remote.getParentFile());
