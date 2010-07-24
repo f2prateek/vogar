@@ -476,7 +476,7 @@ public final class Vogar {
         return true;
     }
 
-    private void run() {
+    private boolean run() {
         Console.init(stream);
         Console.getInstance().setUseColor(color, passColor, warnColor, failColor);
         Console.getInstance().setIndent(indent);
@@ -543,7 +543,7 @@ public final class Vogar {
             expectationStore = ExpectationStore.parse(expectationFiles);
         } catch (IOException e) {
             System.out.println("Problem loading expectations: " + e);
-            return;
+            return false;
         }
 
         Date currentDate = new Date();
@@ -575,7 +575,7 @@ public final class Vogar {
                 recordResults,
                 numRunners);
 
-        driver.buildAndRun(actionFiles, actionClassesAndPackages);
+        return driver.buildAndRun(actionFiles, actionClassesAndPackages);
     }
 
     public static void main(String[] args) {
@@ -584,7 +584,8 @@ public final class Vogar {
             vogar.printUsage();
             return;
         }
-        vogar.run();
+        boolean allSuccess = vogar.run();
+        System.exit(allSuccess ? 0 : 1);
     }
 
     enum ModeId {

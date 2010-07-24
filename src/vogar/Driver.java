@@ -107,7 +107,7 @@ final class Driver {
     /**
      * Builds and executes the actions in the given files.
      */
-    public void buildAndRun(Collection<File> files, Collection<String> classes) {
+    public boolean buildAndRun(Collection<File> files, Collection<String> classes) {
         if (!actions.isEmpty()) {
             throw new IllegalStateException("Drivers are not reusable");
         }
@@ -119,7 +119,7 @@ final class Driver {
 
         if (actions.isEmpty()) {
             Console.getInstance().info("Nothing to do.");
-            return;
+            return false;
         }
 
         Console.getInstance().info("Actions: " + actions.size());
@@ -219,6 +219,7 @@ final class Driver {
             Console.getInstance().info(String.format("Outcomes: %s. All successful. Took %s.",
                     successes, TimeUtilities.msToString(t1 - t0)));
         }
+        return failures == 0;
     }
 
     private void classesToActions(Collection<String> classNames) {
