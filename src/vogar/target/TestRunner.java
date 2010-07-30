@@ -21,6 +21,7 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
@@ -156,6 +157,18 @@ public final class TestRunner {
         }
 
         Set<Class<?>> classes = new ClassFinder().find(classOrPackageName);
+
+        // if there is more than one class in the set, this must be a package. Since we're
+        // running everything in the package already, remove any class called AllTests.
+        if (classes.size() > 1) {
+            Set<Class<?>> toRemove = new HashSet<Class<?>>();
+            for (Class<?> klass : classes) {
+                if (klass.getName().endsWith(".AllTests")) {
+                    toRemove.add(klass);
+                }
+            }
+            classes.removeAll(toRemove);
+        }
 
         for (Class<?> klass : classes) {
             Class<?> runnerClass = runnerClass(klass);

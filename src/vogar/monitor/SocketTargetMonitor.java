@@ -83,6 +83,17 @@ public final class SocketTargetMonitor implements TargetMonitor {
         }
     }
 
+    @Override public synchronized void unstructuredOutput(String text) {
+        try {
+            serializer.startTag(ns, "unstructured-output");
+            serializer.text(Strings.xmlSanitize(text));
+            serializer.endTag(ns, "unstructured-output");
+            serializer.flush();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     @Override public synchronized void outcomeFinished(Result result) {
         try {
             serializer.startTag(ns, "result");

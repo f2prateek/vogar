@@ -457,5 +457,9 @@ final class Driver {
             resetKillTime(smallTimeoutSeconds);
             recordOutcome(outcome);
         }
+
+        public void print(String string) {
+            Console.getInstance().info(string);
+        }
     }
 }

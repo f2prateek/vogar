@@ -29,4 +29,6 @@ public interface TargetMonitor {
     void output(String text);
 
     void outcomeFinished(Result result);
+
+    void unstructuredOutput(String text);
 }

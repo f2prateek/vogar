@@ -172,6 +172,8 @@ public final class SocketHostMonitor implements HostMonitor {
         private String currentOutcomeName;
         private Result currentResult;
         private StringBuilder output = new StringBuilder();
+        private StringBuilder unstructuredOutput = new StringBuilder();
+        private boolean inUnstructuredOutput = false;
 
         ClientXmlHandler(Handler handler) {
             this.handler = handler;
@@ -182,6 +184,9 @@ public final class SocketHostMonitor implements HostMonitor {
          *
          * <?xml version='1.0' encoding='UTF-8' ?>
          * <vogar-monitor>
+         *   <unstructured-output>
+         *     ... some unstructured output ...
+         *   </unstructured-output>
          *   <outcome name="java.util.FormatterTest" action="java.util.FormatterTest"
          *            runner="vogar.target.JUnitRunner">
          *     test output
@@ -193,8 +198,14 @@ public final class SocketHostMonitor implements HostMonitor {
 
         @Override public void startElement(String uri, String localName,
                 String qName, Attributes attributes) throws SAXException {
-            if (qName.equals("outcome")) {
-                if (currentOutcomeName != null) {
+            if (qName.equals("unstructured-output")) {
+                if (currentOutcomeName != null || inUnstructuredOutput) {
+                    throw new IllegalStateException(
+                            "can't have unstructed output inside an outcome");
+                }
+                inUnstructuredOutput = true;
+            } else if (qName.equals("outcome")) {
+                if (currentOutcomeName != null || inUnstructuredOutput) {
                     throw new IllegalStateException();
                 }
 
@@ -216,6 +227,9 @@ public final class SocketHostMonitor implements HostMonitor {
                 String text = new String(ch, start, length);
                 output.append(text);
                 handler.output(currentOutcomeName, text);
+            } else if (inUnstructuredOutput) {
+                String text = new String(ch, start, length);
+                unstructuredOutput.append(text);
             }
         }
 
@@ -227,6 +241,10 @@ public final class SocketHostMonitor implements HostMonitor {
                 currentOutcomeName = null;
                 currentResult = null;
                 output.delete(0, output.length());
+            } else if (qName.equals("unstructured-output")) {
+                handler.print(unstructuredOutput.toString());
+                unstructuredOutput.delete(0, unstructuredOutput.length());
+                inUnstructuredOutput = false;
             }
         }
     }

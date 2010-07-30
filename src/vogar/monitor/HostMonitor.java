@@ -49,5 +49,10 @@ public interface HostMonitor {
          * Receive partial output from an action being executed.
          */
         void output(String outcomeName, String output);
+
+        /**
+         * Receive a string to print immediately
+         */
+        void print(String string);
     }
 }
