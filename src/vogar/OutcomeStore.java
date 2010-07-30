@@ -16,26 +16,38 @@
 
 package vogar;
 
+import com.google.common.base.Joiner;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Maps;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FilenameFilter;
+import java.io.PrintStream;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.SortedMap;
 import java.util.TimeZone;
 import vogar.commands.Mkdir;
 import vogar.commands.Rm;
+import vogar.util.Strings;
 
 /**
  * TODO add description of directory structures for the tag and auto stores
  */
 public final class OutcomeStore {
     private static final String FILE_NAME_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssz";
-
     private static final String TAG_FILENAME = "canonical.xml";
+    private static final FilenameFilter XML_FILTER = new FilenameFilter() {
+        public boolean accept(File dir, String fileName) {
+            return fileName.endsWith(".xml");
+        }
+    };
 
     private final File tagResultsDir;
     private final String tagName;
@@ -74,43 +86,94 @@ public final class OutcomeStore {
                 tagOutcome = outcomes.iterator().next();
             }
         }
+
         // read automatically recorded results (if they exist)
         File outcomeResultDir = new File(autoResultsDir, outcome.getPath());
-        List<Outcome> previousOutcomes = new ArrayList<Outcome>();
+        SortedMap<Long, Outcome> previousOutcomes = Maps.newTreeMap();
+        boolean hasMetadata = false;
         if (outcomeResultDir.exists()) {
-            FilenameFilter xmlFilter = new FilenameFilter() {
-                public boolean accept(File dir, String fileName) {
-                    return fileName.endsWith(".xml");
-                }
-            };
-            List<File> xmlResultFiles = Arrays.asList(outcomeResultDir.listFiles(xmlFilter));
-            Collections.sort(xmlResultFiles, Collections.reverseOrder());
+            List<File> xmlResultFiles = getXmlFiles(outcomeResultDir);
+            Map<String, Outcome> outcomesByFileName = Maps.newHashMap();
+
             for (File resultXmlFile : xmlResultFiles) {
                 Collection<Outcome> outcomes = reportReader.readSuiteReport(resultXmlFile);
-                previousOutcomes.add(outcomes.iterator().next());
+                outcomesByFileName.put(resultXmlFile.getName(), outcomes.iterator().next());
+            }
+
+            File metadataFile = new File(outcomeResultDir, ".meta");
+            if (metadataFile.exists()) {
+                try {
+                    List<String> lines = Strings.readFileLines(metadataFile);
+                    for (String line : lines) {
+                        Splitter commas = Splitter.on(",");
+                        Iterator<String> lineParts = commas.split(line).iterator();
+                        long time = Long.valueOf(lineParts.next());
+                        Outcome previousOutcome = outcomesByFileName.get(lineParts.next());
+                        previousOutcomes.put(time, previousOutcome);
+                    }
+                    hasMetadata = true;
+                } catch (Exception e) {
+                    Console.getInstance().info("failed to read outcome metadata", e);
+                }
+            } else {
+                for (Outcome previousOutcome : outcomesByFileName.values()) {
+                    previousOutcomes.put(previousOutcome.getDate().getTime(), previousOutcome);
+                }
             }
         }
 
         return new AnnotatedOutcome(outcome, expectation, previousOutcomes, compareToTag,
-                tagOutcome);
+                tagOutcome, hasMetadata);
+    }
+
+    private List<File> getXmlFiles(File outcomeResultDir) {
+        return Arrays.asList(outcomeResultDir.listFiles(XML_FILTER));
     }
 
     public void write(Outcome outcome, boolean hasChanged) {
         File outcomeResultDir = new File(autoResultsDir, outcome.getPath());
 
-        // record the outcome's result (only if the outcome has changed)
-        if (hasChanged && recordResults) {
-            // Re-output current results to file(s)
+        if (recordResults) {
             new Mkdir().mkdirs(outcomeResultDir);
-            XmlReportPrinter singleReportPrinter =
-                    new XmlReportPrinter(outcomeResultDir, expectationStore, date, true);
+
+            // record the outcome's result (only if the outcome has changed)
             SimpleDateFormat dateFormat = new SimpleDateFormat(FILE_NAME_DATE_FORMAT);
-            dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
+            dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
             dateFormat.setLenient(true);
             String timestamp = dateFormat.format(date);
-
             String outputFileName = timestamp + ".xml";
-            singleReportPrinter.generateReport(outcome, outputFileName);
+            if (hasChanged) {
+                // Re-output current results to file(s)
+                XmlReportPrinter singleReportPrinter =
+                        new XmlReportPrinter(outcomeResultDir, expectationStore, date, true);
+
+                singleReportPrinter.generateReport(outcome, outputFileName);
+            }
+
+            try {
+                File metadataFile = new File(outcomeResultDir, ".meta");
+                PrintStream metadataPrintStream =
+                        new PrintStream(new FileOutputStream(metadataFile, true));
+                String fileNameContainingOutcome;
+                if (hasChanged) {
+                    fileNameContainingOutcome = outputFileName;
+                } else {
+                    List<File> xmlFiles = getXmlFiles(outcomeResultDir);
+                    if (xmlFiles.isEmpty()) {
+                        throw new RuntimeException("expected at least one outcome in "
+                                + outcomeResultDir);
+                    }
+                    Collections.sort(xmlFiles, Collections.reverseOrder());
+                    fileNameContainingOutcome = xmlFiles.get(0).getName();
+                }
+                Joiner commaJoiner = Joiner.on(",");
+                metadataPrintStream.println(commaJoiner.join(
+                        String.valueOf(outcome.getDate().getTime()),
+                        fileNameContainingOutcome));
+                metadataPrintStream.close();
+            } catch (Exception e) {
+                Console.getInstance().info("failed to write outcome metadata", e);
+            }
         }
 
         // record the outcome's result to a tag (if applicable)

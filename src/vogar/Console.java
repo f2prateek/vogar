@@ -17,7 +17,6 @@
 package vogar;
 
 import com.google.common.collect.Lists;
-import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
@@ -36,6 +35,11 @@ import java.util.Map;
  * </ul>
  */
 public abstract class Console {
+
+    static final long DAY_MILLIS = 1000 * 60 * 60 * 24;
+    static final long HOUR_MILLIS = 1000 * 60 * 60;
+    static final long WARNING_HOURS = 12;
+    static final long FAILURE_HOURS = 48;
 
     private static Console NULL_CONSOLE = new Console() {
         @Override public void streamOutput(String outcomeName, String output) {
@@ -175,14 +179,12 @@ public abstract class Console {
                 list = skips;
             }
 
-            Date lastChanged = annotatedOutcome.lastChanged();
+            Long lastRun = annotatedOutcome.lastRun(null);
             String timestamp;
-            if (lastChanged == null) {
-                timestamp = colorString("never", Color.WARN);
+            if (lastRun == null) {
+                timestamp = colorString("unknown", Color.WARN);
             } else {
-                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd H:mm:ss");
-                dateFormat.setLenient(true);
-                timestamp = dateFormat.format(lastChanged);
+                timestamp = formatElapsedTime(new Date().getTime() - lastRun);
             }
 
             String brokeThisMessage = "";
@@ -191,9 +193,9 @@ public abstract class Console {
                     annotatedOutcome.hasTag() && annotatedOutcome.getTagResultValue() != resultValue;
             if (mostRecentResultValue != null && resultValue != mostRecentResultValue) {
                 if (resultValue == ResultValue.OK) {
-                    brokeThisMessage = colorString(" (you probably fixed this)", Color.WARN);
+                    brokeThisMessage = colorString(" (you might have fixed this)", Color.WARN);
                 } else {
-                    brokeThisMessage = colorString(" (you probably broke this)", Color.WARN);
+                    brokeThisMessage = colorString(" (you might have broken this)", Color.WARN);
                 }
             } else if (resultValueChangedSinceTag) {
                 if (resultValue == ResultValue.OK) {
@@ -221,7 +223,7 @@ public abstract class Console {
                         annotatedOutcome.getTagName()));
             }
             if (!previousResultValuesToShow.isEmpty()) {
-                sb.append(String.format(" [last %d: %s] [result last changed: %s]",
+                sb.append(String.format(" [last %d: %s] [last run: %s]",
                         previousResultValuesToShow.size(),
                         generateSparkLine(previousResultValuesToShow),
                         timestamp));
@@ -248,6 +250,36 @@ public abstract class Console {
             for (String skip : skips) {
                 System.out.println(skip);
             }
+        }
+    }
+
+    private String formatElapsedTime(long elapsedTime) {
+        if (elapsedTime < 0) {
+            throw new IllegalArgumentException("non-negative elapsed times only");
+        }
+
+        String formatted;
+        if (elapsedTime >= DAY_MILLIS) {
+            long days = elapsedTime / DAY_MILLIS;
+            formatted = String.format("%d days ago", days);
+        } else if (elapsedTime >= HOUR_MILLIS) {
+            long hours = elapsedTime / HOUR_MILLIS;
+            formatted = String.format("%d hours ago", hours);
+        } else {
+            formatted = "less than an hour ago";
+        }
+
+        Color color = elapsedTimeWarningColor(elapsedTime);
+        return colorString(formatted, color);
+    }
+
+    private Color elapsedTimeWarningColor(long elapsedTime) {
+        if (elapsedTime < WARNING_HOURS * HOUR_MILLIS) {
+            return Color.PASS;
+        } else if (elapsedTime < FAILURE_HOURS * HOUR_MILLIS) {
+            return Color.WARN;
+        } else {
+            return Color.FAIL;
         }
     }
 

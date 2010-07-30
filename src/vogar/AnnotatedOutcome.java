@@ -16,10 +16,14 @@
 
 package vogar;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.SortedMap;
 
 /**
  * Contains an outcome for a test, along with some metadata pertaining to the history of this test,
@@ -28,33 +32,30 @@ import java.util.List;
  * available.
  */
 public final class AnnotatedOutcome {
-    /** sorts outcomes in reverse chronological order */
-    private static final Ordering<Outcome> ORDER_BY_DATE = new Ordering<Outcome>() {
-        public int compare(Outcome outcome1, Outcome outcome2) {
-            return outcome1.getDate().compareTo(outcome2.getDate());
-        }
-    };
     public static Ordering<AnnotatedOutcome> ORDER_BY_NAME = new Ordering<AnnotatedOutcome>() {
         @Override public int compare(AnnotatedOutcome a, AnnotatedOutcome b) {
             return a.getName().compareTo(b.getName());
-        }
+       }
     };
 
     private final Expectation expectation;
     private final Outcome outcome;
     /** a list of previous outcomes for the same action, sorted in chronological order */
-    private final List<Outcome> previousOutcomes;
+    private final SortedMap<Long, Outcome> previousOutcomes;
     /** will be null if not comparing to a tag */
     private final String tagName;
     private final Outcome tagOutcome;
+    private final boolean hasMetadata;
 
     AnnotatedOutcome(Outcome outcome, Expectation expectation,
-            List<Outcome> previousOutcomes, String tagName, Outcome tagOutcome) {
+            SortedMap<Long, Outcome> previousOutcomes, String tagName, Outcome tagOutcome,
+            boolean hasMetadata) {
         this.expectation = expectation;
         this.outcome = outcome;
-        this.previousOutcomes = ORDER_BY_DATE.sortedCopy(previousOutcomes);
+        this.previousOutcomes = previousOutcomes;
         this.tagName = tagName;
         this.tagOutcome = tagOutcome;
+        this.hasMetadata = hasMetadata;
     }
 
     public Outcome getOutcome() {
@@ -71,7 +72,7 @@ public final class AnnotatedOutcome {
 
     public List<ResultValue> getPreviousResultValues() {
         List<ResultValue> previousResultValues = new ArrayList<ResultValue>();
-        for (Outcome previousOutcome : previousOutcomes) {
+        for (Outcome previousOutcome : previousOutcomes.values()) {
             previousResultValues.add(previousOutcome.getResultValue(expectation));
         }
         return previousResultValues;
@@ -107,8 +108,13 @@ public final class AnnotatedOutcome {
     }
 
     public boolean outcomeChanged() {
-        return previousOutcomes.isEmpty()
-                || !outcome.equals(previousOutcomes.get(previousOutcomes.size() - 1));
+        List<Outcome> previousOutcomesList = getOutcomeList();
+        return previousOutcomesList.isEmpty()
+                || !outcome.equals(previousOutcomesList.get(previousOutcomesList.size() - 1));
+    }
+
+    private ArrayList<Outcome> getOutcomeList() {
+        return new ArrayList<Outcome>(previousOutcomes.values());
     }
 
     /**
@@ -128,17 +134,14 @@ public final class AnnotatedOutcome {
     }
 
     /**
-     * Returns the last time the result value changed, or null if it's never changed in recorded
-     * history.
+     * Returns a Long representing the time the outcome was last run. Returns {@code defaultValue}
+     * if the outcome is not known to have run before.
      */
-    public Date lastChanged() {
-        Date lastChanged = null;
-        ResultValue resultValue = getResultValue();
-        for (Outcome previousOutcome : previousOutcomes) {
-            if (previousOutcome.getResultValue(expectation) != resultValue) {
-                lastChanged = previousOutcome.getDate();
-            }
+    public Long lastRun(Long defaultValue) {
+        if (!hasMetadata) {
+            return defaultValue;
         }
-        return lastChanged;
+        List<Long> runTimes = Lists.newArrayList(previousOutcomes.keySet());
+        return runTimes.isEmpty() ? defaultValue : runTimes.get(runTimes.size() - 1);
     }
 }
