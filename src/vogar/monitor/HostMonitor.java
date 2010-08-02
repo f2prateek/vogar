@@ -16,6 +16,8 @@
 
 package vogar.monitor;
 
+import java.util.List;
+import java.util.concurrent.Future;
 import vogar.Outcome;
 
 /**
@@ -23,7 +25,7 @@ import vogar.Outcome;
  */
 public interface HostMonitor {
 
-    boolean connect();
+    boolean connect(Future<List<String>> commandOutput);
 
     boolean monitor();
 

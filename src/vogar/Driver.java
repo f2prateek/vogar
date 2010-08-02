@@ -366,7 +366,7 @@ final class Driver {
             Future<List<String>> consoleOut = command.executeLater();
             final AtomicReference<Result> result = new AtomicReference<Result>();
 
-            boolean connected = hostMonitor.connect();
+            boolean connected = hostMonitor.connect(consoleOut);
             if (connected && timeoutSeconds != 0) {
                 resetKillTime(timeoutSeconds);
                 scheduleTaskKiller(command, hostMonitor, action, result, timeoutSeconds);

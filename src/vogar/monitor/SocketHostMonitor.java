@@ -23,6 +23,8 @@ import java.net.ConnectException;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.Future;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
@@ -61,9 +63,15 @@ public final class SocketHostMonitor implements HostMonitor {
      * Connect to the target process on the given port, read all of its
      * outcomes into {@code handler}, and disconnect.
      */
-    @Override public boolean connect() {
+    @Override public boolean connect(Future<List<String>> commandOutput) {
         int attempt = 0;
         do {
+            // If the command has finished and we haven't managed to connect, we must have
+            // failed to connect.
+            if (commandOutput.isDone()) {
+                return false;
+            }
+
             try {
                 Socket socketToCheck = new Socket("localhost", port);
                 InputStream inToCheck = new BufferedInputStream(socketToCheck.getInputStream());
