@@ -167,8 +167,8 @@ public final class Vogar {
     @Option(names = { "--suggest-classpaths" })
     private boolean suggestClasspaths = false;
 
-    @Option(names = { "--valgrind" })
-    private boolean valgrind = false;
+    @Option(names = { "--invoke-with" })
+    private String invokeWith = null;
 
     @Option(names = { "--native-output" })
     private boolean nativeOutput = false;
@@ -207,7 +207,8 @@ public final class Vogar {
         System.out.println();
         System.out.println("  --native-output: print out native output (prefixed with \"[native]\").");
         System.out.println();
-        System.out.println("  --valgrind: run the VM under valgrind (not supported for all VMs).");
+        System.out.println("  --invoke-with: provide a command to invoke the VM with (e.g. ");
+        System.out.println("      \"valgrind --leak-check=full\"). Only supported in certain modes.");
         System.out.println();
         System.out.println("  --timeout <seconds>: maximum execution time of each action before the");
         System.out.println("      runner aborts it. Specifying zero seconds or using --debug will");
@@ -466,7 +467,7 @@ public final class Vogar {
             return false;
         }
 
-        if (valgrind && !mode.supportsValgrind()) {
+        if (invokeWith != null && !mode.supportsInvokeWith()) {
             System.out.println("Valgrind is not supported for mode " + mode);
             return false;
         }
@@ -531,7 +532,7 @@ public final class Vogar {
                 mode = new JavaVm(environment, modeOptions, vmOptions);
                 break;
             case SIM:
-                mode = new HostDalvikVm(environment, modeOptions, vmOptions, androidSdk, valgrind);
+                mode = new HostDalvikVm(environment, modeOptions, vmOptions, androidSdk, invokeWith);
                 break;
             case DEVICE:
                 mode = new DeviceDalvikVm(environment, modeOptions, vmOptions);
@@ -596,7 +597,7 @@ public final class Vogar {
     enum ModeId {
         DEVICE, JVM, ACTIVITY, SIM, CRORE;
 
-        public boolean supportsValgrind() {
+        public boolean supportsInvokeWith() {
             return this == SIM;
         }
 

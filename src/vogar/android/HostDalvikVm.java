@@ -16,6 +16,7 @@
 
 package vogar.android;
 
+import com.google.common.base.Splitter;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,15 +35,15 @@ public class HostDalvikVm extends Vm {
 
     private final AndroidSdk androidSdk;
     private final File dalvikCache;
-    private final boolean valgrind;
+    private final String invokeWith;
     private String base;
 
     public HostDalvikVm(Environment environment, Mode.Options options, Options vmOptions,
-            AndroidSdk androidSdk, boolean valgrind) {
+            AndroidSdk androidSdk, String invokeWith) {
         super(environment, options, vmOptions);
         this.androidSdk = androidSdk;
         this.dalvikCache = environment.file("android-data", "dalvik-cache");
-        this.valgrind = valgrind;
+        this.invokeWith = invokeWith;
     }
 
     @Override protected void installRunner() {
@@ -85,8 +86,19 @@ public class HostDalvikVm extends Vm {
                 .env("ANDROID_ROOT", base + "/system")
                 .env("LD_LIBRARY_PATH", base + "/system/lib")
                 .env("DYLD_LIBRARY_PATH", base + "/system/lib");
-        if (valgrind) {
-            builder.vmCommand("valgrind", "--leak-check=full", base + "/system/bin/dalvikvm");
+        if (invokeWith != null) {
+            // all these lines do is create an array for use with vmCommand.
+            Iterable<String> invokeWithPartsIterable =
+                    Splitter.onPattern("\\s+").omitEmptyStrings().split(invokeWith);
+            List<String> invokeWithPartsList = new ArrayList<String>();
+            for (String part : invokeWithPartsIterable) {
+                invokeWithPartsList.add(part);
+            }
+            String[] invokeWithParts = new String[invokeWithPartsList.size() + 1];
+            invokeWithPartsList.toArray(invokeWithParts);
+            invokeWithParts[invokeWithParts.length - 1] = base + "/system/bin/dalvikvm";
+
+            builder.vmCommand(invokeWithParts);
         } else {
             builder.vmCommand(base + "/system/bin/dalvikvm");
         }
