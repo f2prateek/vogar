@@ -102,6 +102,10 @@ public abstract class Console {
         }
     }
 
+    public synchronized void nativeOutput(String s) {
+        info("[native] " + s);
+    }
+
     public synchronized void info(String s) {
         newLine();
         System.out.println(s);

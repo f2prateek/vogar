@@ -54,6 +54,7 @@ public abstract class Mode {
         public final int timeoutSeconds;
         public final boolean useBootClasspath;
         public final Classpath classpath;
+        public final boolean nativeOutput;
 
         Options(Classpath buildClasspath,
                 List<File> sourcepath,
@@ -62,7 +63,8 @@ public abstract class Mode {
                 int firstMonitorPort,
                 int monitorTimeoutSeconds, int timeoutSeconds,
                 boolean useBootClasspath,
-                Classpath classpath) {
+                Classpath classpath,
+                boolean nativeOutput) {
             this.buildClasspath = buildClasspath;
             this.sourcepath = sourcepath;
             this.javacArgs = javacArgs;
@@ -72,6 +74,7 @@ public abstract class Mode {
             this.timeoutSeconds = timeoutSeconds;
             this.useBootClasspath = useBootClasspath;
             this.classpath = classpath;
+            this.nativeOutput = nativeOutput;
         }
     }
 

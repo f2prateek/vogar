@@ -47,6 +47,7 @@ public final class Command {
     private final File workingDirectory;
     private final boolean permitNonZeroExitStatus;
     private final PrintStream tee;
+    private final boolean nativeOutput;
     private volatile Process process;
 
     public Command(String... args) {
@@ -59,6 +60,7 @@ public final class Command {
         this.workingDirectory = null;
         this.permitNonZeroExitStatus = false;
         this.tee = null;
+        this.nativeOutput = false;
     }
 
     private Command(Builder builder) {
@@ -74,6 +76,7 @@ public final class Command {
                                                 + " exceeded by: " + string);
             }
         }
+        this.nativeOutput = builder.nativeOutput;
     }
 
     public void start() throws IOException {
@@ -112,6 +115,9 @@ public final class Command {
         while ((outputLine = in.readLine()) != null) {
             if (tee != null) {
                 tee.println(outputLine);
+            }
+            if (nativeOutput) {
+                Console.getInstance().nativeOutput(outputLine);
             }
             outputLines.add(outputLine);
         }
@@ -211,12 +217,18 @@ public final class Command {
         private File workingDirectory;
         private boolean permitNonZeroExitStatus = false;
         private PrintStream tee = null;
+        private boolean nativeOutput;
         private int maxLength = -1;
 
         public Builder args(Object... objects) {
             for (Object object : objects) {
                 args(object.toString());
             }
+            return this;
+        }
+
+        public Builder setNativeOutput(boolean nativeOutput) {
+            this.nativeOutput = nativeOutput;
             return this;
         }
 

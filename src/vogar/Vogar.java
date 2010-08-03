@@ -170,6 +170,9 @@ public final class Vogar {
     @Option(names = { "--valgrind" })
     private boolean valgrind = false;
 
+    @Option(names = { "--native-output" })
+    private boolean nativeOutput = false;
+
     private Vogar() {}
 
     private void printUsage() {
@@ -201,6 +204,8 @@ public final class Vogar {
         System.out.println("      Disable with --no-clean if you want no files removed.");
         System.out.println();
         System.out.println("  --stream: stream output as it is emitted.");
+        System.out.println();
+        System.out.println("  --native-output: print out native output (prefixed with \"[native]\").");
         System.out.println();
         System.out.println("  --valgrind: run the VM under valgrind (not supported for all VMs).");
         System.out.println();
@@ -499,7 +504,7 @@ public final class Vogar {
                 : NUM_PROCESSORS;
         Mode.Options modeOptions = new Mode.Options(Classpath.of(buildClasspath), sourcepath,
                 javacArgs, javaHome, firstMonitorPort, monitorTimeout, timeoutSeconds,
-                useBootClasspath, Classpath.of(classpath));
+                useBootClasspath, Classpath.of(classpath), nativeOutput);
 
         AndroidSdk androidSdk = null;
         if (mode.requiresAndroidSdk()) {

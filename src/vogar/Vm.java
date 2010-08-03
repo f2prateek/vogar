@@ -44,10 +44,12 @@ public abstract class Vm extends Mode {
         }
     }
     final Options vmOptions;
+    final Mode.Options options;
 
     protected Vm(Environment environment, Mode.Options options, Vm.Options vmOptions) {
         super(environment, options);
         this.vmOptions = vmOptions;
+        this.options = options;
     }
 
     /**
@@ -64,6 +66,8 @@ public abstract class Vm extends Mode {
         if (monitorPort != -1) {
             vmCommandBuilder.args("--monitorPort", Integer.toString(monitorPort));
         }
+
+        vmCommandBuilder.setNativeOutput(options.nativeOutput);
         
         return vmCommandBuilder
                 .userDir(action.getUserDir())
@@ -98,6 +102,7 @@ public abstract class Vm extends Mode {
         private String mainClass;
         private PrintStream output;
         private int maxLength = -1;
+        private boolean nativeOutput;
         private List<String> vmCommand = Collections.singletonList("java");
         private List<String> vmArgs = new ArrayList<String>();
         private List<String> args = new ArrayList<String>();
@@ -105,6 +110,11 @@ public abstract class Vm extends Mode {
 
         public VmCommandBuilder vmCommand(String... vmCommand) {
             this.vmCommand = Arrays.asList(vmCommand.clone());
+            return this;
+        }
+
+        public VmCommandBuilder setNativeOutput(boolean nativeOutput) {
+            this.nativeOutput = nativeOutput;
             return this;
         }
 
@@ -207,6 +217,7 @@ public abstract class Vm extends Mode {
             builder.args(mainClass);
             builder.args(args);
 
+            builder.setNativeOutput(nativeOutput);
             builder.tee(output);
             builder.maxLength(maxLength);
             return builder.build();
