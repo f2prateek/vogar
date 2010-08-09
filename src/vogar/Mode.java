@@ -50,7 +50,6 @@ public abstract class Mode {
         public final List<String> javacArgs;
         public final File javaHome;
         public final int firstMonitorPort;
-        public final int monitorTimeoutSeconds;
         public final int timeoutSeconds;
         public final boolean useBootClasspath;
         public final Classpath classpath;
@@ -61,7 +60,7 @@ public abstract class Mode {
                 List<String> javacArgs,
                 File javaHome,
                 int firstMonitorPort,
-                int monitorTimeoutSeconds, int timeoutSeconds,
+                int timeoutSeconds,
                 boolean useBootClasspath,
                 Classpath classpath,
                 boolean nativeOutput) {
@@ -70,7 +69,6 @@ public abstract class Mode {
             this.javacArgs = javacArgs;
             this.javaHome = javaHome;
             this.firstMonitorPort = firstMonitorPort;
-            this.monitorTimeoutSeconds = monitorTimeoutSeconds;
             this.timeoutSeconds = timeoutSeconds;
             this.useBootClasspath = useBootClasspath;
             this.classpath = classpath;
@@ -250,7 +248,7 @@ public abstract class Mode {
 
     protected HostMonitor createHostMonitor(
             Action action, int monitorPort, HostMonitor.Handler handler) {
-        return new SocketHostMonitor(modeOptions.monitorTimeoutSeconds, monitorPort, handler);
+        return new SocketHostMonitor(monitorPort, handler);
     }
 
     /**

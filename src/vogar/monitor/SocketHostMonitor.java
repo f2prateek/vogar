@@ -47,14 +47,12 @@ public final class SocketHostMonitor implements HostMonitor {
      */
     private static final int BAD_XML_SNIPPET_SIZE = 1024;
 
-    private final long monitorTimeoutSeconds;
     private final int port;
     private Socket socket;
     private InputStream in;
     private Handler handler;
 
-    public SocketHostMonitor(long monitorTimeoutSeconds, int port, Handler handler) {
-        this.monitorTimeoutSeconds = monitorTimeoutSeconds;
+    public SocketHostMonitor(int port, Handler handler) {
         this.port = port;
         this.handler = handler;
     }
@@ -91,14 +89,9 @@ public final class SocketHostMonitor implements HostMonitor {
                 return false;
             }
 
-            if (attempt++ == monitorTimeoutSeconds) {
-                Console.getInstance().info("Exceeded " + monitorTimeoutSeconds
-                        + " attempts to connect to localhost:" + port);
-                return false;
-            }
-
             Console.getInstance().verbose("connection " + attempt + " to localhost:"
                     + port + " failed; retrying in 1s");
+            attempt++;
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException ignored) {

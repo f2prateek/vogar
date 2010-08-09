@@ -65,9 +65,6 @@ public final class Vogar {
     @Option(names = { "--timeout" })
     private int timeoutSeconds = 1 * 60; // default is one minute;
 
-    @Option(names = { "--monitor-timeout" })
-    private int monitorTimeout = 30;
-
     @Option(names = { "--first-monitor-port" })
     private int firstMonitorPort = -1;
 
@@ -323,10 +320,6 @@ public final class Vogar {
         System.out.println("  --javac-arg <argument>: include the specified argument when invoking");
         System.out.println("      javac. Examples: --javac-arg -Xmaxerrs --javac-arg 1");
         System.out.println();
-        System.out.println("  --monitor-timeout <seconds>: number of seconds to wait for the target");
-        System.out.println("      process to launch. This can be used to prevent connection failures");
-        System.out.println("      when dexopt is slow.");
-        System.out.println();
         System.out.println("  --first-monitor-port <port>: the port on the host (and possibly target)");
         System.out.println("      used to traffic control messages between vogar and forked processes.");
         System.out.println("      Use this to avoid port conflicts when running multiple vogar instances");
@@ -504,7 +497,7 @@ public final class Vogar {
                 ? 1
                 : NUM_PROCESSORS;
         Mode.Options modeOptions = new Mode.Options(Classpath.of(buildClasspath), sourcepath,
-                javacArgs, javaHome, firstMonitorPort, monitorTimeout, timeoutSeconds,
+                javacArgs, javaHome, firstMonitorPort, timeoutSeconds,
                 useBootClasspath, Classpath.of(classpath), nativeOutput);
 
         AndroidSdk androidSdk = null;
