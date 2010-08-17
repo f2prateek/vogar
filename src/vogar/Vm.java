@@ -68,7 +68,7 @@ public abstract class Vm extends Mode {
         }
 
         vmCommandBuilder.setNativeOutput(options.nativeOutput);
-        
+
         return vmCommandBuilder
                 .userDir(action.getUserDir())
                 .debugPort(environment.debugPort)
@@ -110,6 +110,11 @@ public abstract class Vm extends Mode {
 
         public VmCommandBuilder vmCommand(String... vmCommand) {
             this.vmCommand = Arrays.asList(vmCommand.clone());
+            return this;
+        }
+
+        public VmCommandBuilder vmCommand(List<String> vmCommand) {
+            this.vmCommand = new ArrayList<String>(vmCommand);
             return this;
         }
 

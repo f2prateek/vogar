@@ -17,6 +17,7 @@
 package vogar.android;
 
 import com.google.common.base.Splitter;
+import com.google.common.collect.Iterables;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -86,23 +87,14 @@ public class HostDalvikVm extends Vm {
                 .env("ANDROID_ROOT", base + "/system")
                 .env("LD_LIBRARY_PATH", base + "/system/lib")
                 .env("DYLD_LIBRARY_PATH", base + "/system/lib");
-        if (invokeWith != null) {
-            // all these lines do is create an array for use with vmCommand.
-            Iterable<String> invokeWithPartsIterable =
-                    Splitter.onPattern("\\s+").omitEmptyStrings().split(invokeWith);
-            List<String> invokeWithPartsList = new ArrayList<String>();
-            for (String part : invokeWithPartsIterable) {
-                invokeWithPartsList.add(part);
-            }
-            String[] invokeWithParts = new String[invokeWithPartsList.size() + 1];
-            invokeWithPartsList.toArray(invokeWithParts);
-            invokeWithParts[invokeWithParts.length - 1] = base + "/system/bin/dalvikvm";
 
-            builder.vmCommand(invokeWithParts);
-        } else {
-            builder.vmCommand(base + "/system/bin/dalvikvm");
+        List<String> vmCommand = new ArrayList<String>();
+        if (invokeWith != null) {
+            Iterables.addAll(vmCommand, Splitter.onPattern("\\s+").omitEmptyStrings().split(invokeWith));
         }
-        builder
+        vmCommand.add(base + "/system/bin/dalvikvm");
+
+        builder.vmCommand(vmCommand)
                 .vmArgs("-Xbootclasspath:" + bootClasspath.toString())
                 .vmArgs("-Duser.home=" + workingDirectory)
                 .vmArgs("-Duser.language=en")
