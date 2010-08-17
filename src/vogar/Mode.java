@@ -152,6 +152,7 @@ public abstract class Mode {
      */
     public Outcome buildAndInstall(Action action) {
         Console.getInstance().verbose("build " + action.getName());
+        environment.prepareUserDir(action);
 
         try {
             File jar = compile(action);
@@ -162,7 +163,6 @@ public abstract class Mode {
         } catch (IOException e) {
             return new Outcome(action.getName(), Result.ERROR, e);
         }
-        environment.prepareUserDir(action);
         return null;
     }
 
