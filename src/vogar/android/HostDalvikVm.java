@@ -38,13 +38,16 @@ public class HostDalvikVm extends Vm {
     private final File dalvikCache;
     private final String invokeWith;
     private String base;
+    private String buildRoot;
+    private boolean hostBuild;
 
     public HostDalvikVm(Environment environment, Mode.Options options, Options vmOptions,
-            AndroidSdk androidSdk, String invokeWith) {
+            AndroidSdk androidSdk, String invokeWith, boolean hostBuild) {
         super(environment, options, vmOptions);
         this.androidSdk = androidSdk;
         this.dalvikCache = environment.file("android-data", "dalvik-cache");
         this.invokeWith = invokeWith;
+        this.hostBuild = hostBuild;
     }
 
     @Override protected void installRunner() {
@@ -55,6 +58,7 @@ public class HostDalvikVm extends Vm {
 
         new Mkdir().mkdirs(dalvikCache);
         base = System.getenv("OUT");
+        buildRoot = System.getenv("ANDROID_BUILD_TOP");
         Console.getInstance().verbose("dalvikvm base directory: " + base);
     }
 
@@ -83,16 +87,24 @@ public class HostDalvikVm extends Vm {
                 .temp(workingDirectory)
                 .env("ANDROID_PRINTF_LOG", "tag")
                 .env("ANDROID_LOG_TAGS", "*:w")
-                .env("ANDROID_DATA", dalvikCache.getParent())
-                .env("ANDROID_ROOT", base + "/system")
-                .env("LD_LIBRARY_PATH", base + "/system/lib")
-                .env("DYLD_LIBRARY_PATH", base + "/system/lib");
+                .env("ANDROID_DATA", dalvikCache.getParent());
 
         List<String> vmCommand = new ArrayList<String>();
         if (invokeWith != null) {
             Iterables.addAll(vmCommand, Splitter.onPattern("\\s+").omitEmptyStrings().split(invokeWith));
         }
-        vmCommand.add(base + "/system/bin/dalvikvm");
+
+        if (hostBuild) {
+            vmCommand.add(buildRoot + "/out/host/linux-x86/bin/dalvikvm");
+            builder.env("ANDROID_ROOT", buildRoot + "/out/host/linux-x86")
+                    .env("LD_LIBRARY_PATH", buildRoot + "/out/host/linux-x86/lib")
+                    .env("DYLD_LIBRARY_PATH", buildRoot + "/out/host/linux-x86/lib");
+        } else {
+            vmCommand.add(base + "/system/bin/dalvikvm");
+            builder.env("ANDROID_ROOT", base + "/system")
+                    .env("LD_LIBRARY_PATH", base + "/system/lib")
+                    .env("DYLD_LIBRARY_PATH", base + "/system/lib");
+        }
 
         builder.vmCommand(vmCommand)
                 .vmArgs("-Xbootclasspath:" + bootClasspath.toString())

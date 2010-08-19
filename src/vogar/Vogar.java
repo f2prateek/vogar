@@ -190,10 +190,11 @@ public final class Vogar {
         System.out.println();
         System.out.println("GENERAL OPTIONS");
         System.out.println();
-        System.out.println("  --mode <activity|device|sim|jvm>: specify which environment to run in.");
+        System.out.println("  --mode <activity|device|sim|host|jvm>: specify which environment to run in.");
         System.out.println("      activity: runs in an Android application on a device or emulator");
         System.out.println("      device: runs in a Dalvik VM on a device or emulator");
-        System.out.println("      sim: runs in a Dalvik VM on the local desktop.");
+        System.out.println("      sim: runs in a Dalvik VM on the local desktop built with sim-eng lunch combo");
+        System.out.println("      host: runs in a Dalvik VM on the local desktop built with any lunch combo.");
         System.out.println("      jvm: runs in a Java VM on the local desktop");
         System.out.println("      Default is: " + mode);
         System.out.println();
@@ -524,8 +525,11 @@ public final class Vogar {
             case JVM:
                 mode = new JavaVm(environment, modeOptions, vmOptions);
                 break;
+            case HOST:
+                mode = new HostDalvikVm(environment, modeOptions, vmOptions, androidSdk, invokeWith, true);
+                break;
             case SIM:
-                mode = new HostDalvikVm(environment, modeOptions, vmOptions, androidSdk, invokeWith);
+                mode = new HostDalvikVm(environment, modeOptions, vmOptions, androidSdk, invokeWith, false);
                 break;
             case DEVICE:
                 mode = new DeviceDalvikVm(environment, modeOptions, vmOptions);
@@ -588,22 +592,22 @@ public final class Vogar {
     }
 
     enum ModeId {
-        DEVICE, JVM, ACTIVITY, SIM, CRORE;
+        DEVICE, JVM, ACTIVITY, SIM, HOST;
 
         public boolean supportsInvokeWith() {
             return this == SIM;
         }
 
         public boolean acceptsVmArgs() {
-            return this != ACTIVITY && this != CRORE;
+            return this != ACTIVITY;
         }
 
         public boolean isHost() {
-            return this == JVM || this == SIM || this == CRORE;
+            return this == JVM || this == SIM || this == HOST;
         }
 
         public boolean requiresAndroidSdk() {
-            return this == DEVICE || this == ACTIVITY || this == SIM;
+            return this == DEVICE || this == ACTIVITY || this == SIM || this == HOST;
         }
     }
 }
