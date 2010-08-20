@@ -16,6 +16,7 @@
 
 package vogar.target;
 
+import java.lang.reflect.Modifier;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -215,7 +216,7 @@ public final class JUnitRunner implements Runner {
         // public class FooSuite {
         //    public static Test suite() {...}
         // }
-        return TestCase.class.isAssignableFrom(klass)
+        return (TestCase.class.isAssignableFrom(klass) && !Modifier.isAbstract(klass.getModifiers()))
                 || new ClassAnalyzer(klass).hasMethod(true, Test.class, "suite");
     }
 }
