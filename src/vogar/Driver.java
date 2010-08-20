@@ -71,6 +71,7 @@ final class Driver {
     private final JarSuggestions jarSuggestions;
     private final ClassFileIndex classFileIndex;
     private final int numRunnerThreads;
+    private final boolean benchmark;
 
     private int successes = 0;
     private int failures = 0;
@@ -89,7 +90,8 @@ final class Driver {
     public Driver(File localTemp, Mode mode, ExpectationStore expectationStore, Date date,
             XmlReportPrinter reportPrinter, int firstMonitorPort, int smallTimeoutSeconds,
             int largeTimeoutSeconds, ClassFileIndex classFileIndex, File resultsDir, File tagDir,
-            String tagName, String compareToTag, boolean recordResults, int numRunnerThreads) {
+            String tagName, String compareToTag, boolean recordResults, int numRunnerThreads,
+            boolean benchmark) {
         this.localTemp = localTemp;
         this.expectationStore = expectationStore;
         this.mode = mode;
@@ -102,6 +104,7 @@ final class Driver {
         this.numRunnerThreads = numRunnerThreads;
         this.outcomeStore = new OutcomeStore(tagDir, tagName, compareToTag, resultsDir,
                 recordResults, expectationStore, date);
+        this.benchmark = benchmark;
     }
 
     /**
@@ -439,6 +442,10 @@ final class Driver {
             this.outcomeName = outcomeName;
             // TODO add to Outcome knowledge about what class was used to run it
             if (CaliperRunner.class.getName().equals(runnerClass)) {
+                if (!benchmark) {
+                    throw new RuntimeException("you must use --benchmark when running Caliper "
+                            + "benchmarks.");
+                }
                 Console.getInstance().verbose("running " + outcomeName + " with unlimited timeout");
                 resetKillTime(FOREVER);
                 disableResultRecord = true;

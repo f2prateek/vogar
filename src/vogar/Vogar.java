@@ -170,6 +170,9 @@ public final class Vogar {
     @Option(names = { "--native-output" })
     private boolean nativeOutput = false;
 
+    @Option(names = { "--benchmark" })
+    private boolean benchmark = false;
+
     private Vogar() {}
 
     private void printUsage() {
@@ -204,6 +207,10 @@ public final class Vogar {
         System.out.println("  --stream: stream output as it is emitted.");
         System.out.println();
         System.out.println("  --native-output: print out native output (prefixed with \"[native]\").");
+        System.out.println();
+        System.out.println("  --benchmark: for use with dalvikvm, this dexes all files together,");
+        System.out.println("      and is mandatory for running Caliper benchmarks, and a good idea");
+        System.out.println("      other performance sensitive code.");
         System.out.println();
         System.out.println("  --invoke-with: provide a command to invoke the VM with (e.g. ");
         System.out.println("      \"valgrind --leak-check=full\"). Only supported in certain modes.");
@@ -477,6 +484,7 @@ public final class Vogar {
     }
 
     private boolean run() {
+        System.out.println(System.getProperty("java.class.path"));
         Console.init(stream);
         Console.getInstance().setUseColor(color, passColor, warnColor, failColor);
         Console.getInstance().setIndent(indent);
@@ -532,7 +540,7 @@ public final class Vogar {
                 mode = new HostDalvikVm(environment, modeOptions, vmOptions, androidSdk, invokeWith, false);
                 break;
             case DEVICE:
-                mode = new DeviceDalvikVm(environment, modeOptions, vmOptions);
+                mode = new DeviceDalvikVm(environment, modeOptions, vmOptions, benchmark);
                 break;
             case ACTIVITY:
                 mode = new ActivityMode(environment, modeOptions);
@@ -576,7 +584,8 @@ public final class Vogar {
                 tagName,
                 compareToTag,
                 recordResults,
-                numRunners);
+                numRunners,
+                benchmark);
 
         return driver.buildAndRun(actionFiles, actionClassesAndPackages);
     }

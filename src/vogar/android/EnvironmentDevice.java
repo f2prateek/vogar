@@ -105,8 +105,8 @@ public final class EnvironmentDevice extends Environment {
             throws FileNotFoundException {
         for (File file : androidSdk.ls(source)) {
             if (filenameFilter.accept(file)) {
-                Console.getInstance().warn("Moving " + file.getPath() + " to "
-                        + destination.getPath());
+                Console.getInstance().warn(String.format("Moving %s to %s", file.getPath(),
+                        new File(destination, file.getName()).getPath()));
                 new Mkdir().mkdirs(destination);
                 androidSdk.pull(file, destination);
             }

@@ -44,6 +44,7 @@ public final class TestRunner {
     protected final int timeoutSeconds;
     protected final List<Runner> runners;
     protected final String[] args;
+    protected final boolean fastMode;
 
     public TestRunner(List<String> argsList) {
         properties = loadProperties();
@@ -55,15 +56,20 @@ public final class TestRunner {
                                 new MainRunner());
 
         int monitorPort = Integer.parseInt(properties.getProperty(TestProperties.MONITOR_PORT));
+        boolean fastMode = false;
         for (Iterator<String> i = argsList.iterator(); i.hasNext(); ) {
-            if (i.next().equals("--monitorPort")) {
+            String arg = i.next();
+            if (arg.equals("--monitorPort")) {
                 i.remove();
                 monitorPort = Integer.parseInt(i.next());
                 i.remove();
+            } else if (arg.equals("--fast")) {
+                fastMode = true;
             }
         }
 
         this.monitorPort = monitorPort;
+        this.fastMode = fastMode;
         this.args = argsList.toArray(new String[argsList.size()]);
     }
 

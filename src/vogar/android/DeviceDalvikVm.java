@@ -32,8 +32,12 @@ public final class DeviceDalvikVm extends Vm {
 
     private static final File USER_HOME = new File("/sdcard");
 
-    public DeviceDalvikVm(Environment environment, Mode.Options options, Vm.Options vmOptions) {
+    private final boolean fastMode;
+
+    public DeviceDalvikVm(Environment environment, Mode.Options options, Vm.Options vmOptions,
+            boolean fastMode) {
         super(environment, options, vmOptions);
+        this.fastMode = fastMode;
     }
 
     private EnvironmentDevice getEnvironmentDevice() {
@@ -58,20 +62,24 @@ public final class DeviceDalvikVm extends Vm {
     @Override protected void installRunner() {
         // dex everything on the classpath and push it to the device.
         for (File classpathElement : classpath.getElements()) {
-            dexAndPush(getSdk().basenameOfJar(classpathElement), classpathElement);
+            dexAndPush(getSdk().basenameOfJar(classpathElement), classpathElement, false);
         }
     }
 
     @Override protected void postCompile(Action action, File jar) {
-        dexAndPush(action.getName(), jar);
+        dexAndPush(action.getName(), jar, true);
     }
 
-    private void dexAndPush(String name, File jar) {
+    private void dexAndPush(String name, File jar, boolean forAction) {
         Console.getInstance().verbose("dex and push " + name);
 
         // make the local dex (inside a jar)
         File localDex = environment.file(name, name + ".dx.jar");
-        getSdk().dex(localDex, Classpath.of(jar));
+        Classpath cp = Classpath.of(jar);
+        if (fastMode && forAction) {
+            cp.addAll(this.classpath);
+        }
+        getSdk().dex(localDex, cp);
 
         // post the local dex to the device
         getSdk().push(localDex, deviceDexFile(name));
@@ -82,7 +90,7 @@ public final class DeviceDalvikVm extends Vm {
     }
 
     @Override protected VmCommandBuilder newVmCommandBuilder(File workingDirectory) {
-        return new VmCommandBuilder()
+        VmCommandBuilder vmCommandBuilder = new VmCommandBuilder()
                 .vmCommand("adb", "shell", getEnvironmentDevice().getAndroidData(), "dalvikvm")
                 .vmArgs("-Duser.home=" + USER_HOME)
                 .vmArgs("-Duser.name=" + AndroidSdk.getDeviceUserName())
@@ -91,13 +99,20 @@ public final class DeviceDalvikVm extends Vm {
                 .vmArgs("-Djavax.net.ssl.trustStore=/system/etc/security/cacerts.bks")
                 .maxLength(1024)
                 .temp(getEnvironmentDevice().vogarTemp);
+        if (!fastMode) {
+            vmCommandBuilder.vmArgs("-Xdexopt:none");
+        }
+        return vmCommandBuilder;
+
     }
 
     @Override protected Classpath getRuntimeClasspath(Action action) {
         Classpath result = new Classpath();
         result.addAll(deviceDexFile(action.getName()));
-        for (File classpathElement : classpath.getElements()) {
-            result.addAll(deviceDexFile(getSdk().basenameOfJar(classpathElement)));
+        if (!fastMode) {
+            for (File classpathElement : classpath.getElements()) {
+                result.addAll(deviceDexFile(getSdk().basenameOfJar(classpathElement)));
+            }
         }
         return result;
     }

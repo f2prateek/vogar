@@ -54,8 +54,8 @@ final class EnvironmentHost extends Environment {
      */
     private void retrieveFiles(File destination, File source, FileFilter filenameFilter) {
         for (File file : source.listFiles(filenameFilter)) {
-            Console.getInstance().warn("Moving " + file.getPath() + " to "
-                        + destination.getPath());
+            Console.getInstance().warn(String.format("Moving %s to %s", file.getPath(),
+                    new File(destination, file.getName()).getPath()));
             new Mkdir().mkdirs(destination);
             new Command("cp", file.getPath(), destination.getPath()).execute();
         }
