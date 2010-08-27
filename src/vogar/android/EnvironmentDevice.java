@@ -131,7 +131,8 @@ public final class EnvironmentDevice extends Environment {
                     new FileFilter() {
                         @Override
                         public boolean accept(File file) {
-                            return file.getName().endsWith(".xml");
+                            return file.getName().endsWith(".xml")
+                                || file.getName().endsWith(".json");
                         }
                     });
         } catch (FileNotFoundException e) {

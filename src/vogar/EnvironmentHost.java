@@ -73,9 +73,9 @@ final class EnvironmentHost extends Environment {
 
     @Override public void cleanup(Action action) {
         retrieveFiles(new File("./vogar-results"), action.getUserDir(), new FileFilter() {
-            @Override
-            public boolean accept(File file) {
-                return file.getName().endsWith(".xml") && file.isFile();
+            @Override public boolean accept(File file) {
+                return file.isFile() &&
+                        (file.getName().endsWith(".xml") || file.getName().endsWith(".json"));
             }
         });
         super.cleanup(action);
