@@ -540,7 +540,7 @@ public final class Vogar {
                 mode = new HostDalvikVm(environment, modeOptions, vmOptions, androidSdk, invokeWith, false);
                 break;
             case DEVICE:
-                mode = new DeviceDalvikVm(environment, modeOptions, vmOptions, benchmark);
+                mode = new DeviceDalvikVm(environment, modeOptions, vmOptions, deviceDir, benchmark);
                 break;
             case ACTIVITY:
                 mode = new ActivityMode(environment, modeOptions);

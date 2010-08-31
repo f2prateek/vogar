@@ -30,14 +30,14 @@ import vogar.Vogar;
  */
 public final class DeviceDalvikVm extends Vm {
 
-    private static final File USER_HOME = new File("/sdcard");
-
     private final boolean fastMode;
+    private final File deviceDir;
 
     public DeviceDalvikVm(Environment environment, Mode.Options options, Vm.Options vmOptions,
-            boolean fastMode) {
+                File deviceDir, boolean fastMode) {
         super(environment, options, vmOptions);
         this.fastMode = fastMode;
+        this.deviceDir = deviceDir;
     }
 
     private EnvironmentDevice getEnvironmentDevice() {
@@ -54,7 +54,7 @@ public final class DeviceDalvikVm extends Vm {
         String caliperrc = ".caliperrc";
         File host = Vogar.dotFile(caliperrc);
         if (host.exists()) {
-            File target = new File(USER_HOME, caliperrc);
+            File target = new File(deviceDir, caliperrc);
             getSdk().push(host, target);
         }
     }
@@ -92,7 +92,7 @@ public final class DeviceDalvikVm extends Vm {
     @Override protected VmCommandBuilder newVmCommandBuilder(File workingDirectory) {
         VmCommandBuilder vmCommandBuilder = new VmCommandBuilder()
                 .vmCommand("adb", "shell", getEnvironmentDevice().getAndroidData(), "dalvikvm")
-                .vmArgs("-Duser.home=" + USER_HOME)
+                .vmArgs("-Duser.home=" + deviceDir)
                 .vmArgs("-Duser.name=" + AndroidSdk.getDeviceUserName())
                 .vmArgs("-Duser.language=en")
                 .vmArgs("-Duser.region=US")
