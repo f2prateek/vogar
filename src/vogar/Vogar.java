@@ -512,7 +512,7 @@ public final class Vogar {
         DEVICE, JVM, ACTIVITY, SIM, HOST;
 
         public boolean supportsInvokeWith() {
-            return this == SIM;
+            return this == SIM || this == HOST;
         }
 
         public boolean acceptsVmArgs() {
