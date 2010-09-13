@@ -15,6 +15,7 @@
     <property name="junit" value="lib/junit.jar"/>
     <property name="kxml2" value="lib/kxml2-2.3.0.jar"/>
     <property name="android" value="${android.platform.dir}/android.jar"/>
+    <property name="miniguice" value="lib/miniguice.jar"/>
 
     <path id="dependencies">
         <pathelement location="${caliper}"/>
@@ -23,6 +24,7 @@
         <pathelement location="${junit}"/>
         <pathelement location="${kxml2}"/>
         <pathelement location="${android}"/>
+        <pathelement location="${miniguice}"/>
     </path>
 
     <target name="compile"
@@ -50,6 +52,7 @@
             <zipfileset src="${jsr305}"/>
             <zipfileset src="${junit}"/>
             <zipfileset src="${kxml2}"/>
+            <zipfileset src="${miniguice}"/>
             <fileset dir="src">
                 <exclude name="**/*.java"/>
             </fileset>

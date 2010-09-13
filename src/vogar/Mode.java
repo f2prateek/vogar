@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
+import javax.inject.Named;
 import vogar.commands.Command;
 import vogar.commands.CommandFailedException;
 import vogar.commands.Mkdir;
@@ -42,62 +44,22 @@ public abstract class Mode {
 
     private static final Pattern JAVA_SOURCE_PATTERN = Pattern.compile("\\/(\\w)+\\.java$");
 
-    protected final Environment environment;
-
-    public static class Options {
-        public final Classpath buildClasspath;
-        public final List<File> sourcepath;
-        public final List<String> javacArgs;
-        public final File javaHome;
-        public final int firstMonitorPort;
-        public final int timeoutSeconds;
-        public final boolean useBootClasspath;
-        public final Classpath classpath;
-        public final boolean nativeOutput;
-
-        Options(Classpath buildClasspath,
-                List<File> sourcepath,
-                List<String> javacArgs,
-                File javaHome,
-                int firstMonitorPort,
-                int timeoutSeconds,
-                boolean useBootClasspath,
-                Classpath classpath,
-                boolean nativeOutput) {
-            this.buildClasspath = buildClasspath;
-            this.sourcepath = sourcepath;
-            this.javacArgs = javacArgs;
-            this.javaHome = javaHome;
-            this.firstMonitorPort = firstMonitorPort;
-            this.timeoutSeconds = timeoutSeconds;
-            this.useBootClasspath = useBootClasspath;
-            this.classpath = classpath;
-            this.nativeOutput = nativeOutput;
-        }
-    }
-
-    final Options modeOptions;
+    @Inject protected Environment environment;
+    @Inject @Named("buildClasspath") Classpath buildClasspath;
+    @Inject @Named("sourcepath") List<File> sourcepath;
+    @Inject @Named("javacArgs") List<String> javacArgs;
+    @Inject @Named("javaHome") File javaHome;
+    @Inject @Named("firstMonitorPort") int firstMonitorPort;
+    @Inject @Named("smallTimeoutSeconds") int timeoutSeconds;
+    @Inject @Named("useBootClasspath") boolean useBootClasspath;
+    @Inject @Named("nativeOutput") boolean nativeOutput;
 
     /**
      * User classes that need to be included in the classpath for both
      * compilation and execution. Also includes dependencies of all active
      * runners.
      */
-    protected final Classpath classpath = new Classpath();
-
-    protected Mode(Environment environment, Options modeOptions) {
-        this.environment = environment;
-        this.modeOptions = modeOptions;
-        this.classpath.addAll(modeOptions.classpath);
-    }
-
-    public Environment getEnvironment() {
-        return environment;
-    }
-
-    public Options getModeOptions() {
-        return modeOptions;
-    }
+    @Inject protected Classpath classpath = new Classpath();
 
     /**
      * Returns a path for a Java tool such as java, javac, jar where
@@ -105,9 +67,9 @@ public abstract class Mode {
      * come from the path.
      */
     String javaPath (String tool) {
-        return (modeOptions.javaHome == null)
+        return (javaHome == null)
             ? tool
-            : new File(new File(modeOptions.javaHome, "bin"), tool).getPath();
+            : new File(new File(javaHome, "bin"), tool).getPath();
     }
 
     /**
@@ -186,16 +148,16 @@ public abstract class Mode {
             }
             sourceFiles.add(javaFile);
             Classpath sourceDirs = Classpath.of(action.getSourcePath());
-            sourceDirs.addAll(modeOptions.sourcepath);
+            sourceDirs.addAll(sourcepath);
             javac.sourcepath(sourceDirs.getElements());
         }
         if (!sourceFiles.isEmpty()) {
-            if (!modeOptions.buildClasspath.isEmpty()) {
-                javac.bootClasspath(modeOptions.buildClasspath);
+            if (!buildClasspath.isEmpty()) {
+                javac.bootClasspath(buildClasspath);
             }
             javac.classpath(classpath)
                     .destination(classesDir)
-                    .extra(modeOptions.javacArgs)
+                    .extra(javacArgs)
                     .compile(sourceFiles);
         }
 
@@ -224,8 +186,8 @@ public abstract class Mode {
     protected void fillInProperties(Properties properties, Action action) {
         properties.setProperty(TestProperties.TEST_CLASS_OR_PACKAGE, action.getTargetClass());
         properties.setProperty(TestProperties.QUALIFIED_NAME, action.getName());
-        properties.setProperty(TestProperties.MONITOR_PORT, Integer.toString(modeOptions.firstMonitorPort));
-        properties.setProperty(TestProperties.TIMEOUT, Integer.toString(modeOptions.timeoutSeconds));
+        properties.setProperty(TestProperties.MONITOR_PORT, Integer.toString(firstMonitorPort));
+        properties.setProperty(TestProperties.TIMEOUT, Integer.toString(timeoutSeconds));
     }
 
     /**

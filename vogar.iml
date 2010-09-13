@@ -10,14 +10,12 @@
     <orderEntry type="module-library">
       <library name="libs">
         <CLASSES>
-          <root url="jar://$MODULE_DIR$/lib/jtreg.jar!/" />
           <root url="jar://$MODULE_DIR$/lib/caliper.jar!/" />
           <root url="jar://$MODULE_DIR$/lib/guava.jar!/" />
-          <root url="jar://$MODULE_DIR$/lib/javatest.jar!/" />
           <root url="jar://$MODULE_DIR$/lib/kxml2-2.3.0.jar!/" />
           <root url="jar://$MODULE_DIR$/lib/jsr305.jar!/" />
-          <root url="jar://$MODULE_DIR$/lib/jh.jar!/" />
           <root url="jar://$MODULE_DIR$/lib/junit.jar!/" />
+          <root url="jar://$MODULE_DIR$/lib/miniguice.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />

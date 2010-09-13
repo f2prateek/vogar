@@ -17,6 +17,8 @@
 package vogar;
 
 import java.io.File;
+import javax.inject.Inject;
+import javax.inject.Named;
 import vogar.commands.Rm;
 import vogar.util.Strings;
 
@@ -24,18 +26,10 @@ import vogar.util.Strings;
  * A target runtime environment such as a remote device or the local host
  */
 public abstract class Environment {
-    final boolean cleanBefore;
-    final boolean cleanAfter;
-    final Integer debugPort;
-    private final File localTemp;
-
-    protected Environment(boolean cleanBefore, boolean cleanAfter, Integer debugPort,
-            File localTemp) {
-        this.cleanBefore = cleanBefore;
-        this.cleanAfter = cleanAfter;
-        this.debugPort = debugPort;
-        this.localTemp = localTemp;
-    }
+    @Inject @Named("cleanBefore") boolean cleanBefore;
+    @Inject @Named("cleanAfter") boolean cleanAfter;
+    @Inject @Named("debugPort") Integer debugPort;
+    @Inject @Named("localTemp") File localTemp;
 
     public final boolean cleanBefore() {
         return cleanBefore;

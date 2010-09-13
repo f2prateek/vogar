@@ -33,6 +33,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TimeZone;
+import javax.inject.Inject;
+import javax.inject.Named;
+import javax.inject.Provider;
 import vogar.commands.Mkdir;
 import vogar.commands.Rm;
 import vogar.util.Strings;
@@ -49,23 +52,21 @@ public final class OutcomeStore {
         }
     };
 
-    private final File tagResultsDir;
-    private final String tagName;
-    private final String compareToTag;
-    private final File autoResultsDir;
-    private final boolean recordResults;
-    private final ExpectationStore expectationStore;
-    private final Date date;
+    @Inject @Named("tagDir") File tagDir;
+    @Inject @Named("tagName") String tagName;
+    @Inject @Named("compareToTag") String compareToTag;
+    @Inject @Named("resultsDir") File resultsDir;
+    @Inject @Named("recordResults") boolean recordResults;
+    @Inject Provider<XmlReportPrinter> xmlReportPrinterProvider;
+    @Inject ExpectationStore expectationStore;
+    @Inject Date date;
 
-    OutcomeStore(File tagDir, String tagName, String compareToTag, File resultsDir,
-            boolean recordResults, ExpectationStore expectationStore, Date date) {
-        this.tagResultsDir = new File(tagDir, "results");
-        this.tagName = tagName;
-        this.compareToTag = compareToTag;
-        this.autoResultsDir = new File(resultsDir, "auto");
-        this.recordResults = recordResults;
-        this.expectationStore = expectationStore;
-        this.date = date;
+    private File tagResultsDir() {
+        return new File(tagDir, "results");
+    }
+
+    private File autoResultsDir() {
+        return new File(resultsDir, "auto");
     }
 
     public AnnotatedOutcome read(Outcome outcome) {
@@ -76,7 +77,7 @@ public final class OutcomeStore {
         XmlReportReader reportReader = new XmlReportReader();
         if (compareToTag != null) {
             String tagOutputFileName = TAG_FILENAME;
-            File tagResultsDir = new File(this.tagResultsDir, compareToTag);
+            File tagResultsDir = new File(tagResultsDir(), compareToTag);
             File tagOutcomeResultsDir = new File(tagResultsDir, outcome.getPath());
             File tagFile = new File(tagOutcomeResultsDir, tagOutputFileName);
             if (tagFile.exists()) {
@@ -88,7 +89,7 @@ public final class OutcomeStore {
         }
 
         // read automatically recorded results (if they exist)
-        File outcomeResultDir = new File(autoResultsDir, outcome.getPath());
+        File outcomeResultDir = new File(autoResultsDir(), outcome.getPath());
         SortedMap<Long, Outcome> previousOutcomes = Maps.newTreeMap();
         boolean hasMetadata = false;
         if (outcomeResultDir.exists()) {
@@ -131,7 +132,7 @@ public final class OutcomeStore {
     }
 
     public void write(Outcome outcome, boolean hasChanged) {
-        File outcomeResultDir = new File(autoResultsDir, outcome.getPath());
+        File outcomeResultDir = new File(autoResultsDir(), outcome.getPath());
 
         if (recordResults) {
             new Mkdir().mkdirs(outcomeResultDir);
@@ -143,10 +144,8 @@ public final class OutcomeStore {
             String timestamp = dateFormat.format(date);
             String outputFileName = timestamp + ".xml";
             if (hasChanged) {
-                // Re-output current results to file(s)
-                XmlReportPrinter singleReportPrinter =
-                        new XmlReportPrinter(outcomeResultDir, expectationStore, date, true);
-
+                XmlReportPrinter singleReportPrinter = xmlReportPrinterProvider.get();
+                singleReportPrinter.setOutput(outcomeResultDir, true);
                 singleReportPrinter.generateReport(outcome, outputFileName);
             }
 
@@ -179,7 +178,7 @@ public final class OutcomeStore {
         // record the outcome's result to a tag (if applicable)
         if (tagName != null) {
             String tagOutputFileName = TAG_FILENAME;
-            File tagDir = new File(this.tagResultsDir, tagName);
+            File tagDir = new File(tagResultsDir(), tagName);
             File tagOutcomeResultDir = new File(tagDir, outcome.getPath());
             File outcomeTagFile = new File(tagOutcomeResultDir, tagOutputFileName);
             if (outcomeTagFile.exists()) {
@@ -188,8 +187,8 @@ public final class OutcomeStore {
             if (!tagOutcomeResultDir.mkdirs() && !tagOutcomeResultDir.exists()) {
                 throw new RuntimeException("Failed to create directory " + tagOutcomeResultDir);
             }
-            XmlReportPrinter tagSingleReportPrinter =
-                    new XmlReportPrinter(tagOutcomeResultDir, expectationStore, date, true);
+            XmlReportPrinter tagSingleReportPrinter = xmlReportPrinterProvider.get();
+            tagSingleReportPrinter.setOutput(tagOutcomeResultDir, true);
             tagSingleReportPrinter.generateReport(outcome, tagOutputFileName);
         }
     }

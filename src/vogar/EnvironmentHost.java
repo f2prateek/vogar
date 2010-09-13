@@ -18,14 +18,13 @@ package vogar;
 
 import java.io.File;
 import java.io.FileFilter;
+import javax.inject.Inject;
 import vogar.commands.Command;
 import vogar.commands.Mkdir;
 
 final class EnvironmentHost extends Environment {
 
-    EnvironmentHost(boolean cleanBefore, boolean cleanAfter, Integer debugPort, File localTemp) {
-        super(cleanBefore, cleanAfter, debugPort, localTemp);
-    }
+    @Inject EnvironmentHost() {}
 
     @Override public void prepare() {}
 

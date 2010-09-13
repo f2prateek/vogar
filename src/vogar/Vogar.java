@@ -17,6 +17,8 @@
 package vogar;
 
 import com.google.common.collect.Lists;
+import com.google.inject.Provides;
+import com.google.inject.mini.MiniGuice;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -26,6 +28,9 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import javax.inject.Named;
+import javax.inject.Provider;
+import javax.inject.Singleton;
 import vogar.android.ActivityMode;
 import vogar.android.AndroidSdk;
 import vogar.android.DeviceDalvikVm;
@@ -489,104 +494,7 @@ public final class Vogar {
         Console.getInstance().setUseColor(color, passColor, warnColor, failColor);
         Console.getInstance().setIndent(indent);
         Console.getInstance().setVerbose(verbose);
-
-        ClassFileIndex classFileIndex = new ClassFileIndex(jarSearchDirs);
-        if (suggestClasspaths) {
-            classFileIndex.createIndex();
-        }
-
-        if (resultsDir == null) {
-            resultsDir = new File(vogarDir, "results");
-        }
-        if (tagDir == null) {
-            tagDir = new File(vogarDir, "results/tags");
-        }
-
-        int numRunners = (stream || this.mode == ModeId.ACTIVITY)
-                ? 1
-                : NUM_PROCESSORS;
-        Mode.Options modeOptions = new Mode.Options(Classpath.of(buildClasspath), sourcepath,
-                javacArgs, javaHome, firstMonitorPort, timeoutSeconds,
-                useBootClasspath, Classpath.of(classpath), nativeOutput);
-
-        AndroidSdk androidSdk = null;
-        if (mode.requiresAndroidSdk()) {
-            androidSdk = AndroidSdk.getFromPath();
-            if (deviceCache) {
-                androidSdk.setDeviceCache(new DeviceFileCache(deviceDir, androidSdk));
-            }
-            modeOptions.buildClasspath.addAll(androidSdk.getAndroidClasses());
-        }
-
-        File localTemp = new File("/tmp/vogar/" + UUID.randomUUID());
-        Environment environment = mode.isHost()
-                ? new EnvironmentHost(cleanBefore, cleanAfter, debugPort, localTemp)
-                : new EnvironmentDevice(cleanBefore, cleanAfter, debugPort, firstMonitorPort,
-                        numRunners, localTemp, new File(deviceDir, "run"), androidSdk);
-
-        Vm.Options vmOptions = (mode.acceptsVmArgs())
-                ? new Vm.Options(vmArgs, targetArgs)
-                : null;
-
-        Mode mode;
-        switch (this.mode) {
-            case JVM:
-                mode = new JavaVm(environment, modeOptions, vmOptions);
-                break;
-            case HOST:
-                mode = new HostDalvikVm(environment, modeOptions, vmOptions, androidSdk, invokeWith, true);
-                break;
-            case SIM:
-                mode = new HostDalvikVm(environment, modeOptions, vmOptions, androidSdk, invokeWith, false);
-                break;
-            case DEVICE:
-                mode = new DeviceDalvikVm(environment, modeOptions, vmOptions, deviceDir, benchmark);
-                break;
-            case ACTIVITY:
-                mode = new ActivityMode(environment, modeOptions);
-                break;
-            default:
-                throw new AssertionError();
-        }
-
-        ExpectationStore expectationStore;
-        try {
-            expectationStore = ExpectationStore.parse(expectationFiles);
-        } catch (IOException e) {
-            System.out.println("Problem loading expectations: " + e);
-            return false;
-        }
-
-        Date currentDate = new Date();
-
-        XmlReportPrinter xmlReportPrinter = xmlReportsDirectory != null
-                ? new XmlReportPrinter(xmlReportsDirectory, expectationStore, currentDate)
-                : null;
-
-        // Automatically compare to a tag if we explicitly run it
-        if (runTag != null && compareToTag == null) {
-            compareToTag = runTag;
-        }
-
-        int smallTimeoutSeconds = timeoutSeconds;
-        Driver driver = new Driver(
-                localTemp,
-                mode,
-                expectationStore,
-                currentDate,
-                xmlReportPrinter,
-                firstMonitorPort,
-                smallTimeoutSeconds,
-                smallTimeoutSeconds * LARGE_TIMEOUT_MULTIPLIER,
-                classFileIndex,
-                resultsDir,
-                tagDir,
-                tagName,
-                compareToTag,
-                recordResults,
-                numRunners,
-                benchmark);
-
+        Driver driver = MiniGuice.inject(Driver.class, new Module());
         return driver.buildAndRun(actionFiles, actionClassesAndPackages);
     }
 
@@ -617,6 +525,186 @@ public final class Vogar {
 
         public boolean requiresAndroidSdk() {
             return this == DEVICE || this == ACTIVITY || this == SIM || this == HOST;
+        }
+    }
+
+    private class Module {
+        @Provides @Named("additionalVmArgs") List<String> provideAdditionalVmArgs() {
+            return vmArgs;
+        }
+
+        @Provides @Singleton AndroidSdk provideAndroidSdk() {
+            AndroidSdk androidSdk = AndroidSdk.getFromPath();
+            if (deviceCache) {
+                androidSdk.setDeviceCache(new DeviceFileCache(deviceDir, androidSdk));
+            }
+            return androidSdk;
+        }
+
+        @Provides @Named("benchmark") boolean provideBenchmark() {
+            return benchmark;
+        }
+
+        @Provides @Named("buildClasspath") Classpath provideBuildClasspath(
+                Provider<AndroidSdk> androidSdkProvider) {
+            Classpath result = Classpath.of(buildClasspath);
+            if (mode.requiresAndroidSdk()) {
+                result.addAll(androidSdkProvider.get().getAndroidClasses());
+            }
+            return result;
+        }
+
+        @Provides ClassFileIndex provideClassFileIndex() {
+            ClassFileIndex classFileIndex = new ClassFileIndex(jarSearchDirs);
+            if (suggestClasspaths) {
+                classFileIndex.createIndex();
+            }
+            return classFileIndex;
+        }
+
+        @Provides Classpath provideClasspath() {
+            return Classpath.of(classpath);
+        }
+
+        @Provides @Named("cleanAfter") boolean provideCleanAfter() {
+            return cleanAfter;
+        }
+
+        @Provides @Named("cleanBefore") boolean provideCleanBefore() {
+            return cleanBefore;
+        }
+
+        @Provides @Named("compareToTag") String provideCompareToTag() {
+            // Automatically compare to a tag if we explicitly run it
+            return (runTag != null && compareToTag == null) ? runTag : compareToTag;
+        }
+
+        @Provides Date provideDate() {
+            return new Date();
+        }
+
+        @Provides @Named("debugPort") Integer provideDebugPort() {
+            return debugPort;
+        }
+
+        @Provides @Named("deviceDir") File provideDeviceDir() {
+            return deviceDir;
+        }
+
+        @Provides Environment provideEnvironment(Provider<EnvironmentHost> environmentHostProvider,
+                Provider<EnvironmentDevice> environmentDeviceProvider) {
+            return mode.isHost()
+                    ? environmentHostProvider.get()
+                    : environmentDeviceProvider.get();
+        }
+
+        @Provides ExpectationStore provideExpectationStore() throws IOException {
+            return ExpectationStore.parse(expectationFiles);
+        }
+
+        @Provides @Named("fastMode") boolean provideFastMode() {
+            return benchmark;
+        }
+
+        @Provides @Named("firstMonitorPort") int provideFirstMonitorPort() {
+            return firstMonitorPort;
+        }
+
+        @Provides @Named("hostBuild") boolean provideHostBuild() {
+            return (Vogar.this.mode == ModeId.HOST);
+        }
+
+        @Provides @Named("invokeWith") String provideInvokeWith() {
+            return invokeWith;
+        }
+
+        @Provides @Named("javacArgs") List<String> provideJavacArgs() {
+            return javacArgs;
+        }
+
+        @Provides @Named("javaHome") File provideJavaHome() {
+            return javaHome;
+        }
+
+        @Provides @Named("largeTimeoutSeconds") int provideLargeTimeoutSeconds() {
+            return timeoutSeconds * LARGE_TIMEOUT_MULTIPLIER;
+        }
+
+        @Provides @Singleton @Named("localTemp") File provideLocalTemp() {
+            return new File("/tmp/vogar/" + UUID.randomUUID());
+        }
+
+        @Provides @Named("nativeOutput") boolean provideNativeOutput() {
+            return nativeOutput;
+        }
+
+        @Provides @Named("numRunners") int provideNumRunners() {
+            return (stream || Vogar.this.mode == ModeId.ACTIVITY)
+                    ? 1
+                    : NUM_PROCESSORS;
+        }
+
+        @Provides Mode provideMode(Provider<JavaVm> javaVmProvider,
+                Provider<HostDalvikVm> hostDalvikVmProvider,
+                Provider<DeviceDalvikVm> deviceDalvikVmProvider,
+                Provider<ActivityMode> activityModeProvider) {
+            switch (Vogar.this.mode) {
+                case JVM:
+                    return javaVmProvider.get();
+                case HOST:
+                case SIM:
+                    return hostDalvikVmProvider.get();
+                case DEVICE:
+                    return deviceDalvikVmProvider.get();
+                case ACTIVITY:
+                    return activityModeProvider.get();
+                default:
+                    throw new AssertionError();
+            }
+        }
+
+        @Provides @Named("recordResults") boolean provideRecordResults() {
+            return recordResults;
+        }
+
+        @Provides @Named("resultsDir") File provideResultsDir() {
+            return resultsDir == null ? new File(vogarDir, "results") : resultsDir;
+        }
+
+        @Provides @Named("runnerDir") File provideRunnerDir() {
+            return new File(deviceDir, "run");
+        }
+
+        @Provides @Named("smallTimeoutSeconds") int provideSmallTimeoutSeconds() {
+            return timeoutSeconds;
+        }
+
+        @Provides @Named("sourcepath") List<File> provideSourcepath() {
+            return sourcepath;
+        }
+
+        @Provides @Named("useBootClasspath") boolean provideUseBootClasspath() {
+            return useBootClasspath;
+        }
+
+        @Provides @Named("tagDir") File provideTagDir() {
+            return tagDir != null ? tagDir : new File(vogarDir, "results/tags");
+        }
+
+        @Provides @Named("tagName") String provideTagName() {
+            return tagName;
+        }
+
+        @Provides @Named("targetArgs") List<String> provideTargetArgs() {
+            return targetArgs;
+        }
+
+        @Provides @Named("vogarTemp") File provideVogarTemp() {
+            return vogarDir;
+        }
+
+        @Provides @Named("xmlReportsDirectory") File provideXmlReportsDirectory() {
+            return xmlReportsDirectory;
         }
     }
 }

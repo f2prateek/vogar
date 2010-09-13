@@ -17,11 +17,11 @@
 package vogar.android;
 
 import java.io.File;
+import javax.inject.Inject;
+import javax.inject.Named;
 import vogar.Action;
 import vogar.Classpath;
 import vogar.Console;
-import vogar.Environment;
-import vogar.Mode;
 import vogar.Vm;
 import vogar.Vogar;
 
@@ -30,15 +30,8 @@ import vogar.Vogar;
  */
 public final class DeviceDalvikVm extends Vm {
 
-    private final boolean fastMode;
-    private final File deviceDir;
-
-    public DeviceDalvikVm(Environment environment, Mode.Options options, Vm.Options vmOptions,
-                File deviceDir, boolean fastMode) {
-        super(environment, options, vmOptions);
-        this.fastMode = fastMode;
-        this.deviceDir = deviceDir;
-    }
+    @Inject @Named("benchmark") boolean fastMode;
+    @Inject @Named("deviceDir") File deviceDir;
 
     private EnvironmentDevice getEnvironmentDevice() {
         return (EnvironmentDevice) environment;
@@ -99,7 +92,7 @@ public final class DeviceDalvikVm extends Vm {
                 .vmArgs("-Djavax.net.ssl.trustStore=/system/etc/security/cacerts.bks")
                 .vmArgs("-Xverify:none")
                 .maxLength(1024)
-                .temp(getEnvironmentDevice().vogarTemp);
+                .temp(getEnvironmentDevice().vogarTemp());
         if (!fastMode) {
             vmCommandBuilder.vmArgs("-Xdexopt:none");
         }

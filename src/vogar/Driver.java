@@ -33,6 +33,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import javax.inject.Inject;
+import javax.inject.Named;
 import vogar.commands.Command;
 import vogar.commands.CommandFailedException;
 import vogar.commands.Mkdir;
@@ -44,7 +46,7 @@ import vogar.util.TimeUtilities;
 /**
  * Compiles, installs, runs and reports on actions.
  */
-final class Driver {
+public final class Driver {
 
     private static final int FOREVER = 60 * 60 * 24 * 28; // four weeks
 
@@ -61,51 +63,29 @@ final class Driver {
 
     private final Timer actionTimeoutTimer = new Timer("action timeout", true);
 
-    private final File localTemp;
-    private final ExpectationStore expectationStore;
-    private final Mode mode;
-    private final XmlReportPrinter reportPrinter;
-    private final int firstMonitorPort;
-    private final int smallTimeoutSeconds;
-    private final int largeTimeoutSeconds;
-    private final JarSuggestions jarSuggestions;
-    private final ClassFileIndex classFileIndex;
-    private final int numRunnerThreads;
-    private final boolean benchmark;
+    @Inject @Named("localTemp") File localTemp;
+    @Inject ExpectationStore expectationStore;
+    @Inject Mode mode;
+    @Inject XmlReportPrinter reportPrinter;
+    @Inject @Named("firstMonitorPort") int firstMonitorPort;
+    @Inject @Named("smallTimeoutSeconds") int smallTimeoutSeconds;
+    @Inject @Named("largeTimeoutSeconds") int largeTimeoutSeconds;
+    @Inject JarSuggestions jarSuggestions;
+    @Inject ClassFileIndex classFileIndex;
+    @Inject @Named("numRunners") int numRunnerThreads;
+    @Inject @Named("benchmark") boolean benchmark;
+    @Inject OutcomeStore outcomeStore;
 
     private int successes = 0;
     private int failures = 0;
     private int skipped = 0;
 
     private List<AnnotatedOutcome> annotatedOutcomes = Lists.newArrayList();
-
     private final Map<String, Action> actions = Collections.synchronizedMap(
             new LinkedHashMap<String, Action>());
     private final Map<String, Outcome> outcomes = Collections.synchronizedMap(
             new LinkedHashMap<String, Outcome>());
-
-    private final OutcomeStore outcomeStore;
     private boolean disableResultRecord = false;
-
-    public Driver(File localTemp, Mode mode, ExpectationStore expectationStore, Date date,
-            XmlReportPrinter reportPrinter, int firstMonitorPort, int smallTimeoutSeconds,
-            int largeTimeoutSeconds, ClassFileIndex classFileIndex, File resultsDir, File tagDir,
-            String tagName, String compareToTag, boolean recordResults, int numRunnerThreads,
-            boolean benchmark) {
-        this.localTemp = localTemp;
-        this.expectationStore = expectationStore;
-        this.mode = mode;
-        this.reportPrinter = reportPrinter;
-        this.firstMonitorPort = firstMonitorPort;
-        this.smallTimeoutSeconds = smallTimeoutSeconds;
-        this.largeTimeoutSeconds = largeTimeoutSeconds;
-        this.classFileIndex = classFileIndex;
-        this.jarSuggestions = new JarSuggestions();
-        this.numRunnerThreads = numRunnerThreads;
-        this.outcomeStore = new OutcomeStore(tagDir, tagName, compareToTag, resultsDir,
-                recordResults, expectationStore, date);
-        this.benchmark = benchmark;
-    }
 
     /**
      * Builds and executes the actions in the given files.
@@ -195,7 +175,7 @@ final class Driver {
                     "Expected " + actions.size() + " actions but found fewer."));
         }
 
-        if (reportPrinter != null) {
+        if (reportPrinter.isReady()) {
             Console.getInstance().info("Printing XML Reports... ");
             int numFiles = reportPrinter.generateReports(outcomes.values());
             Console.getInstance().info(numFiles + " XML files written.");

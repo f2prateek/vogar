@@ -21,11 +21,11 @@ import com.google.common.collect.Iterables;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import javax.inject.Inject;
+import javax.inject.Named;
 import vogar.Action;
 import vogar.Classpath;
 import vogar.Console;
-import vogar.Environment;
-import vogar.Mode;
 import vogar.Vm;
 import vogar.commands.Mkdir;
 
@@ -34,20 +34,15 @@ import vogar.commands.Mkdir;
  */
 public class HostDalvikVm extends Vm {
 
-    private final AndroidSdk androidSdk;
-    private final File dalvikCache;
-    private final String invokeWith;
+    @Inject AndroidSdk androidSdk;
+    @Inject @Named("invokeWith") String invokeWith;
+    @Inject @Named("hostBuild") boolean hostBuild;
+
     private String base;
     private String buildRoot;
-    private boolean hostBuild;
 
-    public HostDalvikVm(Environment environment, Mode.Options options, Options vmOptions,
-            AndroidSdk androidSdk, String invokeWith, boolean hostBuild) {
-        super(environment, options, vmOptions);
-        this.androidSdk = androidSdk;
-        this.dalvikCache = environment.file("android-data", "dalvik-cache");
-        this.invokeWith = invokeWith;
-        this.hostBuild = hostBuild;
+    public File dalvikCache() {
+        return environment.file("android-data", "dalvik-cache");
     }
 
     @Override protected void installRunner() {
@@ -56,7 +51,7 @@ public class HostDalvikVm extends Vm {
             dex(androidSdk.basenameOfJar(classpathElement), classpathElement);
         }
 
-        new Mkdir().mkdirs(dalvikCache);
+        new Mkdir().mkdirs(dalvikCache());
         base = System.getenv("OUT");
         buildRoot = System.getenv("ANDROID_BUILD_TOP");
         Console.getInstance().verbose("dalvikvm base directory: " + base);
@@ -87,7 +82,7 @@ public class HostDalvikVm extends Vm {
                 .temp(workingDirectory)
                 .env("ANDROID_PRINTF_LOG", "tag")
                 .env("ANDROID_LOG_TAGS", "*:w")
-                .env("ANDROID_DATA", dalvikCache.getParent());
+                .env("ANDROID_DATA", dalvikCache().getParent());
 
         List<String> vmCommand = new ArrayList<String>();
         if (invokeWith != null) {

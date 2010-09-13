@@ -17,15 +17,14 @@
 package vogar;
 
 import java.io.File;
+import javax.inject.Inject;
 
 /**
  * A local Java virtual machine like Harmony or the RI.
  */
 final class JavaVm extends Vm {
 
-    JavaVm(Environment environment, Mode.Options options, Vm.Options vmOptions) {
-        super(environment, options, vmOptions);
-    }
+    @Inject JavaVm() {}
 
     @Override protected VmCommandBuilder newVmCommandBuilder(File workingDirectory) {
         return new VmCommandBuilder()

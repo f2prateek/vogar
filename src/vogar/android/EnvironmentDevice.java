@@ -19,32 +19,28 @@ package vogar.android;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import java.io.File;
-import vogar.Action;
-import vogar.Console;
-import vogar.Environment;
 import java.io.FileFilter;
 import java.io.FileNotFoundException;
 import java.util.Collection;
+import javax.inject.Inject;
+import javax.inject.Named;
+import vogar.Action;
+import vogar.Console;
+import vogar.Environment;
 import vogar.commands.Mkdir;
 
 public final class EnvironmentDevice extends Environment {
-    final AndroidSdk androidSdk;
-    final File runnerDir;
-    final File vogarTemp;
-    final File dalvikCache;
-    final int firstMonitorPort;
-    final int numRunners;
+    @Inject AndroidSdk androidSdk;
+    @Inject @Named("runnerDir") File runnerDir;
+    @Inject @Named("firstMonitorPort") int firstMonitorPort;
+    @Inject @Named("numRunners") int numRunners;
 
-    public EnvironmentDevice(boolean cleanBefore, boolean cleanAfter, Integer debugPort,
-            int firstMonitorPort, int numRunners, File localTemp, File runnerDir,
-            AndroidSdk androidSdk) {
-        super(cleanBefore, cleanAfter, debugPort, localTemp);
-        this.androidSdk = androidSdk;
-        this.runnerDir = runnerDir;
-        this.vogarTemp = new File(runnerDir, "tmp");
-        this.dalvikCache = new File(runnerDir.getParentFile(), "dalvik-cache");
-        this.firstMonitorPort = firstMonitorPort;
-        this.numRunners = numRunners;
+    File vogarTemp() {
+        return new File(runnerDir, "tmp");
+    }
+
+    private File dalvikCache() {
+        return new File(runnerDir.getParentFile(), "dalvik-cache");
     }
 
     public AndroidSdk getAndroidSdk() {
@@ -62,7 +58,7 @@ public final class EnvironmentDevice extends Environment {
      */
     public String getAndroidData() {
         // The VM wants the parent directory of a directory named "dalvik-cache"
-        return "ANDROID_DATA=" + dalvikCache.getParentFile();
+        return "ANDROID_DATA=" + dalvikCache().getParentFile();
     }
 
     @Override public void prepare() {
@@ -74,8 +70,8 @@ public final class EnvironmentDevice extends Environment {
             androidSdk.rm(runnerDir);
         }
         androidSdk.mkdirs(runnerDir);
-        androidSdk.mkdir(vogarTemp);
-        androidSdk.mkdir(dalvikCache);
+        androidSdk.mkdir(vogarTemp());
+        androidSdk.mkdir(dalvikCache());
         for (int i = 0; i < numRunners; i++) {
             androidSdk.forwardTcp(firstMonitorPort + i, firstMonitorPort + i);
         }

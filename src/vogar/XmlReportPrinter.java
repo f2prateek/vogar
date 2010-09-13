@@ -27,6 +27,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
+import javax.inject.Inject;
+import javax.inject.Named;
 import org.kxml2.io.KXmlSerializer;
 
 
@@ -44,28 +46,27 @@ public class XmlReportPrinter {
     /** the XML namespace */
     private static final String ns = null;
 
-    private final File directory;
-    private final ExpectationStore expectationStore;
-    private final Date date;
-    /**
-     * true if successful tests should have their output printed (e.g. something with success
-     * signature "SUCCESS (EXEC_FAILED)" would not normally be printed).
-     */
-    private final boolean printAll;
+    @Inject @Named("xmlReportsDirectory") File directory;
+    @Inject ExpectationStore expectationStore;
+    @Inject Date date;
 
-    public XmlReportPrinter(File directory, ExpectationStore expectationStore, Date date,
-            boolean printAll) {
-        this.directory = directory;
-        this.expectationStore = expectationStore;
-        this.date = date;
-        this.printAll = printAll;
+    private boolean printAll;
+
+    /**
+     * Returns true if this XML Report printer can be used to emit XML.
+     */
+    public boolean isReady() {
+        return directory != null;
     }
 
-    public XmlReportPrinter(File directory, ExpectationStore expectationStore, Date date) {
-        this.directory = directory;
-        this.expectationStore = expectationStore;
-        this.date = date;
-        this.printAll = false;
+    /**
+     * @param printAll true if successful tests should have their output
+     *     printed (e.g. something with success signature "SUCCESS (EXEC_FAILED)"
+     *     would not normally be printed).
+     */
+    public void setOutput(File outcomeResultDir, boolean printAll) {
+        this.directory = outcomeResultDir;
+        this.printAll = printAll;
     }
 
     public void generateReport(Outcome outcome, String outputFileName) {

@@ -25,6 +25,8 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.inject.Inject;
+import javax.inject.Named;
 import vogar.commands.Command;
 import vogar.target.TestRunner;
 
@@ -33,31 +35,15 @@ import vogar.target.TestRunner;
  */
 public abstract class Vm extends Mode {
 
-    protected static class Options {
-        protected final List<String> additionalVmArgs;
-        protected final List<String> targetArgs;
-
-        Options(List<String> additionalVmArgs,
-                List<String> targetArgs) {
-            this.additionalVmArgs = additionalVmArgs;
-            this.targetArgs = targetArgs;
-        }
-    }
-    final Options vmOptions;
-    final Mode.Options options;
-
-    protected Vm(Environment environment, Mode.Options options, Vm.Options vmOptions) {
-        super(environment, options);
-        this.vmOptions = vmOptions;
-        this.options = options;
-    }
+    @Inject @Named("additionalVmArgs") List<String> additionalVmArgs;
+    @Inject @Named("targetArgs") List<String> targetArgs;
 
     /**
      * Returns a VM for action execution.
      */
     @Override protected Command createActionCommand(Action action, int monitorPort) {
         VmCommandBuilder vmCommandBuilder = newVmCommandBuilder(action.getUserDir());
-        if (modeOptions.useBootClasspath) {
+        if (useBootClasspath) {
             vmCommandBuilder.bootClasspath(getRuntimeClasspath(action));
         } else {
             vmCommandBuilder.classpath(getRuntimeClasspath(action));
@@ -67,14 +53,14 @@ public abstract class Vm extends Mode {
             vmCommandBuilder.args("--monitorPort", Integer.toString(monitorPort));
         }
 
-        vmCommandBuilder.setNativeOutput(options.nativeOutput);
+        vmCommandBuilder.setNativeOutput(nativeOutput);
 
         return vmCommandBuilder
                 .userDir(action.getUserDir())
                 .debugPort(environment.debugPort)
-                .vmArgs(vmOptions.additionalVmArgs)
+                .vmArgs(additionalVmArgs)
                 .mainClass(TestRunner.class.getName())
-                .args(vmOptions.targetArgs)
+                .args(targetArgs)
                 .build();
     }
 

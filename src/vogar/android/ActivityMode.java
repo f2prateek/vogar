@@ -24,10 +24,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Properties;
+import javax.inject.Inject;
 import vogar.Action;
 import vogar.Classpath;
 import vogar.Console;
-import vogar.Environment;
 import vogar.Mode;
 import vogar.TestProperties;
 import vogar.commands.Command;
@@ -40,9 +40,7 @@ public final class ActivityMode extends Mode {
 
     private File keystore;
 
-    public ActivityMode(Environment environment, Options options) {
-        super(environment, options);
-    }
+    @Inject ActivityMode() {}
 
     private EnvironmentDevice getEnvironmentDevice() {
         return (EnvironmentDevice) environment;
@@ -97,7 +95,7 @@ public final class ActivityMode extends Mode {
     private File createDex(Action action, File actionJar) {
         File dex = environment.file(action, "classes.dex");
         Classpath classesToDex = Classpath.of(actionJar);
-        classesToDex.addAll(this.classpath);
+        classesToDex.addAll(classpath);
         getEnvironmentDevice().getAndroidSdk().dex(dex, classesToDex);
         return dex;
     }
