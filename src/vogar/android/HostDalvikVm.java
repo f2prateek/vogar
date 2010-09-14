@@ -38,7 +38,6 @@ public class HostDalvikVm extends Vm {
     @Inject @Named("invokeWith") String invokeWith;
     @Inject @Named("hostBuild") boolean hostBuild;
 
-    private String base;
     private String buildRoot;
 
     public File dalvikCache() {
@@ -52,9 +51,7 @@ public class HostDalvikVm extends Vm {
         }
 
         new Mkdir().mkdirs(dalvikCache());
-        base = System.getenv("OUT");
         buildRoot = System.getenv("ANDROID_BUILD_TOP");
-        Console.getInstance().verbose("dalvikvm base directory: " + base);
     }
 
     private File nameDexFile(String name) {
@@ -72,8 +69,8 @@ public class HostDalvikVm extends Vm {
 
     @Override protected VmCommandBuilder newVmCommandBuilder(File workingDirectory) {
         List<File> jars = new ArrayList<File>();
-        for (String jar : AndroidSdk.BOOTCLASSPATH) {
-            jars.add(new File(base, "system/framework/" + jar + ".jar"));
+        for (String jar : AndroidSdk.HOST_BOOTCLASSPATH) {
+            jars.add(new File(buildRoot, "out/host/linux-x86/framework/" + jar + ".jar"));
         }
         Classpath bootClasspath = Classpath.of(jars);
 
@@ -89,16 +86,20 @@ public class HostDalvikVm extends Vm {
             Iterables.addAll(vmCommand, Splitter.onPattern("\\s+").omitEmptyStrings().split(invokeWith));
         }
 
+        String trustStore;
         if (hostBuild) {
             vmCommand.add(buildRoot + "/out/host/linux-x86/bin/dalvikvm");
             builder.env("ANDROID_ROOT", buildRoot + "/out/host/linux-x86")
                     .env("LD_LIBRARY_PATH", buildRoot + "/out/host/linux-x86/lib")
                     .env("DYLD_LIBRARY_PATH", buildRoot + "/out/host/linux-x86/lib");
+            trustStore = buildRoot + "/out/host/linux-x86/etc/security/cacerts.bks";
         } else {
+            String base = System.getenv("OUT");
             vmCommand.add(base + "/system/bin/dalvikvm");
             builder.env("ANDROID_ROOT", base + "/system")
                     .env("LD_LIBRARY_PATH", base + "/system/lib")
                     .env("DYLD_LIBRARY_PATH", base + "/system/lib");
+            trustStore = base + "/system/etc/security/cacerts.bks";
         }
 
         builder.vmCommand(vmCommand)
@@ -106,7 +107,7 @@ public class HostDalvikVm extends Vm {
                 .vmArgs("-Duser.home=" + workingDirectory)
                 .vmArgs("-Duser.language=en")
                 .vmArgs("-Duser.region=US")
-                .vmArgs("-Djavax.net.ssl.trustStore=" + base + "/system/etc/security/cacerts.bks");
+                .vmArgs("-Djavax.net.ssl.trustStore=" + trustStore);
         return builder;
     }
 

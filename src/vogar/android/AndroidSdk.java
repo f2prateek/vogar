@@ -54,6 +54,12 @@ public class AndroidSdk {
                                                                 "core-junit",
                                                                 "bouncycastle" };
 
+
+    public static final String[] HOST_BOOTCLASSPATH = new String[] {
+            "core-hostdex",
+            "bouncycastle-hostdex",
+    };
+
     private final Md5Cache dexCache;
     private Md5Cache pushCache;
     private Set<File> mkdirCache = new HashSet<File>();
