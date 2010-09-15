@@ -47,6 +47,9 @@ public final class AnnotatedOutcome {
     AnnotatedOutcome(Outcome outcome, Expectation expectation,
             SortedMap<Long, Outcome> previousOutcomes, String tagName, Outcome tagOutcome,
             boolean hasMetadata) {
+        if (previousOutcomes == null) {
+            throw new NullPointerException();
+        }
         this.expectation = expectation;
         this.outcome = outcome;
         this.previousOutcomes = previousOutcomes;

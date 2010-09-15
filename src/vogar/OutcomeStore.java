@@ -110,7 +110,11 @@ public final class OutcomeStore {
                         Iterator<String> lineParts = commas.split(line).iterator();
                         long time = Long.valueOf(lineParts.next());
                         Outcome previousOutcome = outcomesByFileName.get(lineParts.next());
-                        previousOutcomes.put(time, previousOutcome);
+                        if (previousOutcome != null) {
+                            previousOutcomes.put(time, previousOutcome);
+                        } else {
+                            Console.getInstance().warn("No outcome: " + lineParts.next());
+                        }
                     }
                     hasMetadata = true;
                 } catch (Exception e) {
