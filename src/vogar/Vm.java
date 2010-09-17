@@ -16,6 +16,7 @@
 
 package vogar;
 
+import com.google.common.base.Splitter;
 import java.io.File;
 import java.io.PrintStream;
 import java.util.ArrayList;
@@ -35,8 +36,20 @@ import vogar.target.TestRunner;
  */
 public abstract class Vm extends Mode {
 
+    @Inject @Named("invokeWith") String invokeWith;
     @Inject @Named("additionalVmArgs") List<String> additionalVmArgs;
     @Inject @Named("targetArgs") List<String> targetArgs;
+
+    /**
+     * Returns a parsed list of the --invoke-with command and its
+     * arguments, or an empty list if no --invoke-with was provided.
+     */
+    protected Iterable<String> invokeWith() {
+        if (invokeWith == null) {
+            return Collections.emptyList();
+        }
+        return Splitter.onPattern("\\s+").omitEmptyStrings().split(invokeWith);
+    }
 
     /**
      * Returns a VM for action execution.

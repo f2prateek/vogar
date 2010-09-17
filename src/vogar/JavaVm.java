@@ -16,7 +16,10 @@
 
 package vogar;
 
+import com.google.common.collect.Iterables;
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import javax.inject.Inject;
 
 /**
@@ -27,8 +30,11 @@ final class JavaVm extends Vm {
     @Inject JavaVm() {}
 
     @Override protected VmCommandBuilder newVmCommandBuilder(File workingDirectory) {
+        List<String> vmCommand = new ArrayList<String>();
+        Iterables.addAll(vmCommand, invokeWith());
+        vmCommand.add(javaPath("java"));
         return new VmCommandBuilder()
-                .vmCommand(javaPath("java"))
+                .vmCommand(vmCommand)
                 .workingDir(workingDirectory);
     }
 

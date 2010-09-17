@@ -217,8 +217,9 @@ public final class Vogar {
         System.out.println("      and is mandatory for running Caliper benchmarks, and a good idea");
         System.out.println("      other performance sensitive code.");
         System.out.println();
-        System.out.println("  --invoke-with: provide a command to invoke the VM with (e.g. ");
-        System.out.println("      \"valgrind --leak-check=full\"). Only supported in certain modes.");
+        System.out.println("  --invoke-with: provide a command to invoke the VM with. Examples:");
+        System.out.println("      --mode host --invoke-with \"valgrind --leak-check=full\"");
+        System.out.println("      --mode device --invoke-with \"strace -f -o/sdcard/strace.txt -x -s128\"");
         System.out.println();
         System.out.println("  --timeout <seconds>: maximum execution time of each action before the");
         System.out.println("      runner aborts it. Specifying zero seconds or using --debug will");
@@ -470,11 +471,6 @@ public final class Vogar {
 
         if (!mode.acceptsVmArgs() && !targetArgs.isEmpty()) {
             System.out.println("Target args " + targetArgs + " should not be specified for mode " + mode);
-            return false;
-        }
-
-        if (invokeWith != null && !mode.supportsInvokeWith()) {
-            System.out.println("Valgrind is not supported for mode " + mode);
             return false;
         }
 

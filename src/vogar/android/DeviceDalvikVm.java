@@ -16,7 +16,11 @@
 
 package vogar.android;
 
+import com.google.common.collect.Iterables;
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import javax.inject.Inject;
 import javax.inject.Named;
 import vogar.Action;
@@ -83,8 +87,12 @@ public final class DeviceDalvikVm extends Vm {
     }
 
     @Override protected VmCommandBuilder newVmCommandBuilder(File workingDirectory) {
+        List<String> vmCommand = new ArrayList<String>();
+        Collections.addAll(vmCommand, "adb", "shell", getEnvironmentDevice().getAndroidData());
+        Iterables.addAll(vmCommand, invokeWith());
+        vmCommand.add("dalvikvm");
         VmCommandBuilder vmCommandBuilder = new VmCommandBuilder()
-                .vmCommand("adb", "shell", getEnvironmentDevice().getAndroidData(), "dalvikvm")
+                .vmCommand(vmCommand)
                 .vmArgs("-Duser.home=" + deviceDir)
                 .vmArgs("-Duser.name=" + AndroidSdk.getDeviceUserName())
                 .vmArgs("-Duser.language=en")

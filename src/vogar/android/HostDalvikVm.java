@@ -16,7 +16,6 @@
 
 package vogar.android;
 
-import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 import java.io.File;
 import java.util.ArrayList;
@@ -35,7 +34,6 @@ import vogar.commands.Mkdir;
 public class HostDalvikVm extends Vm {
 
     @Inject AndroidSdk androidSdk;
-    @Inject @Named("invokeWith") String invokeWith;
     @Inject @Named("hostBuild") boolean hostBuild;
 
     private String buildRoot;
@@ -82,9 +80,7 @@ public class HostDalvikVm extends Vm {
                 .env("ANDROID_DATA", dalvikCache().getParent());
 
         List<String> vmCommand = new ArrayList<String>();
-        if (invokeWith != null) {
-            Iterables.addAll(vmCommand, Splitter.onPattern("\\s+").omitEmptyStrings().split(invokeWith));
-        }
+        Iterables.addAll(vmCommand, invokeWith());
 
         String trustStore;
         if (hostBuild) {
