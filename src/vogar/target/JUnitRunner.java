@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 The Android Open Source Project
+ * Copyright (C) 2010 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package vogar.target;
 
-import java.lang.reflect.Modifier;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -33,7 +32,6 @@ import junit.framework.TestCase;
 import junit.framework.TestResult;
 import junit.framework.TestSuite;
 import junit.runner.BaseTestRunner;
-import junit.runner.TestSuiteLoader;
 import junit.textui.ResultPrinter;
 import vogar.ClassAnalyzer;
 import vogar.Result;
@@ -41,7 +39,7 @@ import vogar.monitor.TargetMonitor;
 import vogar.util.Threads;
 
 /**
- * Adapts a JUnit test for use by vogar.
+ * Adapts a JUnit3 test for use by vogar.
  */
 public final class JUnitRunner implements Runner {
 
@@ -53,22 +51,8 @@ public final class JUnitRunner implements Runner {
 
     public void init(TargetMonitor monitor, String actionName, String qualification,
             Class<?> klass) {
-        final TestSuiteLoader testSuiteLoader = new TestSuiteLoader() {
-            public Class load(String suiteClassName) throws ClassNotFoundException {
-                return Class.forName(suiteClassName);
-            }
-
-            public Class reload(Class c) {
-                return c;
-            }
-        };
-
         testRunner = new junit.textui.TestRunner(
                 new MonitoringResultPrinter(monitor, actionName)) {
-            @Override public TestSuiteLoader getLoader() {
-                return testSuiteLoader;
-            }
-
             @Override protected TestResult createTestResult() {
                 return new TimeoutTestResult();
             }
@@ -216,7 +200,7 @@ public final class JUnitRunner implements Runner {
         // public class FooSuite {
         //    public static Test suite() {...}
         // }
-        return (TestCase.class.isAssignableFrom(klass) && !Modifier.isAbstract(klass.getModifiers()))
+        return TestCase.class.isAssignableFrom(klass)
                 || new ClassAnalyzer(klass).hasMethod(true, Test.class, "suite");
     }
 }
