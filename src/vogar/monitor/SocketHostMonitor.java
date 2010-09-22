@@ -137,7 +137,7 @@ public final class SocketHostMonitor implements HostMonitor {
                 byte[] offendingXml = new byte[BAD_XML_SNIPPET_SIZE];
                 int bytes = in.available() > 0 ? in.read(offendingXml) : 0;
                 Console.getInstance().warn("received bad XML from localhost:" + port
-                        + " " + new String(offendingXml, 0, bytes, "UTF-8"));
+                        + " " + new String(offendingXml, 0, bytes, "UTF-8") + " " + e);
             } catch (IOException another) {
                 Console.getInstance().warn("received bad XML from localhost:" + port + " " + e);
             }
