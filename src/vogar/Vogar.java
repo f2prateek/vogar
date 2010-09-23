@@ -594,7 +594,7 @@ public final class Vogar {
                     : environmentDeviceProvider.get();
         }
 
-        @Provides ExpectationStore provideExpectationStore() throws IOException {
+        @Provides @Singleton ExpectationStore provideExpectationStore() throws IOException {
             return ExpectationStore.parse(expectationFiles);
         }
 

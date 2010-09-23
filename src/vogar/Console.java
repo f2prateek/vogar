@@ -73,6 +73,7 @@ public abstract class Console {
         Color.PASS.setCode(passColor);
         Color.WARN.setCode(warnColor);
         Color.FAIL.setCode(failColor);
+        Color.COMMENT.setCode(34);
     }
 
     public void setVerbose(boolean verbose) {
@@ -135,9 +136,27 @@ public abstract class Console {
     public abstract void streamOutput(String outcomeName, String output);
 
     /**
+     * Hook to flush anything streamed via {@link #streamOutput}.
+     */
+    protected void flushBufferedOutput(String outcomeName) {}
+
+    /**
      * Writes the action's outcome.
      */
-    public synchronized void printResult(String outcomeName, Result result, ResultValue resultValue) {
+    public synchronized void printResult(
+            String outcomeName, Result result, ResultValue resultValue, Expectation expectation) {
+        // when the result is interesting, include the description and bug number
+        if (result != Result.SUCCESS || resultValue != ResultValue.OK) {
+            if (!expectation.getDescription().isEmpty()) {
+                streamOutput(outcomeName, "\n" + colorString(expectation.getDescription(), Color.COMMENT));
+            }
+            if (expectation.getBug() != -1) {
+                streamOutput(outcomeName, "\n" + colorString("http://b/" + expectation.getBug(), Color.COMMENT));
+            }
+        }
+
+        flushBufferedOutput(outcomeName);
+
         if (currentLine == CurrentLine.NAME) {
             System.out.print(" ");
         } else {
@@ -390,7 +409,7 @@ public abstract class Console {
     }
 
     private enum Color {
-        PASS, FAIL, WARN;
+        PASS, FAIL, WARN, COMMENT;
 
         int code = 0;
 
@@ -465,7 +484,7 @@ public abstract class Console {
             buffer.append(output);
         }
 
-        @Override public synchronized void printResult(String outcomeName, Result result, ResultValue resultValue) {
+        @Override protected synchronized void flushBufferedOutput(String outcomeName) {
             newLine();
             System.out.print(indent + outcomeName);
             currentLine = CurrentLine.NAME;
@@ -474,8 +493,6 @@ public abstract class Console {
             if (buffer != null) {
                 printOutput(buffer);
             }
-
-            super.printResult(outcomeName, result, resultValue);
         }
     }
 }

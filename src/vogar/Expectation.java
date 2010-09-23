@@ -38,12 +38,15 @@ import java.util.regex.Pattern;
 final class Expectation {
 
     /** The pattern to use when no expected output is specified */
-    private static final Pattern MATCH_ALL_PATTERN
+    public static final Pattern MATCH_ALL_PATTERN
             = Pattern.compile(".*", Pattern.MULTILINE | Pattern.DOTALL);
 
     /** The expectation of a general successful run. */
-    static final Expectation SUCCESS = new Expectation(Result.SUCCESS, null,
-            Collections.<String>emptySet());
+    static final Expectation SUCCESS = new Expectation(Result.SUCCESS, MATCH_ALL_PATTERN,
+            Collections.<String>emptySet(), "", -1);
+
+    /** Justification for this expectation */
+    private final String description;
 
     /** The action's expected result, such as {@code EXEC_FAILED}. */
     private final Result result;
@@ -54,16 +57,28 @@ final class Expectation {
     /** Attributes of this test. */
     private final Set<String> tags;
 
-    public Expectation(Result result, String pattern, Set<String> tags) {
-        if (result == null) {
-            throw new IllegalArgumentException();
+    /** The tracking bug ID */
+    private final long bug;
+
+    public Expectation(Result result, Pattern pattern, Set<String> tags, String description, long bug) {
+        if (result == null || description == null || pattern == null) {
+            throw new IllegalArgumentException(
+                    "result=" + result + " description=" + description + " pattern=" + pattern);
         }
 
+        this.description = description;
         this.result = result;
-        this.pattern = pattern != null
-                ? Pattern.compile(pattern, Pattern.MULTILINE | Pattern.DOTALL)
-                : MATCH_ALL_PATTERN;
+        this.pattern = pattern;
         this.tags = new LinkedHashSet<String>(tags);
+        this.bug = bug;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public long getBug() {
+        return bug;
     }
 
     public Result getResult() {

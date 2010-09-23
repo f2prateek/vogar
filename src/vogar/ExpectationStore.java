@@ -16,16 +16,16 @@
 
 package vogar;
 
-import java.io.BufferedReader;
+import com.google.caliper.internal.gson.stream.JsonReader;
+import com.google.common.base.Joiner;
+import com.google.common.base.Splitter;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -43,11 +43,8 @@ import java.util.regex.Pattern;
  * expectation, the outcome expectation will be returned.
  */
 final class ExpectationStore {
-    /** Matches lines in the file containing a key and value pair. */
-    private static final Pattern KEY_VALUE_PAIR_PATTERN = Pattern.compile("(\\w+)\\s+(.+)");
-
-    private final Map<String, Expectation> outcomes = new HashMap<String, Expectation>();
-    private final Map<String, Expectation> failures = new HashMap<String, Expectation>();
+    private final Map<String, Expectation> outcomes = new LinkedHashMap<String, Expectation>();
+    private final Map<String, Expectation> failures = new LinkedHashMap<String, Expectation>();
 
     private ExpectationStore() {}
 
@@ -114,80 +111,83 @@ final class ExpectationStore {
     public void parse(File expectationsFile) throws IOException {
         Console.getInstance().verbose("loading expectations file " + expectationsFile);
 
-        BufferedReader reader = new BufferedReader(new FileReader(expectationsFile));
         int count = 0;
+        JsonReader reader = null;
         try {
-            Matcher keyValuePairMatcher = KEY_VALUE_PAIR_PATTERN.matcher("");
-
-            // the fields of interest for the current element
-            String type = null;
-            String qualifiedName = null;
-            Result result = Result.SUCCESS;
-            String pattern = null;
-            Set<String> tags = new LinkedHashSet<String>();
-
-            String line;
-            while ((line = reader.readLine()) != null) {
-                line = line.trim();
-
-                if (line.length() == 0 || line.startsWith("#")) {
-                    continue; // skip comment and blank lines
-                }
-
-                keyValuePairMatcher.reset(line);
-                if (!keyValuePairMatcher.matches()) {
-                    throw new IllegalArgumentException("Unexpected line " + line
-                            + " in file " + expectationsFile);
-                }
-
-                String key = keyValuePairMatcher.group(1);
-                String value = keyValuePairMatcher.group(2);
-                if (key.equals("result")) {
-                    result = Result.valueOf(value);
-
-                } else if (key.equals("pattern") && pattern == null) {
-                    pattern = value;
-
-                } else if (key.equals("tags")) {
-                    tags.addAll(Arrays.asList(value.toLowerCase().split("[\\s,]+")));
-
-                } else if (key.equals("test") || key.equals("failure")) {
-                    // when we encounter a new qualified name, the previous
-                    // element is complete. Add it to the results.
-                    if (qualifiedName != null) {
-                        count++;
-                        put(type, qualifiedName, result, pattern, tags);
-                        result = Result.SUCCESS;
-                        pattern = null;
-                        tags.clear();
-                    }
-                    type = key;
-                    qualifiedName = value;
-
-                } else {
-                    throw new IllegalArgumentException("Unexpected key " + key
-                            + " in file " + expectationsFile);
-                }
-            }
-
-            // add the last element in the file
-            if (qualifiedName != null) {
+            reader = new JsonReader(new FileReader(expectationsFile));
+            reader.setLenient(true);
+            reader.beginArray();
+            while (reader.hasNext()) {
+                readExpectation(reader);
                 count++;
-                put(type, qualifiedName, result, pattern, tags);
             }
+            reader.endArray();
 
             Console.getInstance().verbose("loaded " + count + " expectations from " + expectationsFile);
         } finally {
-            reader.close();
+            if (reader != null) {
+                reader.close();
+            }
         }
     }
 
-    void put(String type, String qualifiedName, Result result, String pattern, Set<String> tags) {
-        Expectation expectation = new Expectation(result, pattern, tags);
-        Map<String, Expectation> map = "test".equals(type) ? outcomes : failures;
-        if (map.put(qualifiedName, expectation) != null) {
-            throw new IllegalArgumentException(
-                    "Duplicate expectations for " + qualifiedName);
+    private void readExpectation(JsonReader reader) throws IOException {
+        boolean isFailure = false;
+        Result result = Result.SUCCESS;
+        Pattern pattern = Expectation.MATCH_ALL_PATTERN;
+        Set<String> names = new LinkedHashSet<String>();
+        Set<String> tags = new LinkedHashSet<String>();
+        String description = "";
+        long buganizerBug = -1;
+
+        reader.beginObject();
+        while (reader.hasNext()) {
+            String name = reader.nextName();
+            if (name.equals("result")) {
+                result = Result.valueOf(reader.nextString());
+            } else if (name.equals("name")) {
+                names.add(reader.nextString());
+            } else if (name.equals("names")) {
+                readStrings(reader, names);
+            } else if (name.equals("failure")) {
+                isFailure = true;
+                names.add(reader.nextString());
+            } else if (name.equals("pattern")) {
+                pattern = Pattern.compile(reader.nextString(), Pattern.MULTILINE | Pattern.DOTALL);
+            } else if (name.equals("substring")) {
+                pattern = Pattern.compile(Pattern.quote(reader.nextString()), Pattern.MULTILINE | Pattern.DOTALL);
+            } else if (name.equals("tags")) {
+                readStrings(reader, tags);
+            } else if (name.equals("description")) {
+                Iterable<String> split = Splitter.on("\n").omitEmptyStrings().trimResults().split(reader.nextString());
+                description = Joiner.on("\n").join(split);
+            } else if (name.equals("bug")) {
+                buganizerBug = reader.nextLong();
+            } else {
+                Console.getInstance().warn("Unhandled name in expectations file: " + name);
+                reader.skipValue();
+            }
         }
+        reader.endObject();
+
+        if (names.isEmpty()) {
+            throw new IllegalArgumentException("Missing 'name' or 'failure' key in " + reader);
+        }
+
+        Expectation expectation = new Expectation(result, pattern, tags, description, buganizerBug);
+        Map<String, Expectation> map = isFailure ? failures : outcomes;
+        for (String name : names) {
+            if (map.put(name, expectation) != null) {
+                throw new IllegalArgumentException("Duplicate expectations for " + name);
+            }
+        }
+    }
+
+    private void readStrings(JsonReader reader, Set<String> output) throws IOException {
+        reader.beginArray();
+        while (reader.hasNext()) {
+            output.add(reader.nextString());
+        }
+        reader.endArray();
     }
 }

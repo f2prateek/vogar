@@ -246,7 +246,7 @@ public final class Driver {
 
         Result result = outcome.getResult();
         Console.getInstance().outcome(outcome.getName());
-        Console.getInstance().printResult(outcome.getName(), result, resultValue);
+        Console.getInstance().printResult(outcome.getName(), result, resultValue, expectation);
 
         AnnotatedOutcome annotatedOutcome = outcomeStore.read(outcome);
         if (!disableResultRecord) {
