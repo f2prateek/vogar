@@ -178,6 +178,9 @@ public final class Vogar {
     @Option(names = { "--benchmark" })
     private boolean benchmark = false;
 
+    @Option(names = { "--open-bugs-command" })
+    private String openBugsCommand;
+
     private Vogar() {}
 
     private void printUsage() {
@@ -339,6 +342,13 @@ public final class Vogar {
         System.out.println("      Use this to avoid port conflicts when running multiple vogar instances");
         System.out.println("      concurrently. Vogar will use up to N ports starting with this one,");
         System.out.println("      where N is the number of processors on the host (" + NUM_PROCESSORS + "). ");
+        System.out.println();
+        System.out.println("  --open-bugs-command <command>: a command that will take bug IDs as parameters");
+        System.out.println("      and return those bugs that are still open. For example, if bugs 123 and");
+        System.out.println("      789 are both open, the command should echo those values:");
+        System.out.println("         $ ~/bin/bug-command 123 456 789");
+        System.out.println("         123");
+        System.out.println("         789");
         System.out.println();
         System.out.println("CONFIG FILE");
         System.out.println();
@@ -595,7 +605,11 @@ public final class Vogar {
         }
 
         @Provides @Singleton ExpectationStore provideExpectationStore() throws IOException {
-            return ExpectationStore.parse(expectationFiles);
+            ExpectationStore result = ExpectationStore.parse(expectationFiles);
+            if (openBugsCommand != null) {
+                result.loadBugStatuses(openBugsCommand);
+            }
+            return result;
         }
 
         @Provides @Named("fastMode") boolean provideFastMode() {

@@ -60,6 +60,9 @@ final class Expectation {
     /** The tracking bug ID */
     private final long bug;
 
+    /** True if the identified bug still active. */
+    private boolean bugIsOpen = false;
+
     public Expectation(Result result, Pattern pattern, Set<String> tags, String description, long bug) {
         if (result == null || description == null || pattern == null) {
             throw new IllegalArgumentException(
@@ -90,10 +93,19 @@ final class Expectation {
     }
 
     /**
+     * Set the current status of this expectation's bug. When a bug is open,
+     * any result (success or failure) is permitted.
+     */
+    public void setBugIsOpen(boolean bugIsOpen) {
+        this.bugIsOpen = bugIsOpen;
+    }
+
+    /**
      * Returns true if {@code outcome} matches this expectation.
      */
     public boolean matches(Outcome outcome) {
-        return result == outcome.getResult() && patternMatches(outcome);
+        return (result == outcome.getResult() && patternMatches(outcome))
+                || bugIsOpen;
     }
 
     private boolean patternMatches(Outcome outcome) {

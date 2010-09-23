@@ -24,9 +24,11 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
+import vogar.commands.Command;
 
 /**
  * A database of expected outcomes. Entries in this database come in two forms.
@@ -189,5 +191,41 @@ final class ExpectationStore {
             output.add(reader.nextString());
         }
         reader.endArray();
+    }
+
+    /**
+     * Sets the bugIsOpen status on all expectations by querying an external bug
+     * tracker.
+     */
+    public void loadBugStatuses(String openBugsCommand) {
+        // figure out what bug IDs we're interested in
+        Set<String> bugs = new LinkedHashSet<String>();
+        for (Expectation expectation : outcomes.values()) {
+            if (expectation.getBug() != -1) {
+                bugs.add(Long.toString(expectation.getBug()));
+            }
+        }
+        if (bugs.isEmpty()) {
+            return;
+        }
+
+        // query the external app for open bugs
+        List<String> openBugs = new Command.Builder()
+                .args(openBugsCommand)
+                .args(bugs)
+                .execute();
+        Set<Long> openBugsSet = new LinkedHashSet<Long>();
+        for (String bug : openBugs) {
+            openBugsSet.add(Long.parseLong(bug));
+        }
+
+        Console.getInstance().verbose("tracking " + openBugsSet.size() + " open bugs: " + openBugs);
+
+        // update our expectations with that set
+        for (Expectation expectation : outcomes.values()) {
+            if (openBugsSet.contains(expectation.getBug())) {
+                expectation.setBugIsOpen(true);
+            }
+        }
     }
 }
