@@ -17,6 +17,9 @@
 package vogar.target;
 
 import java.io.File;
+import java.net.Authenticator;
+import java.net.CookieHandler;
+import java.net.ResponseCache;
 import java.util.Locale;
 import java.util.Properties;
 import java.util.TimeZone;
@@ -68,13 +71,23 @@ public final class TestEnvironment {
     }
 
     public void reset() {
+        // System Properties
         Properties propertiesCopy = new Properties();
         propertiesCopy.putAll(systemProperties);
         System.setProperties(propertiesCopy);
+
+        // Localization
         Locale.setDefault(Locale.US);
         TimeZone.setDefault(TimeZone.getTimeZone("America/Los_Angeles"));
+
+        // Preferences
         resetPreferences(Preferences.systemRoot());
         resetPreferences(Preferences.userRoot());
+
+        // HttpURLConnection
+        Authenticator.setDefault(null);
+        CookieHandler.setDefault(null);
+        ResponseCache.setDefault(null);
     }
 
     private static void resetPreferences(Preferences root) {
