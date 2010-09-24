@@ -111,4 +111,8 @@ final class Expectation {
     private boolean patternMatches(Outcome outcome) {
         return pattern.matcher(outcome.getOutput()).matches();
     }
+
+    @Override public String toString() {
+        return "Expectation[description=" + description + " pattern=" + pattern.pattern() + "]";
+    }
 }

@@ -165,4 +165,9 @@ public final class Outcome {
         hashCode = 37 * hashCode + output.hashCode();
         return hashCode;
     }
+
+    @Override public String toString() {
+        return "Outcome[name=" + outcomeName + " output=" + output + "]";
+    }
+
 }
