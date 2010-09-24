@@ -104,8 +104,7 @@ final class Expectation {
      * Returns true if {@code outcome} matches this expectation.
      */
     public boolean matches(Outcome outcome) {
-        return (result == outcome.getResult() && patternMatches(outcome))
-                || bugIsOpen;
+        return patternMatches(outcome) && (bugIsOpen || result == outcome.getResult());
     }
 
     private boolean patternMatches(Outcome outcome) {
