@@ -48,6 +48,7 @@ public final class JUnitRunner implements Runner {
     private junit.textui.TestRunner testRunner;
     private Test junitTest;
     private int timeoutSeconds;
+    private final TestEnvironment testEnvironment = new TestEnvironment();
 
     public void init(TargetMonitor monitor, String actionName, String qualification,
             Class<?> klass) {
@@ -149,6 +150,7 @@ public final class JUnitRunner implements Runner {
                 Threads.daemonThreadFactory("junitrunner"));
 
         @Override public void runProtected(Test test, final Protectable p) {
+            testEnvironment.reset();
 
             // Start the test on a background thread.
             final AtomicReference<Thread> executingThreadReference = new AtomicReference<Thread>();
