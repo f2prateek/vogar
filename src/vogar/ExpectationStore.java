@@ -45,6 +45,7 @@ import vogar.commands.Command;
  * expectation, the outcome expectation will be returned.
  */
 final class ExpectationStore {
+    private static final int PATTERN_FLAGS = Pattern.MULTILINE | Pattern.DOTALL;
     private final Map<String, Expectation> outcomes = new LinkedHashMap<String, Expectation>();
     private final Map<String, Expectation> failures = new LinkedHashMap<String, Expectation>();
 
@@ -155,9 +156,9 @@ final class ExpectationStore {
                 isFailure = true;
                 names.add(reader.nextString());
             } else if (name.equals("pattern")) {
-                pattern = Pattern.compile(reader.nextString(), Pattern.MULTILINE | Pattern.DOTALL);
+                pattern = Pattern.compile(reader.nextString(), PATTERN_FLAGS);
             } else if (name.equals("substring")) {
-                pattern = Pattern.compile(Pattern.quote(reader.nextString()), Pattern.MULTILINE | Pattern.DOTALL);
+                pattern = Pattern.compile(".*" + Pattern.quote(reader.nextString()) + ".*", PATTERN_FLAGS);
             } else if (name.equals("tags")) {
                 readStrings(reader, tags);
             } else if (name.equals("description")) {
