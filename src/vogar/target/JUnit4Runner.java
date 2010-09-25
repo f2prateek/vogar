@@ -18,16 +18,12 @@ package vogar.target;
 
 import java.lang.reflect.Method;
 
-import junit.framework.Test;
-import junit.framework.TestCase;
-
 import org.junit.runner.Description;
 import org.junit.runner.JUnitCore;
 import org.junit.runner.Request;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunListener;
 
-import vogar.ClassAnalyzer;
 import vogar.Result;
 import vogar.monitor.TargetMonitor;
 
@@ -39,17 +35,7 @@ public final class JUnit4Runner implements Runner {
     private String qualification;
 
     public boolean supports(Class<?> klass) {
-        return isJUnit3Test(klass) || isJUnit4Test(klass);
-    }
-
-    private boolean isJUnit3Test(Class<?> klass) {
-        // public class FooTest extends TestCase {...}
-        // or
-        // public class FooSuite {
-        // public static Test suite() {...}
-        // }
-        return TestCase.class.isAssignableFrom(klass)
-                || new ClassAnalyzer(klass).hasMethod(true, Test.class, "suite");
+        return JUnitRunner.isJunit3Test(klass) || isJUnit4Test(klass);
     }
 
     private boolean isJUnit4Test(Class<?> klass) {

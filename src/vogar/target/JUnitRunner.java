@@ -198,6 +198,10 @@ public final class JUnitRunner implements Runner {
     }
 
     public boolean supports(Class<?> klass) {
+        return isJunit3Test(klass);
+    }
+
+    static boolean isJunit3Test(Class<?> klass) {
         // public class FooTest extends TestCase {...}
         //   or
         // public class FooSuite {
