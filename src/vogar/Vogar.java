@@ -514,26 +514,6 @@ public final class Vogar {
         System.exit(allSuccess ? 0 : 1);
     }
 
-    enum ModeId {
-        DEVICE, JVM, ACTIVITY, SIM, HOST;
-
-        public boolean supportsInvokeWith() {
-            return this == SIM || this == HOST;
-        }
-
-        public boolean acceptsVmArgs() {
-            return this != ACTIVITY;
-        }
-
-        public boolean isHost() {
-            return this == JVM || this == SIM || this == HOST;
-        }
-
-        public boolean requiresAndroidSdk() {
-            return this == DEVICE || this == ACTIVITY || this == SIM || this == HOST;
-        }
-    }
-
     private class Module {
         @Provides @Named("additionalVmArgs") List<String> provideAdditionalVmArgs() {
             return vmArgs;
@@ -605,7 +585,7 @@ public final class Vogar {
         }
 
         @Provides @Singleton ExpectationStore provideExpectationStore() throws IOException {
-            ExpectationStore result = ExpectationStore.parse(expectationFiles);
+            ExpectationStore result = ExpectationStore.parse(expectationFiles, mode);
             if (openBugsCommand != null) {
                 result.loadBugStatuses(openBugsCommand);
             }

@@ -102,17 +102,17 @@ final class ExpectationStore {
         }
     }
 
-    public static ExpectationStore parse(Set<File> expectationFiles) throws IOException {
+    public static ExpectationStore parse(Set<File> expectationFiles, ModeId mode) throws IOException {
         ExpectationStore result = new ExpectationStore();
         for (File f : expectationFiles) {
             if (f.exists()) {
-                result.parse(f);
+                result.parse(f, mode);
             }
         }
         return result;
     }
 
-    public void parse(File expectationsFile) throws IOException {
+    public void parse(File expectationsFile, ModeId mode) throws IOException {
         Console.getInstance().verbose("loading expectations file " + expectationsFile);
 
         int count = 0;
@@ -122,7 +122,7 @@ final class ExpectationStore {
             reader.setLenient(true);
             reader.beginArray();
             while (reader.hasNext()) {
-                readExpectation(reader);
+                readExpectation(reader, mode);
                 count++;
             }
             reader.endArray();
@@ -135,12 +135,13 @@ final class ExpectationStore {
         }
     }
 
-    private void readExpectation(JsonReader reader) throws IOException {
+    private void readExpectation(JsonReader reader, ModeId mode) throws IOException {
         boolean isFailure = false;
         Result result = Result.SUCCESS;
         Pattern pattern = Expectation.MATCH_ALL_PATTERN;
         Set<String> names = new LinkedHashSet<String>();
         Set<String> tags = new LinkedHashSet<String>();
+        Set<ModeId> modes = null;
         String description = "";
         long buganizerBug = -1;
 
@@ -167,6 +168,8 @@ final class ExpectationStore {
                 description = Joiner.on("\n").join(split);
             } else if (name.equals("bug")) {
                 buganizerBug = reader.nextLong();
+            } else if (name.equals("modes")) {
+                modes = readModes(reader);
             } else {
                 Console.getInstance().warn("Unhandled name in expectations file: " + name);
                 reader.skipValue();
@@ -176,6 +179,9 @@ final class ExpectationStore {
 
         if (names.isEmpty()) {
             throw new IllegalArgumentException("Missing 'name' or 'failure' key in " + reader);
+        }
+        if (modes != null && !modes.contains(mode)) {
+            return;
         }
 
         Expectation expectation = new Expectation(result, pattern, tags, description, buganizerBug);
@@ -193,6 +199,16 @@ final class ExpectationStore {
             output.add(reader.nextString());
         }
         reader.endArray();
+    }
+
+    private Set<ModeId> readModes(JsonReader reader) throws IOException {
+        Set<ModeId> result = new LinkedHashSet<ModeId>();
+        reader.beginArray();
+        while (reader.hasNext()) {
+            result.add(ModeId.valueOf(reader.nextString().toUpperCase()));
+        }
+        reader.endArray();
+        return result;
     }
 
     /**
