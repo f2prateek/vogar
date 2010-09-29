@@ -17,6 +17,9 @@
 package vogar.target;
 
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -188,14 +191,59 @@ public final class JUnitRunner implements Runner {
                 thrown = e;
             }
 
+            final Throwable reportableThrown = prepareForDisplay(thrown);
+
             // Report failures to the superclass' runProtected method.
-            final Throwable finalThrown = thrown;
             super.runProtected(test, new Protectable() {
                 public void protect() throws Throwable {
-                    throw finalThrown;
+                    throw reportableThrown;
                 }
             });
         }
+    }
+
+    /**
+     * Strip vogar's lines from the stack trace. For example, we'd strip everything
+     * after the testFoo() line in this stack trace:
+     *
+     *     at junit.framework.Assert.fail(Assert.java:47)
+     *     at junit.framework.Assert.assertTrue(Assert.java:20)
+     *     at junit.framework.Assert.assertFalse(Assert.java:34)
+     *     at junit.framework.Assert.assertFalse(Assert.java:41)
+     *     at com.foo.FooTest.baz(FooTest.java:370)
+     *     at com.foo.FooTest.testFoo(FooTest.java:361)
+     *     at java.lang.reflect.Method.invokeNative(Native Method)
+     *     at java.lang.reflect.Method.invoke(Method.java:515)
+     *     at junit.framework.TestCase.runTest(TestCase.java:154)
+     *     at junit.framework.TestCase.runBare(TestCase.java:127)
+     *     at vogar.target.JUnitRunner$TimeoutTestResult$1.call(JUnitRunner.java:163)
+     *     at vogar.target.JUnitRunner$TimeoutTestResult$1.call(JUnitRunner.java:159)
+     *     at java.util.concurrent.FutureTask$Sync.innerRun(FutureTask.java:306)
+     *     at java.util.concurrent.FutureTask.run(FutureTask.java:138)
+     *     at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1088)
+     *     at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:581)
+     *     at java.lang.Thread.run(Thread.java:1019)
+     *
+     * Note that JUnit does its own stripping which takes care of the assert lines.
+     */
+    public Throwable prepareForDisplay(Throwable t) {
+        StackTraceElement[] stackTraceElements = t.getStackTrace();
+        List<StackTraceElement> result = new ArrayList<StackTraceElement>();
+        result.addAll(Arrays.asList(stackTraceElements));
+        boolean foundVogar = false;
+        for (int i = result.size() - 1; i >= 0; i--) {
+            String className = result.get(i).getClassName();
+            if (className.startsWith("vogar.target")) {
+                foundVogar = true;
+            } else if (foundVogar
+                    && !className.startsWith("java.lang.reflect")
+                    && !className.startsWith("junit.framework")) {
+                StackTraceElement[] newTrace = result.subList(0, i + 1).toArray(new StackTraceElement[i + 1]);
+                t.setStackTrace(newTrace);
+                break;
+            }
+        }
+        return t;
     }
 
     public boolean supports(Class<?> klass) {
