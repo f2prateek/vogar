@@ -45,12 +45,9 @@ public final class TestEnvironment {
 
         // paths with writable values for testing
         String userHome = tmpDir + "/user.home";
-        String javaHome = tmpDir + "/java.home";
         String userDir = tmpDir + "/user.dir";
         makeDirectory(new File(userHome));
-        makeDirectory(new File(javaHome));
         makeDirectory(new File(userDir));
-        systemProperties.put("java.home", javaHome);
         systemProperties.put("user.dir", userDir);
         systemProperties.put("user.home", userHome);
     }
