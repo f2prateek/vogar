@@ -237,6 +237,7 @@ public final class JUnitRunner implements Runner {
                 foundVogar = true;
             } else if (foundVogar
                     && !className.startsWith("java.lang.reflect")
+                    && !className.startsWith("sun.reflect")
                     && !className.startsWith("junit.framework")) {
                 StackTraceElement[] newTrace = result.subList(0, i + 1).toArray(new StackTraceElement[i + 1]);
                 t.setStackTrace(newTrace);
