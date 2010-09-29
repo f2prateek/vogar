@@ -50,6 +50,13 @@ public final class TestEnvironment {
         makeDirectory(new File(userDir));
         systemProperties.put("user.dir", userDir);
         systemProperties.put("user.home", userHome);
+
+        // Dalvik requires a writable java.home directory for preferences
+        if ("Dalvik".equals(System.getProperty("java.vm.name"))) {
+            String javaHome = tmpDir + "/java.home";
+            makeDirectory(new File(javaHome));
+            systemProperties.put("java.home", javaHome);
+        }
     }
 
     private void makeDirectory(File path) {
