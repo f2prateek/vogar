@@ -49,10 +49,11 @@ public final class JUnitRunner implements Runner {
     private junit.textui.TestRunner testRunner;
     private Test junitTest;
     private int timeoutSeconds;
-    private final TestEnvironment testEnvironment = new TestEnvironment();
+    private TestEnvironment testEnvironment;
 
     public void init(TargetMonitor monitor, String actionName, String qualification,
-            Class<?> klass) {
+            Class<?> klass, TestEnvironment testEnvironment) {
+        this.testEnvironment = testEnvironment;
         testRunner = new junit.textui.TestRunner(
                 new MonitoringResultPrinter(monitor, actionName)) {
             @Override protected TestResult createTestResult() {

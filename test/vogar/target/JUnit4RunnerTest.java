@@ -63,7 +63,7 @@ public class JUnit4RunnerTest {
     @Test
     public void init_and_run_for_SimpleTest_should_perform_test() {
         Class<?> target = SimpleTest.class;
-        runner.init(monitor, "", null, target);
+        runner.init(monitor, "", null, target, testEnvironment);
         runner.run("", target, null, 0);
 
         verify(monitor).outcomeStarted(runner,
@@ -74,7 +74,7 @@ public class JUnit4RunnerTest {
     @Test
     public void init_and_run_for_SuiteTest_should_perform_tests() {
         Class<?> target = SuiteTest.class;
-        runner.init(monitor, "", null, target);
+        runner.init(monitor, "", null, target, testEnvironment);
         runner.run("", target, null, 0);
 
         verify(monitor).outcomeStarted(runner,
@@ -92,7 +92,7 @@ public class JUnit4RunnerTest {
     public void init_and_run_for_SimpleTest2_with_ActionName_should_perform_test() {
         Class<?> target = SimpleTest2.class;
         String actionName = "actionName";
-        runner.init(monitor, actionName, null, target);
+        runner.init(monitor, actionName, null, target, testEnvironment);
         runner.run("", target, null, 0);
 
         verify(monitor).outcomeStarted(runner,
@@ -108,7 +108,7 @@ public class JUnit4RunnerTest {
     public void init_and_run_for_SimpleTest2_limitting_to_1method_should_perform_test() {
         Class<?> target = SimpleTest2.class;
         String actionName = "actionName";
-        runner.init(monitor, actionName, null, target);
+        runner.init(monitor, actionName, null, target, testEnvironment);
         runner.run("", target, new String[] { "simpleTest2" }, 0);
 
         verify(monitor).outcomeStarted(runner,
@@ -120,7 +120,7 @@ public class JUnit4RunnerTest {
     public void init_and_run_for_SimpleTest2_limitting_to_2methods_should_perform_test() {
         Class<?> target = SimpleTest2.class;
         String actionName = "actionName";
-        runner.init(monitor, actionName, null, target);
+        runner.init(monitor, actionName, null, target, testEnvironment);
         runner.run("", target, new String[] { "simpleTest2", "simpleTest3" }, 0);
 
         verify(monitor).outcomeStarted(runner,
@@ -134,7 +134,7 @@ public class JUnit4RunnerTest {
     public void init_limitting_to_1method_and_run_for_SimpleTest2_should_perform_test() {
         Class<?> target = SimpleTest2.class;
         String actionName = "actionName";
-        runner.init(monitor, actionName, "simpleTest2", target);
+        runner.init(monitor, actionName, "simpleTest2", target, testEnvironment);
         runner.run("", target, null, 0);
 
         verify(monitor).outcomeStarted(runner,
@@ -146,7 +146,7 @@ public class JUnit4RunnerTest {
     @Test
     public void init_limitting_to_1method_and_run_for_SuiteTest_should_FAIL_test() {
         Class<?> target = SuiteTest.class;
-        runner.init(monitor, "", "testSimple", target);
+        runner.init(monitor, "", "testSimple", target, testEnvironment);
         runner.run("", target, null, 0);
 
         verify(monitor).outcomeStarted(runner,
@@ -161,7 +161,7 @@ public class JUnit4RunnerTest {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         System.setOut(new PrintStream(baos));
 
-        runner.init(monitor, actionName, "testSimple5", target);
+        runner.init(monitor, actionName, "testSimple5", target, testEnvironment);
         runner.run("", target, null, 0);
 
         verify(monitor).outcomeStarted(runner,
@@ -179,7 +179,7 @@ public class JUnit4RunnerTest {
     public void init_and_run_for_SimpleTest2_limitting_to_1method_with_both_init_and_run_should_perform_test() {
         Class<?> target = SimpleTest2.class;
         String actionName = "actionName";
-        runner.init(monitor, actionName, "simpleTest3", target);
+        runner.init(monitor, actionName, "simpleTest3", target, testEnvironment);
         runner.run("", target, new String[] { "simpleTest2" }, 0);
 
         verify(monitor).outcomeStarted(runner,
@@ -195,7 +195,7 @@ public class JUnit4RunnerTest {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         System.setOut(new PrintStream(baos));
 
-        runner.init(monitor, actionName, null, target);
+        runner.init(monitor, actionName, null, target, testEnvironment);
         runner.run("", target, null, 0);
 
         verify(monitor).outcomeStarted(runner,
@@ -221,7 +221,7 @@ public class JUnit4RunnerTest {
         Class<?> target = LongTest.class;
         String actionName = "actionName";
 
-        runner.init(monitor, actionName, null, target);
+        runner.init(monitor, actionName, null, target, testEnvironment);
         runner.run("", target, null, 1);
 
         verify(monitor).outcomeStarted(runner, target.getName() + "#longTest",
@@ -234,7 +234,7 @@ public class JUnit4RunnerTest {
         Class<?> target = LongTest2.class;
         String actionName = "actionName";
 
-        runner.init(monitor, actionName, null, target);
+        runner.init(monitor, actionName, null, target, testEnvironment);
         runner.run("", target, null, 1);
 
         verify(monitor, times(8)).outcomeFinished(Result.SUCCESS);

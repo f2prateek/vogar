@@ -30,7 +30,7 @@ public final class MainRunner implements Runner {
     private Method main;
 
     public void init(TargetMonitor monitor, String actionName, String qualification,
-            Class<?> klass) {
+            Class<?> klass, TestEnvironment testEnvironment) {
         this.monitor = monitor;
         try {
             this.main = klass.getMethod("main", String[].class);

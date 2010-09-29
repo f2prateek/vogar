@@ -31,7 +31,7 @@ public final class CaliperRunner implements vogar.target.Runner {
     private Class<?> testClass;
 
     public void init(TargetMonitor monitor, String actionName, String qualification,
-            Class<?> klass) {
+            Class<?> klass, TestEnvironment testEnvironment) {
         this.monitor = monitor;
         testClass = klass;
     }

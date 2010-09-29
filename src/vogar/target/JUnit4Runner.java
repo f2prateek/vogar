@@ -51,7 +51,7 @@ public final class JUnit4Runner implements Runner {
     }
 
     public void init(final TargetMonitor monitor, final String actionName,
-            String qualification, Class<?> klass) {
+            String qualification, Class<?> klass, TestEnvironment testEnvironment) {
         jUnitCore = new JUnitCore();
         jUnitCore.addListener(new RunListener() {
             private Failure failure;

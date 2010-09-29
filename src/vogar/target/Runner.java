@@ -29,7 +29,8 @@ public interface Runner {
      */
     boolean supports(Class<?> klass);
 
-    void init(TargetMonitor monitor, String actionName, String qualification, Class<?> klass);
+    void init(TargetMonitor monitor, String actionName, String qualification, Class<?> klass,
+            TestEnvironment testEnvironment);
 
     void run(String actionName, Class<?> klass, String[] args, int timeoutSeconds);
 }

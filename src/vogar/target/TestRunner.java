@@ -197,6 +197,9 @@ public final class TestRunner {
         System.setOut(monitorPrintStream);
         System.setErr(monitorPrintStream);
 
+        TestEnvironment testEnvironment = new TestEnvironment();
+        testEnvironment.reset();
+
         String classOrPackageName;
         String qualification;
 
@@ -232,7 +235,7 @@ public final class TestRunner {
                 Runner runner;
                 try {
                     runner = (Runner) runnerClass.newInstance();
-                    runner.init(monitor, qualifiedName, qualification, klass);
+                    runner.init(monitor, qualifiedName, qualification, klass, testEnvironment);
                 } catch (Exception e) {
                     monitor.outcomeStarted(null, qualifiedName, qualifiedName);
                     e.printStackTrace();
