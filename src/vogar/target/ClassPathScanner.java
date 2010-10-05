@@ -19,6 +19,7 @@ package vogar.target;
 import dalvik.system.DexFile;
 import java.io.File;
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Set;
@@ -36,6 +37,11 @@ import java.util.zip.ZipFile;
  */
 final class ClassPathScanner {
 
+    static final Comparator<Class<?>> ORDER_CLASS_BY_NAME = new Comparator<Class<?>>() {
+        @Override public int compare(Class<?> a, Class<?> b) {
+            return a.getName().compareTo(b.getName());
+        }
+    };
     private static final String DOT_CLASS = ".class";
 
     private final String[] classPath;
@@ -55,7 +61,7 @@ final class ClassPathScanner {
     public Package scan(String packageName) throws IOException {
         Set<String> subpackageNames = new TreeSet<String>();
         Set<String> classNames = new TreeSet<String>();
-        Set<Class<?>> topLevelClasses = new HashSet<Class<?>>();
+        Set<Class<?>> topLevelClasses = new TreeSet<Class<?>>(ORDER_CLASS_BY_NAME);
         findClasses(packageName, classNames, subpackageNames);
         for (String className : classNames) {
             try {

@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * The class and subpackage contents of a package.
@@ -39,18 +40,18 @@ class Package {
         this.topLevelClasses = Collections.unmodifiableSet(topLevelClasses);
     }
 
-    public Set<Package> getSubpackages() throws IOException {
+    public Set<Class<?>> getTopLevelClassesRecursive() throws IOException {
+        Set<Class<?>> set = new TreeSet<Class<?>>(ClassPathScanner.ORDER_CLASS_BY_NAME);
+        addTopLevelClassesTo(set);
+        return set;
+    }
+
+    private Set<Package> getSubpackages() throws IOException {
         Set<Package> info = new HashSet<Package>();
         for (String name : subpackageNames) {
             info.add(source.scan(name));
         }
         return info;
-    }
-
-    public Set<Class<?>> getTopLevelClassesRecursive() throws IOException {
-        Set<Class<?>> set = new HashSet<Class<?>>();
-        addTopLevelClassesTo(set);
-        return set;
     }
 
     private void addTopLevelClassesTo(Set<Class<?>> set) throws IOException {
