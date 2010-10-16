@@ -18,6 +18,7 @@ package vogar;
 
 import com.google.common.collect.Lists;
 import java.io.File;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -29,14 +30,12 @@ import java.util.TimerTask;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.inject.Inject;
 import javax.inject.Named;
 import vogar.commands.Command;
-import vogar.commands.CommandFailedException;
 import vogar.commands.Mkdir;
 import vogar.monitor.HostMonitor;
 import vogar.target.CaliperRunner;
@@ -343,40 +342,31 @@ public final class Driver {
                 return;
             }
 
-            HostMonitor hostMonitor = mode.createHostMonitor(
-                    action, monitorPort(firstMonitorPort), this);
             final Command command = mode.createActionCommand(action, monitorPort(-1));
-            Future<List<String>> consoleOut = command.executeLater();
-            final AtomicReference<Result> result = new AtomicReference<Result>();
-
-            boolean connected = hostMonitor.connect(consoleOut);
-            if (connected && timeoutSeconds != 0) {
-                resetKillTime(timeoutSeconds);
-                scheduleTaskKiller(command, hostMonitor, action, result, timeoutSeconds);
+            try {
+                command.start();
+            } catch (IOException e) {
+                addEarlyResult(new Outcome(action.getName(), Result.ERROR,
+                        "failed to start: " + command));
+                return;
             }
 
-            boolean completedNormally = connected && hostMonitor.monitor();
-            if (completedNormally) {
+            final AtomicReference<Result> result = new AtomicReference<Result>();
+            if (timeoutSeconds != 0) {
+                resetKillTime(timeoutSeconds);
+                scheduleTaskKiller(command, action, result, timeoutSeconds);
+            }
+
+            HostMonitor monitor = new HostMonitor(this);
+            try {
+                // TODO: optionally follow a port instead
+                monitor.followStream(command.getInputStream());
                 if (result.compareAndSet(null, Result.SUCCESS)) {
                     command.destroy();
                 }
-                return; // outcomes will have been reported via outcome()
-            }
-
-            if (result.compareAndSet(null, Result.ERROR)) {
-                Console.getInstance().verbose(
-                        "killing " + action + " because it could not be monitored.");
-                command.destroy();
-            }
-
-            try {
-                addEarlyResult(new Outcome(action.getName(), result.get(), consoleOut.get()));
-            } catch (Exception e) {
-                if (e.getCause() instanceof CommandFailedException) {
-                    addEarlyResult(new Outcome(action.getName(), result.get(),
-                            ((CommandFailedException) e.getCause()).getOutputLines()));
-                } else if (result.get() == Result.EXEC_TIMEOUT) {
-                    addEarlyResult(new Outcome(action.getName(), result.get(),
+            } catch (IOException e) {
+                if (result.get() == Result.EXEC_TIMEOUT) {
+                    addEarlyResult(new Outcome(action.getName(), Result.EXEC_TIMEOUT,
                             "killed because it timed out after " + timeoutSeconds + " seconds"));
                 } else {
                     addEarlyResult(new Outcome(action.getName(), result.get(), e));
@@ -384,14 +374,13 @@ public final class Driver {
             }
         }
 
-        private void scheduleTaskKiller(final Command command, final HostMonitor hostMonitor,
-                final Action action, final AtomicReference<Result> result,
-                final int timeoutSeconds) {
+        private void scheduleTaskKiller(final Command command, final Action action,
+                final AtomicReference<Result> result, final int timeoutSeconds) {
             actionTimeoutTimer.schedule(new TimerTask() {
                 @Override public void run() {
                     // if the kill time has been pushed back, reschedule
                     if (System.currentTimeMillis() < killTime.getTime()) {
-                        scheduleTaskKiller(command, hostMonitor, action, result, timeoutSeconds);
+                        scheduleTaskKiller(command, action, result, timeoutSeconds);
                         return;
                     }
                     if (result.compareAndSet(null, Result.EXEC_TIMEOUT)) {
@@ -399,7 +388,6 @@ public final class Driver {
                                 + "after " + timeoutSeconds + " seconds. Current outcome is "
                                 + outcomeName);
                         command.destroy();
-                        hostMonitor.close();
                     }
                 }
             }, killTime);
@@ -434,18 +422,18 @@ public final class Driver {
             }
         }
 
-        public void output(String outcomeName, String output) {
+        @Override public void output(String outcomeName, String output) {
             Console.getInstance().outcome(outcomeName);
             Console.getInstance().streamOutput(outcomeName, output);
         }
 
-        public void outcome(Outcome outcome) {
+        @Override public void outcome(Outcome outcome) {
             // TODO: support flexible timeouts for JUnit tests
             resetKillTime(smallTimeoutSeconds);
             recordOutcome(outcome);
         }
 
-        public void print(String string) {
+        @Override public void print(String string) {
             Console.getInstance().info(string);
         }
     }

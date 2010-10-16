@@ -20,6 +20,7 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.TextView;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.concurrent.ExecutorService;
 import vogar.util.Threads;
@@ -45,7 +46,11 @@ public class TestActivity extends Activity {
         ExecutorService executor = Threads.fixedThreadsExecutor("testactivity", 1);
         executor.execute(new Runnable() {
             public void run() {
-                new TestRunner(Collections.<String>emptyList()).run();
+                try {
+                    new TestRunner(Collections.<String>emptyList()).run();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             }
         });
         executor.shutdown();

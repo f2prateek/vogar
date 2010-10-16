@@ -16,23 +16,30 @@
 
 package vogar.target;
 
-import static org.junit.Assert.*;
-import static org.junit.matchers.JUnitMatchers.*;
-import static org.mockito.Mockito.*;
-
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 import org.junit.Before;
 import org.junit.Test;
-
+import static org.junit.matchers.JUnitMatchers.containsString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import vogar.Result;
 import vogar.monitor.TargetMonitor;
-import vogar.target.junit4.*;
+import vogar.target.junit4.FailTest;
+import vogar.target.junit4.LongTest;
+import vogar.target.junit4.LongTest2;
+import vogar.target.junit4.SimpleTest;
+import vogar.target.junit4.SimpleTest2;
+import vogar.target.junit4.SuiteTest;
+import vogar.target.junit4.WrongSuiteTest;
 
 public class JUnit4RunnerTest {
     private Runner runner;
     private TargetMonitor monitor;
+    private TestEnvironment testEnvironment = new TestEnvironment();
 
     @Before
     public void before() {

@@ -16,20 +16,125 @@
 
 package vogar.monitor;
 
-import java.util.List;
-import java.util.concurrent.Future;
+import com.google.caliper.InterleavedReader;
+import com.google.caliper.internal.gson.JsonElement;
+import com.google.caliper.internal.gson.JsonObject;
+import java.io.BufferedInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.ConnectException;
+import java.net.Socket;
+import java.net.SocketException;
+import java.nio.charset.Charset;
+import vogar.Console;
 import vogar.Outcome;
+import vogar.Result;
+import vogar.util.IoUtils;
 
 /**
- * Attaches to a target process to handle output.
+ * Connects to a target process to monitor its action using XML over raw
+ * sockets.
  */
-public interface HostMonitor {
+public final class HostMonitor {
+    private static final Charset UTF8 = Charset.forName("UTF-8");
 
-    boolean connect(Future<List<String>> commandOutput);
+    private Handler handler;
+    private final String marker = "//00xx";
 
-    boolean monitor();
+    public HostMonitor(Handler handler) {
+        this.handler = handler;
+    }
 
-    void close();
+    public boolean attach(int port) throws IOException {
+        for (int attempt = 0; true; attempt++) {
+            Socket socket = null;
+            try {
+                socket = new Socket("localhost", port);
+                InputStream in = new BufferedInputStream(socket.getInputStream());
+                if (checkStream(in)) {
+                    Console.getInstance().verbose("action monitor connected to "
+                            + socket.getRemoteSocketAddress());
+                    followStream(in);
+                }
+            } catch (ConnectException ignored) {
+            } catch (SocketException ignored) {
+            } finally {
+                IoUtils.closeQuietly(socket);
+            }
+
+            Console.getInstance().verbose("connection " + attempt + " to localhost:"
+                    + port + " failed; retrying in 1s");
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException ignored) {
+            }
+        }
+    }
+
+    /**
+     * Somewhere between the host and client process, broken socket connections
+     * are being accepted. Before we try to do any work on such a connection,
+     * check it to make sure it's not dead!
+     *
+     * TODO: file a bug (against adb?) for this
+     */
+    private boolean checkStream(InputStream in) throws IOException {
+        in.mark(1);
+        if (in.read() == -1) {
+            return false;
+        } else {
+            in.reset();
+            return true;
+        }
+    }
+
+    public void followStream(InputStream in) throws IOException {
+        followProcess(new InterleavedReader(marker, new InputStreamReader(in, UTF8)));
+    }
+
+    /**
+     * Our wire format is a mix of strings and the JSON values like the following:
+     *
+     * {"outcome"="java.util.FormatterMain"}
+     * {"result"="SUCCESS"}
+     * {"outcome"="java.util.FormatterTest#testBar" runner="vogar.target.JUnitRunner"}
+     * {"result"="SUCCESS"}
+     */
+    private void followProcess(InterleavedReader reader) throws IOException {
+        String currentOutcome = null;
+        StringBuilder output = new StringBuilder();
+
+        Object o;
+        while ((o = reader.read()) != null) {
+            if (o instanceof String) {
+                String text = (String) o;
+                if (currentOutcome != null) {
+                    output.append(text);
+                    handler.output(currentOutcome, text);
+                } else {
+                    handler.print(text);
+                }
+            } else if (o instanceof JsonObject) {
+                JsonObject jsonObject = (JsonObject) o;
+                if (jsonObject.get("outcome") != null) {
+                    currentOutcome = jsonObject.get("outcome").getAsString();
+                    handler.output(currentOutcome, "");
+                    JsonElement runner = jsonObject.get("runner");
+                    String runnerClass = runner != null ? runner.getAsString() : null;
+                    handler.runnerClass(currentOutcome, runnerClass);
+                } else if (jsonObject.get("result") != null) {
+                    Result currentResult = Result.valueOf(jsonObject.get("result").getAsString());
+                    handler.outcome(new Outcome(currentOutcome, currentResult, output.toString()));
+                    output.delete(0, output.length());
+                    currentOutcome = null;
+                }
+            } else {
+                throw new IllegalStateException("Unexpected object: " + o);
+            }
+        }
+    }
+
 
     /**
      * Handles updates on the outcomes of a target process.

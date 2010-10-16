@@ -28,7 +28,6 @@ import java.util.Properties;
 import java.util.Set;
 import vogar.Result;
 import vogar.TestProperties;
-import vogar.monitor.SocketTargetMonitor;
 import vogar.monitor.TargetMonitor;
 
 /**
@@ -109,9 +108,10 @@ public final class TestRunner {
         return null;
     }
 
-    public void run(String... args) {
-        final SocketTargetMonitor monitor = new SocketTargetMonitor();
-        monitor.await(monitorPort);
+    public void run(String... args) throws IOException {
+        final TargetMonitor monitor = TargetMonitor.forPrintStream(System.out);
+        // TODO: support either port or system.out
+        // monitor.await(monitorPort);
 
         run(monitor, args);
 
@@ -251,7 +251,7 @@ public final class TestRunner {
         }
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         TestRunner testRunner = new TestRunner(new ArrayList<String>(Arrays.asList(args)));
         testRunner.run(testRunner.args);
     }

@@ -16,19 +16,72 @@
 
 package vogar.monitor;
 
+import com.google.caliper.internal.gson.Gson;
+import com.google.caliper.internal.gson.JsonObject;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.net.ServerSocket;
+import java.net.Socket;
 import vogar.Result;
 import vogar.target.Runner;
 
 /**
- * Send state to the host process.
+ * Accepts a connection from the host process. Once connected, XML is sent over
+ * raw sockets.
  */
-public interface TargetMonitor {
+public class TargetMonitor {
 
-    void outcomeStarted(Runner runner, String outcomeName, String actionName);
+    private static final int ACCEPT_TIMEOUT_MILLIS = 10 * 1000;
 
-    void output(String text);
+    private final Gson gson = new Gson();
+    private final String marker = "//00xx";
 
-    void outcomeFinished(Result result);
+    private final PrintStream writer;
 
-    void unstructuredOutput(String text);
+    private TargetMonitor(PrintStream writer) {
+        this.writer = writer;
+    }
+
+    public static TargetMonitor forPrintStream(PrintStream printStream) {
+        return new TargetMonitor(printStream);
+    }
+
+    public static TargetMonitor await(int port) {
+        try {
+            final ServerSocket serverSocket = new ServerSocket(port);
+            serverSocket.setSoTimeout(ACCEPT_TIMEOUT_MILLIS);
+            serverSocket.setReuseAddress(true);
+            final Socket socket = serverSocket.accept();
+            return new TargetMonitor(new PrintStream(socket.getOutputStream())) {
+                @Override public void close() throws IOException {
+                    socket.close();
+                    serverSocket.close();
+                }
+            };
+
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to accept a monitor on localhost:" + port, e);
+        }
+    }
+
+    public void outcomeStarted(Runner runner, String outcomeName, String actionName) {
+        JsonObject jsonObject = new JsonObject();
+        jsonObject.addProperty("outcome", outcomeName);
+        if (runner != null) {
+            jsonObject.addProperty("runner", runner.getClass().getName());
+        }
+        writer.println(marker + gson.toJson(jsonObject));
+    }
+
+    public void output(String text) {
+        writer.print(text);
+    }
+
+    public void outcomeFinished(Result result) {
+        JsonObject jsonObject = new JsonObject();
+        jsonObject.addProperty("result", result.name());
+        writer.println(marker + gson.toJson(jsonObject));
+    }
+
+    public synchronized void close() throws IOException {}
 }

@@ -19,6 +19,7 @@ package vogar.commands;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.util.ArrayList;
@@ -102,6 +103,14 @@ public final class Command {
         return process != null;
     }
 
+    public InputStream getInputStream() {
+        if (!isStarted()) {
+            throw new IllegalStateException("Not started!");
+        }
+
+        return process.getInputStream();
+    }
+
     public List<String> gatherOutput()
             throws IOException, InterruptedException {
         if (!isStarted()) {
@@ -109,7 +118,7 @@ public final class Command {
         }
 
         BufferedReader in = new BufferedReader(
-                new InputStreamReader(process.getInputStream()));
+                new InputStreamReader(getInputStream(), "UTF-8"));
         List<String> outputLines = new ArrayList<String>();
         String outputLine;
         while ((outputLine = in.readLine()) != null) {

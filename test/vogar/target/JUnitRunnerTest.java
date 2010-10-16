@@ -36,6 +36,7 @@ import vogar.target.junit3.*;
 public class JUnitRunnerTest extends TestCase {
     private Runner runner;
     private TargetMonitor monitor;
+    private TestEnvironment testEnvironment = new TestEnvironment();
 
     public void setUp() {
         runner = new JUnitRunner();

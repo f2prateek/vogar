@@ -33,7 +33,6 @@ import vogar.commands.Command;
 import vogar.commands.CommandFailedException;
 import vogar.commands.Mkdir;
 import vogar.monitor.HostMonitor;
-import vogar.monitor.SocketHostMonitor;
 
 /**
  * A Mode for running actions. Examples including running in a virtual machine
@@ -207,11 +206,6 @@ public abstract class Mode {
      *     default port.
      */
     protected abstract Command createActionCommand(Action action, int monitorPort);
-
-    protected HostMonitor createHostMonitor(
-            Action action, int monitorPort, HostMonitor.Handler handler) {
-        return new SocketHostMonitor(monitorPort, handler);
-    }
 
     /**
      * Deletes files and releases any resources required for the execution of
