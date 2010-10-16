@@ -225,4 +225,13 @@ public abstract class Mode {
     public Classpath getClasspath() {
         return classpath;
     }
+
+    /**
+     * Returns true if this mode requires a socket connection for reading test
+     * results. Otherwise all communication happens over the output stream of
+     * the forked process.
+     */
+    public boolean useSocketMonitor() {
+        return false;
+    }
 }

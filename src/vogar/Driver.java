@@ -358,9 +358,14 @@ public final class Driver {
             }
 
             HostMonitor monitor = new HostMonitor(this);
+
             try {
-                // TODO: optionally follow a port instead
-                monitor.followStream(command.getInputStream());
+                if (mode.useSocketMonitor()) {
+                    monitor.attach(monitorPort(firstMonitorPort));
+                } else {
+                    monitor.followStream(command.getInputStream());
+                }
+
                 if (result.compareAndSet(null, Result.SUCCESS)) {
                     command.destroy();
                 }

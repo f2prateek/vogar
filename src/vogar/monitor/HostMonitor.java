@@ -46,7 +46,7 @@ public final class HostMonitor {
         this.handler = handler;
     }
 
-    public boolean attach(int port) throws IOException {
+    public void attach(int port) throws IOException {
         for (int attempt = 0; true; attempt++) {
             Socket socket = null;
             try {
@@ -56,6 +56,7 @@ public final class HostMonitor {
                     Console.getInstance().verbose("action monitor connected to "
                             + socket.getRemoteSocketAddress());
                     followStream(in);
+                    return;
                 }
             } catch (ConnectException ignored) {
             } catch (SocketException ignored) {

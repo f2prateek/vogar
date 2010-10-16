@@ -39,10 +39,13 @@ public final class TestRunner {
 
     protected final String qualifiedName;
     protected final String qualifiedClassOrPackageName;
-    protected final int monitorPort;
+
+    /** the monitor port if a monitor is expected, or null for no monitor */
+    protected final Integer monitorPort;
     protected final int timeoutSeconds;
     protected final List<Runner> runners;
     protected final String[] args;
+    private boolean useSocketMonitor;
 
     public TestRunner(List<String> argsList) {
         properties = loadProperties();
@@ -78,6 +81,15 @@ public final class TestRunner {
     }
 
     /**
+     * Configure this test runner to await an incoming socket connection when
+     * writing test results. Otherwise all communication happens over
+     * System.out.
+     */
+    public void useSocketMonitor() {
+        this.useSocketMonitor = true;
+    }
+
+    /**
      * Attempt to load the test properties file from both the application and system classloader.
      * This is necessary because sometimes we run tests from the boot classpath.
      */
@@ -109,13 +121,14 @@ public final class TestRunner {
     }
 
     public void run(String... args) throws IOException {
-        final TargetMonitor monitor = TargetMonitor.forPrintStream(System.out);
-        // TODO: support either port or system.out
-        // monitor.await(monitorPort);
-
-        run(monitor, args);
-
-        monitor.close();
+        TargetMonitor monitor = useSocketMonitor
+                ? TargetMonitor.await(monitorPort)
+                : TargetMonitor.forPrintStream(System.out);
+        try {
+            run(monitor, args);
+        } finally {
+            monitor.close();
+        }
     }
 
     public void run(final TargetMonitor monitor, String... args) {

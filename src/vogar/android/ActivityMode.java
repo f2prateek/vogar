@@ -184,4 +184,8 @@ public final class ActivityMode extends Mode {
             getEnvironmentDevice().getAndroidSdk().uninstall(action.getName());
         }
     }
+
+    @Override public boolean useSocketMonitor() {
+        return true;
+    }
 }
