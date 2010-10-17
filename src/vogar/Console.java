@@ -174,7 +174,8 @@ public abstract class Console {
         if (currentLine == CurrentLine.NAME) {
             out.print(" ");
         } else {
-            out.print("\n" + indent + outcomeName + " ");
+            newLine(); // TODO: backup the cursor up to the name if there's no streaming output
+            out.print(indent + outcomeName + " ");
         }
 
         if (resultValue == ResultValue.OK) {
