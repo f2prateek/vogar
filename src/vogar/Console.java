@@ -87,17 +87,15 @@ public abstract class Console {
 
     public synchronized void verbose(String s) {
         /*
-         * When writing verbose output in the middle of streamed output, mark
-         * the location. That way we can remove the verbose output later without
-         * losing our position mid-line in the streamed output.
+         * When writing verbose output in the middle of streamed output, keep
+         * the streamed mark location. That way we can remove the verbose output
+         * later without losing our position mid-line in the streamed output.
          */
-        if (currentLine == CurrentLine.STREAMED_OUTPUT) {
-            MarkResetConsole.Mark mark = out.mark();
-            newLine();
-            currentStreamMark = mark;
-        } else {
-            newLine();
-        }
+        MarkResetConsole.Mark savedStreamMark = currentLine == CurrentLine.STREAMED_OUTPUT
+                ? out.mark()
+                : currentStreamMark;
+        newLine();
+        currentStreamMark = savedStreamMark;
 
         currentVerboseMark = out.mark();
         out.print(s);
