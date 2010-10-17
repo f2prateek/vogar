@@ -339,7 +339,7 @@ public abstract class Console {
     /**
      * Prints the action output with appropriate indentation.
      */
-    protected void printOutput(CharSequence streamedOutput) {
+    public synchronized void streamOutput(CharSequence streamedOutput) {
         if (streamedOutput.length() == 0) {
             return;
         }
@@ -474,7 +474,7 @@ public abstract class Console {
         }
 
         @Override public synchronized void streamOutput(String outcomeName, String output) {
-            printOutput(output);
+            streamOutput(output);
         }
     }
 
@@ -502,7 +502,7 @@ public abstract class Console {
 
             StringBuilder buffer = bufferedOutputByOutcome.remove(outcomeName);
             if (buffer != null) {
-                printOutput(buffer);
+                streamOutput(buffer);
             }
         }
     }

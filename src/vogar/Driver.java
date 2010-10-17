@@ -439,7 +439,7 @@ public final class Driver {
         }
 
         @Override public void print(String string) {
-            Console.getInstance().info(string);
+            Console.getInstance().streamOutput(string);
         }
     }
 }
