@@ -70,7 +70,7 @@ public class TargetMonitor {
         if (runner != null) {
             jsonObject.addProperty("runner", runner.getClass().getName());
         }
-        writer.println(marker + gson.toJson(jsonObject));
+        writer.print(marker + gson.toJson(jsonObject) + "\n");
     }
 
     public void output(String text) {
@@ -80,7 +80,7 @@ public class TargetMonitor {
     public void outcomeFinished(Result result) {
         JsonObject jsonObject = new JsonObject();
         jsonObject.addProperty("result", result.name());
-        writer.println(marker + gson.toJson(jsonObject));
+        writer.print(marker + gson.toJson(jsonObject) + "\n");
     }
 
     public synchronized void close() throws IOException {}

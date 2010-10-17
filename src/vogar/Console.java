@@ -19,10 +19,12 @@ package vogar;
 import com.google.common.collect.Lists;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import vogar.util.MarkResetConsole;
 
 /**
  * Controls, formats and emits output to the command line. This class emits
@@ -53,6 +55,9 @@ public abstract class Console {
     private boolean verbose;
     protected String indent;
     protected CurrentLine currentLine = CurrentLine.NEW;
+    protected final MarkResetConsole out = new MarkResetConsole(System.out);
+    protected MarkResetConsole.Mark currentVerboseMark;
+    protected MarkResetConsole.Mark currentStreamMark;
 
     private Console() {}
 
@@ -81,15 +86,26 @@ public abstract class Console {
     }
 
     public synchronized void verbose(String s) {
-        newLine();
-        System.out.print(s);
-        System.out.flush();
+        /*
+         * When writing verbose output in the middle of streamed output, mark
+         * the location. That way we can remove the verbose output later without
+         * losing our position mid-line in the streamed output.
+         */
+        if (currentLine == CurrentLine.STREAMED_OUTPUT) {
+            MarkResetConsole.Mark mark = out.mark();
+            newLine();
+            currentStreamMark = mark;
+        } else {
+            newLine();
+        }
+
+        currentVerboseMark = out.mark();
+        out.print(s);
         currentLine = CurrentLine.VERBOSE;
     }
 
     public synchronized void warn(String message) {
-        newLine();
-        System.out.println(colorString("Warning: " + message, Color.WARN));
+        warn(message, Collections.<String>emptyList());
     }
 
     /**
@@ -97,9 +113,9 @@ public abstract class Console {
      */
     public synchronized void warn(String message, List<String> list) {
         newLine();
-        System.out.println(colorString("Warning: " + message, Color.WARN));
+        out.println(colorString("Warning: " + message, Color.WARN));
         for (String item : list) {
-            System.out.println(colorString(indent + item, Color.WARN));
+            out.println(colorString(indent + item, Color.WARN));
         }
     }
 
@@ -109,12 +125,12 @@ public abstract class Console {
 
     public synchronized void info(String s) {
         newLine();
-        System.out.println(s);
+        out.println(s);
     }
 
     public synchronized void info(String message, Throwable throwable) {
         newLine();
-        System.out.println(message);
+        out.println(message);
         throwable.printStackTrace(System.out);
     }
 
@@ -158,17 +174,17 @@ public abstract class Console {
         flushBufferedOutput(outcomeName);
 
         if (currentLine == CurrentLine.NAME) {
-            System.out.print(" ");
+            out.print(" ");
         } else {
-            System.out.print("\n" + indent + outcomeName + " ");
+            out.print("\n" + indent + outcomeName + " ");
         }
 
         if (resultValue == ResultValue.OK) {
-            System.out.println(colorString("OK (" + result + ")", Color.PASS));
+            out.println(colorString("OK (" + result + ")", Color.PASS));
         } else if (resultValue == ResultValue.FAIL) {
-            System.out.println(colorString("FAIL (" + result + ")", Color.FAIL));
+            out.println(colorString("FAIL (" + result + ")", Color.FAIL));
         } else if (resultValue == ResultValue.IGNORE) {
-            System.out.println(colorString("SKIP (" + result + ")", Color.WARN));
+            out.println(colorString("SKIP (" + result + ")", Color.WARN));
         }
 
         currentLine = CurrentLine.NEW;
@@ -257,21 +273,21 @@ public abstract class Console {
 
         newLine();
         if (!successes.isEmpty()) {
-            System.out.println("Success summary:");
+            out.println("Success summary:");
             for (String success : successes) {
-                System.out.println(success);
+                out.println(success);
             }
         }
         if (!failures.isEmpty()) {
-            System.out.println("Failure summary:");
+            out.println("Failure summary:");
             for (String failure : failures) {
-                System.out.println(failure);
+                out.println(failure);
             }
         }
         if (!skips.isEmpty()) {
-            System.out.println("Skips summary:");
+            out.println("Skips summary:");
             for (String skip : skips) {
-                System.out.println(skip);
+                out.println(skip);
             }
         }
     }
@@ -330,21 +346,24 @@ public abstract class Console {
 
         String[] lines = messageToLines(streamedOutput.toString());
 
-        if (currentLine != CurrentLine.STREAMED_OUTPUT) {
+        if (currentLine == CurrentLine.VERBOSE && currentStreamMark != null) {
+            currentStreamMark.reset();
+            currentStreamMark = null;
+        } else if (currentLine != CurrentLine.STREAMED_OUTPUT) {
             newLine();
-            System.out.print(indent);
-            System.out.print(indent);
+            out.print(indent);
+            out.print(indent);
         }
-        System.out.print(lines[0]);
+        out.print(lines[0]);
         currentLine = CurrentLine.STREAMED_OUTPUT;
 
         for (int i = 1; i < lines.length; i++) {
             newLine();
 
             if (lines[i].length() > 0) {
-                System.out.print(indent);
-                System.out.print(indent);
-                System.out.print(lines[i]);
+                out.print(indent);
+                out.print(indent);
+                out.print(lines[i]);
                 currentLine = CurrentLine.STREAMED_OUTPUT;
             }
         }
@@ -354,19 +373,18 @@ public abstract class Console {
      * Inserts a linebreak if necessary.
      */
     protected void newLine() {
-        if (currentLine == CurrentLine.NEW) {
-            return;
-        } else if (currentLine == CurrentLine.VERBOSE) {
-            // --verbose means "leave all the verbose output on the screen".
-            if (!verbose) {
-                // Otherwise we overwrite verbose output whenever something new arrives.
-                eraseCurrentLine();
-                currentLine = CurrentLine.NEW;
-                return;
-            }
+        currentStreamMark = null;
+
+        if (currentLine == CurrentLine.VERBOSE && !verbose && useColor) {
+            /*
+             * Verbose means we leave all verbose output on the screen.
+             * Otherwise we overwrite verbose output when new output arrives.
+             */
+            currentVerboseMark.reset();
+        } else if (currentLine != CurrentLine.NEW) {
+            out.print("\n");
         }
 
-        System.out.println();
         currentLine = CurrentLine.NEW;
     }
 
@@ -426,11 +444,6 @@ public abstract class Console {
         return useColor ? ("\u001b[" + color.getCode() + ";1m" + message + "\u001b[0m") : message;
     }
 
-    private void eraseCurrentLine() {
-        System.out.print(useColor ? "\u001b[2K\r" : "\n");
-        System.out.flush();
-    }
-
     /**
      * This console prints output as it's emitted. It supports at most one
      * action at a time.
@@ -440,8 +453,7 @@ public abstract class Console {
 
         @Override public synchronized void action(String name) {
             newLine();
-            System.out.print("Action " + name);
-            System.out.flush();
+            out.print("Action " + name);
             currentName = name;
             currentLine = CurrentLine.NAME;
         }
@@ -457,8 +469,7 @@ public abstract class Console {
 
             currentName = name;
             newLine();
-            System.out.print(indent + name);
-            System.out.flush();
+            out.print(indent + name);
             currentLine = CurrentLine.NAME;
         }
 
@@ -486,7 +497,7 @@ public abstract class Console {
 
         @Override protected synchronized void flushBufferedOutput(String outcomeName) {
             newLine();
-            System.out.print(indent + outcomeName);
+            out.print(indent + outcomeName);
             currentLine = CurrentLine.NAME;
 
             StringBuilder buffer = bufferedOutputByOutcome.remove(outcomeName);
