@@ -24,7 +24,9 @@ import vogar.commands.Mkdir;
 
 final class EnvironmentHost extends Environment {
 
-    @Inject EnvironmentHost() {}
+    @Inject RetrievedFilesFilter retrievedFiles;
+
+    @Inject EnvironmentHost() {};
 
     @Override public void prepare() {}
 
@@ -53,8 +55,7 @@ final class EnvironmentHost extends Environment {
      */
     private void retrieveFiles(File destination, File source, FileFilter filenameFilter) {
         for (File file : source.listFiles(filenameFilter)) {
-            Console.getInstance().warn(String.format("Moving %s to %s", file.getPath(),
-                    new File(destination, file.getName()).getPath()));
+            Console.getInstance().info("Moving " + file + " to " + destination);
             new Mkdir().mkdirs(destination);
             new Command("cp", file.getPath(), destination.getPath()).execute();
         }
@@ -71,12 +72,7 @@ final class EnvironmentHost extends Environment {
     }
 
     @Override public void cleanup(Action action) {
-        retrieveFiles(new File("./vogar-results"), action.getUserDir(), new FileFilter() {
-            @Override public boolean accept(File file) {
-                return file.isFile() &&
-                        (file.getName().endsWith(".xml") || file.getName().endsWith(".json"));
-            }
-        });
+        retrieveFiles(new File("./vogar-results"), action.getUserDir(), retrievedFiles);
         super.cleanup(action);
     }
 }

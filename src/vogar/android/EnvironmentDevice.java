@@ -27,10 +27,12 @@ import javax.inject.Named;
 import vogar.Action;
 import vogar.Console;
 import vogar.Environment;
+import vogar.RetrievedFilesFilter;
 import vogar.commands.Mkdir;
 
 public final class EnvironmentDevice extends Environment {
     @Inject AndroidSdk androidSdk;
+    @Inject RetrievedFilesFilter retrievedFiles;
     @Inject @Named("runnerDir") File runnerDir;
     @Inject @Named("firstMonitorPort") int firstMonitorPort;
     @Inject @Named("numRunners") int numRunners;
@@ -101,8 +103,7 @@ public final class EnvironmentDevice extends Environment {
             throws FileNotFoundException {
         for (File file : androidSdk.ls(source)) {
             if (filenameFilter.accept(file)) {
-                Console.getInstance().warn(String.format("Moving %s to %s", file.getPath(),
-                        new File(destination, file.getName()).getPath()));
+                Console.getInstance().info("Moving " + file + " to " + destination);
                 new Mkdir().mkdirs(destination);
                 androidSdk.pull(file, destination);
             }
@@ -123,14 +124,8 @@ public final class EnvironmentDevice extends Environment {
 
     @Override public void cleanup(Action action) {
         try {
-            retrieveFiles(new File("./vogar-results"), actionClassesDirOnDevice(action),
-                    new FileFilter() {
-                        @Override
-                        public boolean accept(File file) {
-                            return file.getName().endsWith(".xml")
-                                || file.getName().endsWith(".json");
-                        }
-                    });
+            retrieveFiles(new File("./vogar-results"),
+                    actionClassesDirOnDevice(action), retrievedFiles);
         } catch (FileNotFoundException e) {
             Console.getInstance().info("Failed to retrieve all files: ", e);
         }
@@ -146,4 +141,5 @@ public final class EnvironmentDevice extends Environment {
             androidSdk.rm(runnerDir);
         }
     }
+
 }
