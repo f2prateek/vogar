@@ -77,8 +77,8 @@ public final class MarkResetConsole {
             }
 
             // clear the line, reprint the line
-            System.out.print("\u001b[0G\u001b[K");
-            System.out.print(markRowContent);
+            out.print("\u001b[0G\u001b[K");
+            out.print(markRowContent);
             rowContent.delete(0, rowContent.length());
             rowContent.append(markRowContent);
             row = markRow;
