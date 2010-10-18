@@ -23,11 +23,9 @@ import java.io.PrintStream;
  */
 public final class MarkResetConsole {
 
-    private int row;
-    private int column;
-    private int maxColumn;
-
     private final PrintStream out;
+    private int row;
+    private final StringBuilder rowContent = new StringBuilder();
 
     public MarkResetConsole(PrintStream out) {
         this.out = out;
@@ -40,15 +38,13 @@ public final class MarkResetConsole {
     public void print(String text) {
         for (int i = 0; i < text.length(); i++) {
             if (text.charAt(i) == '\n') {
-                maxColumn = Math.max(column, maxColumn);
                 row++;
-                column = 0;
+                rowContent.delete(0, rowContent.length());
             } else {
-                column++;
+                rowContent.append(text.charAt(i));
             }
         }
 
-        maxColumn = Math.max(column, maxColumn);
         out.print(text);
         out.flush();
     }
@@ -59,7 +55,7 @@ public final class MarkResetConsole {
 
     public class Mark {
         private final int markRow = row;
-        private final int markColumn = column;
+        private final String markRowContent = rowContent.toString();
 
         private Mark() {}
 
@@ -76,13 +72,15 @@ public final class MarkResetConsole {
              */
 
             for (int r = row; r > markRow; r--) {
-                // all the way left, clear the line, up a line
-                System.out.print("\u001b[" + maxColumn + "D\u001b[K\u001b[1A");
+                // clear the line, up a line
+                System.out.print("\u001b[0G\u001b[K\u001b[1A");
             }
 
-            // all the way left, right to marked column, erase the rest of the line
-            System.out.print("\u001b[" + maxColumn + "D\u001b[" + markColumn + "C\u001b[K");
-            column = markColumn;
+            // clear the line, reprint the line
+            System.out.print("\u001b[0G\u001b[K");
+            System.out.print(markRowContent);
+            rowContent.delete(0, rowContent.length());
+            rowContent.append(markRowContent);
             row = markRow;
         }
     }
