@@ -25,6 +25,9 @@ import java.util.Properties;
 import java.util.TimeZone;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLSocketFactory;
 
 /**
  * This class resets the VM to a relatively pristine state. Useful to defend
@@ -33,6 +36,9 @@ import java.util.prefs.Preferences;
 public final class TestEnvironment {
 
     private final Properties systemProperties;
+
+    private final HostnameVerifier defaultHostnameVerifier;
+    private final SSLSocketFactory defaultSSLSocketFactory;
 
     public TestEnvironment() {
         systemProperties = new Properties();
@@ -57,6 +63,9 @@ public final class TestEnvironment {
             makeDirectory(new File(javaHome));
             systemProperties.put("java.home", javaHome);
         }
+
+        defaultHostnameVerifier = HttpsURLConnection.getDefaultHostnameVerifier();
+        defaultSSLSocketFactory = HttpsURLConnection.getDefaultSSLSocketFactory();
     }
 
     private void makeDirectory(File path) {
@@ -92,6 +101,8 @@ public final class TestEnvironment {
         Authenticator.setDefault(null);
         CookieHandler.setDefault(null);
         ResponseCache.setDefault(null);
+        HttpsURLConnection.setDefaultHostnameVerifier(defaultHostnameVerifier);
+        HttpsURLConnection.setDefaultSSLSocketFactory(defaultSSLSocketFactory);
     }
 
     private static void resetPreferences(Preferences root) {
