@@ -52,6 +52,7 @@ public abstract class Console {
     private static Console INSTANCE = NULL_CONSOLE;
 
     private boolean useColor;
+    private boolean ansi;
     private boolean verbose;
     protected String indent;
     protected CurrentLine currentLine = CurrentLine.NEW;
@@ -81,11 +82,22 @@ public abstract class Console {
         Color.COMMENT.setCode(34);
     }
 
+    public void setAnsi(boolean ansi) {
+        this.ansi = ansi;
+    }
+
     public void setVerbose(boolean verbose) {
         this.verbose = verbose;
     }
 
     public synchronized void verbose(String s) {
+        /*
+         * terminal does't support overwriting output, so don't print
+         * verbose message unless requested.
+         */
+        if (!verbose && !ansi) {
+            return;
+        }
         /*
          * When writing verbose output in the middle of streamed output, keep
          * the streamed mark location. That way we can remove the verbose output
@@ -345,7 +357,7 @@ public abstract class Console {
 
         String[] lines = messageToLines(streamedOutput.toString());
 
-        if (currentLine == CurrentLine.VERBOSE && currentStreamMark != null) {
+        if (currentLine == CurrentLine.VERBOSE && currentStreamMark != null && ansi) {
             currentStreamMark.reset();
             currentStreamMark = null;
         } else if (currentLine != CurrentLine.STREAMED_OUTPUT) {
@@ -374,7 +386,7 @@ public abstract class Console {
     protected void newLine() {
         currentStreamMark = null;
 
-        if (currentLine == CurrentLine.VERBOSE && !verbose && useColor) {
+        if (currentLine == CurrentLine.VERBOSE && !verbose && ansi) {
             /*
              * Verbose means we leave all verbose output on the screen.
              * Otherwise we overwrite verbose output when new output arrives.

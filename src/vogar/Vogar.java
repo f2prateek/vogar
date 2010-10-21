@@ -106,6 +106,9 @@ public final class Vogar {
     @Option(names = { "--fail-color" })
     private int failColor = 31; // red
 
+    @Option(names = { "--ansi" })
+    private boolean ansi = !"dumb".equals(System.getenv("TERM"));
+
     @Option(names = { "--debug" })
     private Integer debugPort;
 
@@ -325,6 +328,8 @@ public final class Vogar {
         System.out.println("  --fail-color: ANSI color code to use for failures.");
         System.out.println("      Default: 31 (red)");
         System.out.println();
+        System.out.println("  --ansi: use ASNI escape sequences to remove intermediate output.");
+        System.out.println();
         System.out.println("  --expectations <file>: include the specified file when looking for");
         System.out.println("      action expectations. The file should include qualified action names");
         System.out.println("      and the corresponding expected output.");
@@ -498,6 +503,7 @@ public final class Vogar {
         System.out.println(System.getProperty("java.class.path"));
         Console.init(stream);
         Console.getInstance().setUseColor(color, passColor, warnColor, failColor);
+        Console.getInstance().setAnsi(ansi);
         Console.getInstance().setIndent(indent);
         Console.getInstance().setVerbose(verbose);
         Driver driver = MiniGuice.inject(Driver.class, new Module());
