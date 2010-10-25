@@ -19,6 +19,9 @@ package vogar.target;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -29,14 +32,12 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import junit.framework.AssertionFailedError;
 import junit.framework.Protectable;
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestResult;
 import junit.framework.TestSuite;
 import junit.runner.BaseTestRunner;
-import junit.textui.ResultPrinter;
 import vogar.ClassAnalyzer;
 import vogar.Result;
 import vogar.monitor.TargetMonitor;
@@ -49,31 +50,38 @@ public final class JUnitRunner implements Runner {
 
     private static final Pattern NAME_THEN_TEST_CLASS = Pattern.compile("(.*)\\(([\\w\\.$]+)\\)");
 
-    private junit.textui.TestRunner testRunner;
+    private static final Comparator<Test> ORDER_BY_OUTCOME_NAME = new Comparator<Test>() {
+        @Override public int compare(Test a, Test b) {
+            return getOutcomeName(a).compareTo(getOutcomeName(b));
+        }
+    };
+
+    private TargetMonitor monitor;
+    private String actionName;
+    private TestEnvironment testEnvironment;
     private Test junitTest;
     private int timeoutSeconds;
-    private TestEnvironment testEnvironment;
+    private boolean vmIsUnstable;
+
+    final ExecutorService executor = Executors.newCachedThreadPool(
+            Threads.daemonThreadFactory("junitrunner"));
 
     public void init(TargetMonitor monitor, String actionName, String qualification,
-            Class<?> klass, TestEnvironment testEnvironment) {
+            Class<?> klass, TestEnvironment testEnvironment, int timeoutSeconds) {
+        this.monitor = monitor;
+        this.actionName = actionName;
         this.testEnvironment = testEnvironment;
-        testRunner = new junit.textui.TestRunner(
-                new MonitoringResultPrinter(monitor, actionName)) {
-            @Override protected TestResult createTestResult() {
-                return new TimeoutTestResult();
-            }
-        };
+        this.timeoutSeconds = timeoutSeconds;
 
         if (qualification == null) {
-            junitTest = testRunner.getTest(klass.getName());
+            junitTest = new junit.textui.TestRunner().getTest(klass.getName());
         } else {
             junitTest = TestSuite.createTest(klass, qualification);
         }
     }
 
-    public void run(String actionName, Class<?> klass, String[] args, int timeoutSeconds) {
+    public boolean run(String actionName, Class<?> klass, String skipPast, String[] args) {
         // if target args were specified, perhaps only a few tests should be run?
-        this.timeoutSeconds = timeoutSeconds;
         if (args != null && args.length > 0 && TestCase.class.isAssignableFrom(klass)) {
             TestSuite testSuite = new TestSuite();
             for (String arg : args) {
@@ -81,14 +89,45 @@ public final class JUnitRunner implements Runner {
             }
             this.junitTest = testSuite;
         }
-        testRunner.doRun(junitTest);
+
+        List<Test> tests = new ArrayList<Test>();
+        flatten(junitTest, tests);
+        Collections.sort(tests, ORDER_BY_OUTCOME_NAME);
+
+        for (Test test : tests) {
+            if (skipPast != null) {
+                if (skipPast.equals(getOutcomeName(test))) {
+                    skipPast = null;
+                }
+                continue;
+            }
+
+            test.run(new TimeoutTestResult());
+
+            if (vmIsUnstable) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private void flatten(Test test, List<Test> flattened) {
+        if (test instanceof TestSuite) {
+            TestSuite suite = (TestSuite) test;
+            for (Enumeration<Test> e = suite.tests(); e.hasMoreElements(); ) {
+                flatten(e.nextElement(), flattened);
+            }
+        } else {
+            flattened.add(test);
+        }
     }
 
     /**
      * Returns the vogar name like {@code tests.xml.DomTest#testFoo} for a test
      * with a JUnit name like {@code testFoo(tests.xml.DomTest)}.
      */
-    private String getOutcomeName(Test test) {
+    private static String getOutcomeName(Test test) {
         String testToString = test.toString();
 
         Matcher matcher = NAME_THEN_TEST_CLASS.matcher(testToString);
@@ -100,62 +139,15 @@ public final class JUnitRunner implements Runner {
     }
 
     /**
-     * This result printer posts test names, output and exceptions to the
-     * hosting process.
+     * Runs the test on another thread. If the test completes before the
+     * timeout, this reports the result normally. But if the test times out,
+     * this reports the timeout stack trace and begins the process of killing
+     * this no-longer-trustworthy process.
      */
-    private class MonitoringResultPrinter extends ResultPrinter {
-        private final TargetMonitor monitor;
-        private final String actionName;
-
-        private Test current;
-        private Throwable failure;
-
-        public MonitoringResultPrinter(TargetMonitor monitor, String actionName) {
-            super(System.out);
-            this.monitor = monitor;
-            this.actionName = actionName;
-        }
-
-        @Override public void addError(Test test, Throwable t) {
-            System.out.println(BaseTestRunner.getFilteredTrace(t));
-            failure = t;
-        }
-
-        @Override public void addFailure(Test test, AssertionFailedError t) {
-            System.out.println(BaseTestRunner.getFilteredTrace(t));
-            failure = t;
-        }
-
-        @Override public void endTest(Test test) {
-            if (current == null) {
-                throw new IllegalStateException();
-            }
-            monitor.outcomeFinished(
-                    failure == null ? Result.SUCCESS : Result.EXEC_FAILED);
-            current = null;
-            failure = null;
-        }
-
-        @Override public void startTest(Test test) {
-            if (current != null) {
-                throw new IllegalStateException();
-            }
-            current = test;
-            monitor.outcomeStarted(JUnitRunner.this, getOutcomeName(test), actionName);
-        }
-
-        @Override protected void printHeader(long runTime) {}
-        @Override protected void printErrors(TestResult result) {}
-        @Override protected void printFailures(TestResult result) {}
-        @Override protected void printFooter(TestResult result) {}
-    }
-
     private class TimeoutTestResult extends TestResult {
-        final ExecutorService executor = Executors.newCachedThreadPool(
-                Threads.daemonThreadFactory("junitrunner"));
-
         @Override public void runProtected(Test test, final Protectable p) {
             testEnvironment.reset();
+            monitor.outcomeStarted(JUnitRunner.this, getOutcomeName(test), actionName);
 
             // Start the test on a background thread.
             final AtomicReference<Thread> executingThreadReference = new AtomicReference<Thread>();
@@ -177,10 +169,8 @@ public final class JUnitRunner implements Runner {
                 thrown = timeoutSeconds == 0
                         ? result.get()
                         : result.get(timeoutSeconds, TimeUnit.SECONDS);
-                if (thrown == null) {
-                    return;
-                }
             } catch (TimeoutException e) {
+                vmIsUnstable = true;
                 Thread executingThread = executingThreadReference.get();
                 if (executingThread != null) {
                     executingThread.interrupt();
@@ -191,14 +181,12 @@ public final class JUnitRunner implements Runner {
                 thrown = e;
             }
 
-            final Throwable reportableThrown = prepareForDisplay(thrown);
-
-            // Report failures to the superclass' runProtected method.
-            super.runProtected(test, new Protectable() {
-                public void protect() throws Throwable {
-                    throw reportableThrown;
-                }
-            });
+            if (thrown != null) {
+                System.out.println(BaseTestRunner.getFilteredTrace(prepareForDisplay(thrown)));
+                monitor.outcomeFinished(Result.EXEC_FAILED);
+            } else {
+                monitor.outcomeFinished(Result.SUCCESS);
+            }
         }
     }
 

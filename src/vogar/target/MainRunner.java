@@ -30,7 +30,7 @@ public final class MainRunner implements Runner {
     private Method main;
 
     public void init(TargetMonitor monitor, String actionName, String qualification,
-            Class<?> klass, TestEnvironment testEnvironment) {
+            Class<?> klass, TestEnvironment testEnvironment, int timeoutSeconds) {
         this.monitor = monitor;
         try {
             this.main = klass.getMethod("main", String[].class);
@@ -40,7 +40,7 @@ public final class MainRunner implements Runner {
         }
     }
 
-    public void run(String actionName, Class<?> klass, String[] args, int timeoutSeconds) {
+    public boolean run(String actionName, Class<?> klass, String skipPast, String[] args) {
         monitor.outcomeStarted(this, actionName, actionName);
         try {
             main.invoke(null, new Object[] { args });
@@ -49,6 +49,7 @@ public final class MainRunner implements Runner {
             ex.printStackTrace();
             monitor.outcomeFinished(Result.EXEC_FAILED);
         }
+        return true;
     }
 
     public boolean supports(Class<?> klass) {

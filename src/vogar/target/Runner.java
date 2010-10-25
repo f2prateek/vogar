@@ -30,7 +30,12 @@ public interface Runner {
     boolean supports(Class<?> klass);
 
     void init(TargetMonitor monitor, String actionName, String qualification, Class<?> klass,
-            TestEnvironment testEnvironment);
+            TestEnvironment testEnvironment, int timeoutSeconds);
 
-    void run(String actionName, Class<?> klass, String[] args, int timeoutSeconds);
+    /**
+     * @return true if this run completed normally. Otherwise the calling
+     *     process should kill this process and attempt to resume after the last
+     *     known outcome.
+     */
+    boolean run(String actionName, Class<?> klass, String skipPast, String[] args);
 }

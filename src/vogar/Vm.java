@@ -54,7 +54,7 @@ public abstract class Vm extends Mode {
     /**
      * Returns a VM for action execution.
      */
-    @Override protected Command createActionCommand(Action action, int monitorPort) {
+    @Override protected Command createActionCommand(Action action, String skipPast, int monitorPort) {
         VmCommandBuilder vmCommandBuilder = newVmCommandBuilder(action.getUserDir());
         if (useBootClasspath) {
             vmCommandBuilder.bootClasspath(getRuntimeClasspath(action));
@@ -64,6 +64,9 @@ public abstract class Vm extends Mode {
 
         if (monitorPort != -1) {
             vmCommandBuilder.args("--monitorPort", Integer.toString(monitorPort));
+        }
+        if (skipPast != null) {
+            vmCommandBuilder.args("--skipPast", skipPast);
         }
 
         vmCommandBuilder.setNativeOutput(nativeOutput);

@@ -32,7 +32,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import javax.inject.Inject;
 import javax.inject.Named;
 import vogar.commands.Command;
@@ -280,7 +279,7 @@ public final class Driver {
         private final int count;
         private final BlockingQueue<Action> readyToRun;
         private volatile Date killTime;
-        private volatile String outcomeName;
+        private String lastStartedOutcome;
 
         public ActionRunner(AtomicBoolean prematurelyExhaustedInput, int count, BlockingQueue<Action> readyToRun) {
             this.prematurelyExhaustedInput = prematurelyExhaustedInput;
@@ -342,58 +341,59 @@ public final class Driver {
                 return;
             }
 
-            final Command command = mode.createActionCommand(action, monitorPort(-1));
-            try {
-                command.start();
-            } catch (IOException e) {
-                addEarlyResult(new Outcome(action.getName(), Result.ERROR,
-                        "failed to start: " + command));
-                return;
-            }
+            for (int i = 0; true; i++) {
+                /*
+                 * If the target process failed midway through a set of
+                 * outcomes, that's okay. We pickup right after the first
+                 * outcome that wasn't completed.
+                 */
+                String skipPast = lastStartedOutcome;
+                lastStartedOutcome = null;
 
-            final AtomicReference<Result> result = new AtomicReference<Result>();
-            if (timeoutSeconds != 0) {
-                resetKillTime(timeoutSeconds);
-                scheduleTaskKiller(command, action, result, timeoutSeconds);
-            }
-
-            HostMonitor monitor = new HostMonitor(this);
-
-            try {
-                if (mode.useSocketMonitor()) {
-                    monitor.attach(monitorPort(firstMonitorPort));
-                } else {
-                    monitor.followStream(command.getInputStream());
+                if (skipPast == null && i != 0) {
+                    break;
                 }
 
-                if (result.compareAndSet(null, Result.SUCCESS)) {
+                Command command = mode.createActionCommand(action, skipPast, monitorPort(-1));
+                try {
+                    command.start();
+
+                    if (timeoutSeconds != 0) {
+                        resetKillTime(timeoutSeconds);
+                        scheduleTaskKiller(command, action, timeoutSeconds);
+                    }
+
+                    HostMonitor hostMonitor = new HostMonitor(this);
+                    boolean completedNormally = mode.useSocketMonitor()
+                            ? hostMonitor.attach(monitorPort(firstMonitorPort))
+                            : hostMonitor.followStream(command.getInputStream());
+
+                    if (completedNormally) {
+                        return;
+                    }
+                } catch (IOException e) {
+                    // if the monitor breaks, assume the worst and don't retry
+                    addEarlyResult(new Outcome(action.getName(), Result.ERROR, e));
+                    return;
+                } finally {
                     command.destroy();
-                }
-            } catch (IOException e) {
-                if (result.get() == Result.EXEC_TIMEOUT) {
-                    addEarlyResult(new Outcome(action.getName(), Result.EXEC_TIMEOUT,
-                            "killed because it timed out after " + timeoutSeconds + " seconds"));
-                } else {
-                    addEarlyResult(new Outcome(action.getName(), result.get(), e));
                 }
             }
         }
 
         private void scheduleTaskKiller(final Command command, final Action action,
-                final AtomicReference<Result> result, final int timeoutSeconds) {
+                final int timeoutSeconds) {
             actionTimeoutTimer.schedule(new TimerTask() {
                 @Override public void run() {
                     // if the kill time has been pushed back, reschedule
                     if (System.currentTimeMillis() < killTime.getTime()) {
-                        scheduleTaskKiller(command, action, result, timeoutSeconds);
+                        scheduleTaskKiller(command, action, timeoutSeconds);
                         return;
                     }
-                    if (result.compareAndSet(null, Result.EXEC_TIMEOUT)) {
-                        Console.getInstance().verbose("killing " + action + " because it timed out "
-                                + "after " + timeoutSeconds + " seconds. Current outcome is "
-                                + outcomeName);
-                        command.destroy();
-                    }
+                    Console.getInstance().verbose("killing " + action + " because it timed out "
+                            + "after " + timeoutSeconds + " seconds. Last started outcome is "
+                            + lastStartedOutcome);
+                    command.destroy();
                 }
             }, killTime);
         }
@@ -403,16 +403,16 @@ public final class Driver {
          */
         private void resetKillTime(int timeoutForTest) {
             /*
-             * Give the target process an extra full timeout to self-timeout and report
-             * the error. This way, when a JUnit test has one slow method, we don't
-             * end up killing the whole process.
+             * Give the target process an extra full timeout to self-timeout and
+             * report the error. This way, when a JUnit test has one slow
+             * method, we still get to see the offending stack trace.
              */
             long delay = TimeUnit.SECONDS.toMillis(timeoutForTest * 2);
             this.killTime = new Date(System.currentTimeMillis() + delay);
         }
 
-        @Override public void runnerClass(String outcomeName, String runnerClass) {
-            this.outcomeName = outcomeName;
+        @Override public void start(String outcomeName, String runnerClass) {
+            lastStartedOutcome = outcomeName;
             // TODO add to Outcome knowledge about what class was used to run it
             if (CaliperRunner.class.getName().equals(runnerClass)) {
                 if (!benchmark) {
@@ -432,7 +432,7 @@ public final class Driver {
             Console.getInstance().streamOutput(outcomeName, output);
         }
 
-        @Override public void outcome(Outcome outcome) {
+        @Override public void finish(Outcome outcome) {
             // TODO: support flexible timeouts for JUnit tests
             resetKillTime(smallTimeoutSeconds);
             recordOutcome(outcome);

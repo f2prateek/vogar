@@ -32,7 +32,6 @@ import javax.inject.Named;
 import vogar.commands.Command;
 import vogar.commands.CommandFailedException;
 import vogar.commands.Mkdir;
-import vogar.monitor.HostMonitor;
 
 /**
  * A Mode for running actions. Examples including running in a virtual machine
@@ -202,10 +201,10 @@ public abstract class Mode {
     /**
      * Create the command that executes the action.
      *
+     * @param skipPast the last outcome to skip, or null to run all outcomes.
      * @param monitorPort the port to accept connections on, or -1 for the
-     *     default port.
      */
-    protected abstract Command createActionCommand(Action action, int monitorPort);
+    protected abstract Command createActionCommand(Action action, String skipPast, int monitorPort);
 
     /**
      * Deletes files and releases any resources required for the execution of

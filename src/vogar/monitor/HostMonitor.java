@@ -46,7 +46,10 @@ public final class HostMonitor {
         this.handler = handler;
     }
 
-    public void attach(int port) throws IOException {
+    /**
+     * Returns true if the target process completed normally.
+     */
+    public boolean attach(int port) throws IOException {
         for (int attempt = 0; true; attempt++) {
             Socket socket = null;
             try {
@@ -55,8 +58,7 @@ public final class HostMonitor {
                 if (checkStream(in)) {
                     Console.getInstance().verbose("action monitor connected to "
                             + socket.getRemoteSocketAddress());
-                    followStream(in);
-                    return;
+                    return followStream(in);
                 }
             } catch (ConnectException ignored) {
             } catch (SocketException ignored) {
@@ -90,8 +92,8 @@ public final class HostMonitor {
         }
     }
 
-    public void followStream(InputStream in) throws IOException {
-        followProcess(new InterleavedReader(marker, new InputStreamReader(in, UTF8)));
+    public boolean followStream(InputStream in) throws IOException {
+        return followProcess(new InterleavedReader(marker, new InputStreamReader(in, UTF8)));
     }
 
     /**
@@ -101,10 +103,12 @@ public final class HostMonitor {
      * {"result"="SUCCESS"}
      * {"outcome"="java.util.FormatterTest#testBar" runner="vogar.target.JUnitRunner"}
      * {"result"="SUCCESS"}
+     * {"completedNormally"=true}
      */
-    private void followProcess(InterleavedReader reader) throws IOException {
+    private boolean followProcess(InterleavedReader reader) throws IOException {
         String currentOutcome = null;
         StringBuilder output = new StringBuilder();
+        boolean completedNormally = false;
 
         Object o;
         while ((o = reader.read()) != null) {
@@ -123,17 +127,21 @@ public final class HostMonitor {
                     handler.output(currentOutcome, "");
                     JsonElement runner = jsonObject.get("runner");
                     String runnerClass = runner != null ? runner.getAsString() : null;
-                    handler.runnerClass(currentOutcome, runnerClass);
+                    handler.start(currentOutcome, runnerClass);
                 } else if (jsonObject.get("result") != null) {
                     Result currentResult = Result.valueOf(jsonObject.get("result").getAsString());
-                    handler.outcome(new Outcome(currentOutcome, currentResult, output.toString()));
+                    handler.finish(new Outcome(currentOutcome, currentResult, output.toString()));
                     output.delete(0, output.length());
                     currentOutcome = null;
+                } else if (jsonObject.get("completedNormally") != null) {
+                    completedNormally = jsonObject.get("completedNormally").getAsBoolean();
                 }
             } else {
                 throw new IllegalStateException("Unexpected object: " + o);
             }
         }
+
+        return completedNormally;
     }
 
 
@@ -146,12 +154,12 @@ public final class HostMonitor {
          * @param runnerClass can be null, indicating nothing is actually being run. This will
          *        happen in the event of an impending error.
          */
-        void runnerClass(String outcomeName, String runnerClass);
+        void start(String outcomeName, String runnerClass);
 
         /**
          * Receive a completed outcome.
          */
-        void outcome(Outcome outcome);
+        void finish(Outcome outcome);
 
         /**
          * Receive partial output from an action being executed.

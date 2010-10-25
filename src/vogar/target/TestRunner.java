@@ -42,6 +42,7 @@ public final class TestRunner {
 
     /** the monitor port if a monitor is expected, or null for no monitor */
     protected final Integer monitorPort;
+    protected final String skipPast;
     protected final int timeoutSeconds;
     protected final List<Runner> runners;
     protected final String[] args;
@@ -58,15 +59,23 @@ public final class TestRunner {
                                 new MainRunner());
 
         int monitorPort = Integer.parseInt(properties.getProperty(TestProperties.MONITOR_PORT));
+        String skipPast = null;
         for (Iterator<String> i = argsList.iterator(); i.hasNext(); ) {
-            if (i.next().equals("--monitorPort")) {
+            String arg = i.next();
+            if (arg.equals("--monitorPort")) {
                 i.remove();
                 monitorPort = Integer.parseInt(i.next());
+                i.remove();
+            }
+            if (arg.equals("--skipPast")) {
+                i.remove();
+                skipPast = i.next();
                 i.remove();
             }
         }
 
         this.monitorPort = monitorPort;
+        this.skipPast = skipPast;
         this.args = argsList.toArray(new String[argsList.size()]);
     }
 
@@ -248,14 +257,16 @@ public final class TestRunner {
                 Runner runner;
                 try {
                     runner = (Runner) runnerClass.newInstance();
-                    runner.init(monitor, qualifiedName, qualification, klass, testEnvironment);
+                    runner.init(monitor, qualifiedName, qualification, klass,
+                            testEnvironment, timeoutSeconds);
                 } catch (Exception e) {
                     monitor.outcomeStarted(null, qualifiedName, qualifiedName);
                     e.printStackTrace();
                     monitor.outcomeFinished(Result.ERROR);
                     return;
                 }
-                runner.run(qualifiedName, klass, args, timeoutSeconds);
+                boolean completedNormally = runner.run(qualifiedName, klass, skipPast, args);
+                monitor.completedNormally(completedNormally);
             } else {
                 monitor.outcomeStarted(null, klass.getName(), qualifiedName);
                 System.out.println("Skipping " + klass.getName() + ": no associated runner class");

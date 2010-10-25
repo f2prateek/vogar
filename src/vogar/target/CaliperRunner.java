@@ -31,12 +31,12 @@ public final class CaliperRunner implements vogar.target.Runner {
     private Class<?> testClass;
 
     public void init(TargetMonitor monitor, String actionName, String qualification,
-            Class<?> klass, TestEnvironment testEnvironment) {
+            Class<?> klass, TestEnvironment testEnvironment, int timeoutSeconds) {
         this.monitor = monitor;
         testClass = klass;
     }
 
-    public void run(String actionName, Class<?> klass, String[] args, int timeoutSeconds) {
+    public boolean run(String actionName, Class<?> klass, String skipPast, String[] args) {
         monitor.outcomeStarted(this, actionName, actionName);
         try {
             new Runner().run(ObjectArrays.concat(testClass.getName(), args));
@@ -44,6 +44,7 @@ public final class CaliperRunner implements vogar.target.Runner {
             ex.printStackTrace();
         }
         monitor.outcomeFinished(Result.SUCCESS);
+        return true;
     }
 
     public boolean supports(Class<?> klass) {

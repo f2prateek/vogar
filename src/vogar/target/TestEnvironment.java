@@ -25,8 +25,8 @@ import java.util.Properties;
 import java.util.TimeZone;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
-import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 
 /**

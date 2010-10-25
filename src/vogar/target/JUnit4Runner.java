@@ -17,13 +17,11 @@
 package vogar.target;
 
 import java.lang.reflect.Method;
-
 import org.junit.runner.Description;
 import org.junit.runner.JUnitCore;
 import org.junit.runner.Request;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunListener;
-
 import vogar.Result;
 import vogar.monitor.TargetMonitor;
 
@@ -50,8 +48,8 @@ public final class JUnit4Runner implements Runner {
         return false;
     }
 
-    public void init(final TargetMonitor monitor, final String actionName,
-            String qualification, Class<?> klass, TestEnvironment testEnvironment) {
+    public void init(final TargetMonitor monitor, final String actionName, String qualification,
+            Class<?> klass, TestEnvironment testEnvironment, int timeoutSeconds) {
         jUnitCore = new JUnitCore();
         jUnitCore.addListener(new RunListener() {
             private Failure failure;
@@ -80,20 +78,21 @@ public final class JUnit4Runner implements Runner {
         this.qualification = qualification;
     }
 
-    public void run(String actionName, Class<?> klass, String[] args, int timeoutSeconds) {
+    public boolean run(String actionName, Class<?> klass, String skipPast, String[] args) {
         // ignore the timeoutSeconds parameter because JUnit4 performs tests
         // in test-class unit and it can't specify timeout in test-method unit
         if (args != null && args.length > 0) {
             for (String arg : args) {
                 runTests(klass, arg);
             }
-            return;
+            return true;
         }
         if (qualification == null) {
             runTests(klass);
         } else {
             runTests(klass, qualification);
         }
+        return true;
     }
 
     private org.junit.runner.Result runTests(Class<?> klass) {

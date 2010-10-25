@@ -84,4 +84,10 @@ public class TargetMonitor {
     }
 
     public synchronized void close() throws IOException {}
+
+    public void completedNormally(boolean completedNormally) {
+        JsonObject jsonObject = new JsonObject();
+        jsonObject.addProperty("completedNormally", completedNormally);
+        writer.print(marker + gson.toJson(jsonObject) + "\n");
+    }
 }
