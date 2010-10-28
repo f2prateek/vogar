@@ -80,9 +80,11 @@ public final class TestRunner {
     }
 
     private Properties loadProperties() {
-        Properties properties = new Properties();
         try {
-            properties.load(getPropertiesStream());
+            InputStream in = getPropertiesStream();
+            Properties properties = new Properties();
+            properties.load(in);
+            in.close();
             return properties;
         } catch (IOException e) {
             throw new RuntimeException(e);
