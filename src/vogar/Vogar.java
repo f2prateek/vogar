@@ -579,8 +579,8 @@ public final class Vogar {
             return debugPort;
         }
 
-        @Provides @Named("deviceDir") File provideDeviceDir() {
-            return deviceDir;
+        @Provides @Named("deviceUserHome") File deviceUserHome() {
+            return new File(deviceDir, "user.home");
         }
 
         @Provides Environment provideEnvironment(Provider<EnvironmentHost> environmentHostProvider,

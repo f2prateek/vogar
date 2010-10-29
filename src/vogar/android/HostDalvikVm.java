@@ -65,7 +65,7 @@ public class HostDalvikVm extends Vm {
         androidSdk.dex(nameDexFile(name), Classpath.of(jar));
     }
 
-    @Override protected VmCommandBuilder newVmCommandBuilder(File workingDirectory) {
+    @Override protected VmCommandBuilder newVmCommandBuilder() {
         List<File> jars = new ArrayList<File>();
         for (String jar : AndroidSdk.HOST_BOOTCLASSPATH) {
             jars.add(new File(buildRoot, "out/host/linux-x86/framework/" + jar + ".jar"));
@@ -73,8 +73,6 @@ public class HostDalvikVm extends Vm {
         Classpath bootClasspath = Classpath.of(jars);
 
         VmCommandBuilder builder = new VmCommandBuilder()
-                .workingDir(workingDirectory)
-                .temp(workingDirectory)
                 .env("ANDROID_PRINTF_LOG", "tag")
                 .env("ANDROID_LOG_TAGS", "*:w")
                 .env("ANDROID_DATA", dalvikCache().getParent());
@@ -100,7 +98,6 @@ public class HostDalvikVm extends Vm {
 
         builder.vmCommand(vmCommand)
                 .vmArgs("-Xbootclasspath:" + bootClasspath.toString())
-                .vmArgs("-Duser.home=" + workingDirectory)
                 .vmArgs("-Duser.language=en")
                 .vmArgs("-Duser.region=US")
                 .vmArgs("-Djavax.net.ssl.trustStore=" + trustStore);

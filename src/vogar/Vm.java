@@ -55,7 +55,7 @@ public abstract class Vm extends Mode {
      * Returns a VM for action execution.
      */
     @Override protected Command createActionCommand(Action action, String skipPast, int monitorPort) {
-        VmCommandBuilder vmCommandBuilder = newVmCommandBuilder(action.getUserDir());
+        VmCommandBuilder vmCommandBuilder = newVmCommandBuilder();
         if (useBootClasspath) {
             vmCommandBuilder.bootClasspath(getRuntimeClasspath(action));
         } else {
@@ -71,8 +71,10 @@ public abstract class Vm extends Mode {
 
         vmCommandBuilder.setNativeOutput(nativeOutput);
 
+        File workingDirectory = action.getUserDir();
         return vmCommandBuilder
-                .userDir(action.getUserDir())
+                .temp(workingDirectory)
+                .userDir(workingDirectory)
                 .debugPort(environment.debugPort)
                 .vmArgs(additionalVmArgs)
                 .mainClass(TestRunner.class.getName())
@@ -83,7 +85,7 @@ public abstract class Vm extends Mode {
     /**
      * Returns a VM for action execution.
      */
-    protected abstract VmCommandBuilder newVmCommandBuilder(File workingDirectory);
+    protected abstract VmCommandBuilder newVmCommandBuilder();
 
     /**
      * Returns the classpath containing JUnit and the dalvik annotations
@@ -140,11 +142,19 @@ public abstract class Vm extends Mode {
             return this;
         }
 
+        /**
+         * The working directory on the host. This directory must exist on the
+         * local disk.
+         */
         public VmCommandBuilder workingDir(File workingDir) {
             this.workingDir = workingDir;
             return this;
         }
 
+        /**
+         * The user dir on the target. This directory might not exist on the
+         * local disk.
+         */
         public VmCommandBuilder userDir(File userDir) {
             this.userDir = userDir;
             return this;

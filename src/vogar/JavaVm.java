@@ -29,13 +29,11 @@ final class JavaVm extends Vm {
 
     @Inject JavaVm() {}
 
-    @Override protected VmCommandBuilder newVmCommandBuilder(File workingDirectory) {
+    @Override protected VmCommandBuilder newVmCommandBuilder() {
         List<String> vmCommand = new ArrayList<String>();
         Iterables.addAll(vmCommand, invokeWith());
         vmCommand.add(javaPath("java"));
-        return new VmCommandBuilder()
-                .vmCommand(vmCommand)
-                .workingDir(workingDirectory);
+        return new VmCommandBuilder().vmCommand(vmCommand);
     }
 
     @Override protected Classpath getRuntimeClasspath(Action action) {

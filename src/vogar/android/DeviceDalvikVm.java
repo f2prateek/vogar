@@ -35,7 +35,7 @@ import vogar.Vogar;
 public final class DeviceDalvikVm extends Vm {
 
     @Inject @Named("benchmark") boolean fastMode;
-    @Inject @Named("deviceDir") File deviceDir;
+    @Inject @Named("deviceUserHome") File deviceUserHome;
 
     private EnvironmentDevice getEnvironmentDevice() {
         return (EnvironmentDevice) environment;
@@ -47,12 +47,12 @@ public final class DeviceDalvikVm extends Vm {
 
     @Override protected void prepare() {
         super.prepare();
+        getSdk().mkdirs(deviceUserHome);
+
         // push ~/.caliperrc to device if found
-        String caliperrc = ".caliperrc";
-        File host = Vogar.dotFile(caliperrc);
-        if (host.exists()) {
-            File target = new File(deviceDir, caliperrc);
-            getSdk().push(host, target);
+        File hostCaliperRc = Vogar.dotFile(".caliperrc");
+        if (hostCaliperRc.exists()) {
+            getSdk().push(hostCaliperRc, new File(deviceUserHome, ".caliperrc"));
         }
     }
 
@@ -86,21 +86,20 @@ public final class DeviceDalvikVm extends Vm {
         return new File(getEnvironmentDevice().runnerDir, name + ".jar");
     }
 
-    @Override protected VmCommandBuilder newVmCommandBuilder(File workingDirectory) {
+    @Override protected VmCommandBuilder newVmCommandBuilder() {
         List<String> vmCommand = new ArrayList<String>();
         Collections.addAll(vmCommand, "adb", "shell", getEnvironmentDevice().getAndroidData());
         Iterables.addAll(vmCommand, invokeWith());
         vmCommand.add("dalvikvm");
         VmCommandBuilder vmCommandBuilder = new VmCommandBuilder()
                 .vmCommand(vmCommand)
-                .vmArgs("-Duser.home=" + deviceDir)
+                .vmArgs("-Duser.home=" + deviceUserHome)
                 .vmArgs("-Duser.name=" + AndroidSdk.getDeviceUserName())
                 .vmArgs("-Duser.language=en")
                 .vmArgs("-Duser.region=US")
                 .vmArgs("-Djavax.net.ssl.trustStore=/system/etc/security/cacerts.bks")
                 .vmArgs("-Xverify:none")
-                .maxLength(1024)
-                .temp(getEnvironmentDevice().vogarTemp());
+                .maxLength(1024);
         if (!fastMode) {
             vmCommandBuilder.vmArgs("-Xdexopt:none");
         }

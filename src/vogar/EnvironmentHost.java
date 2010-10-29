@@ -26,7 +26,7 @@ final class EnvironmentHost extends Environment {
 
     @Inject RetrievedFilesFilter retrievedFiles;
 
-    @Inject EnvironmentHost() {};
+    @Inject EnvironmentHost() {}
 
     @Override public void prepare() {}
 

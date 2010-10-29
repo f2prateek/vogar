@@ -48,14 +48,14 @@ public final class TestEnvironment {
         if (tmpDir == null) {
             throw new NullPointerException("tmpDir == null");
         }
-
-        // paths with writable values for testing
-        String userHome = tmpDir + "/user.home";
-        String userDir = tmpDir + "/user.dir";
-        makeDirectory(new File(userHome));
-        makeDirectory(new File(userDir));
-        systemProperties.put("user.dir", userDir);
-        systemProperties.put("user.home", userHome);
+        String userHome = systemProperties.getProperty("user.home");
+        if (userHome == null) {
+            throw new NullPointerException("userHome == null");
+        }
+        String userDir = systemProperties.getProperty("user.dir");
+        if (userDir == null) {
+            throw new NullPointerException("userDir == null");
+        }
 
         // Dalvik requires a writable java.home directory for preferences
         if ("Dalvik".equals(System.getProperty("java.vm.name"))) {
