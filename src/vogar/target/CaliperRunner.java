@@ -28,18 +28,24 @@ import vogar.monitor.TargetMonitor;
 public final class CaliperRunner implements vogar.target.Runner {
 
     private TargetMonitor monitor;
+    private boolean profile;
     private Class<?> testClass;
 
     public void init(TargetMonitor monitor, String actionName, String qualification,
-            Class<?> klass, TestEnvironment testEnvironment, int timeoutSeconds) {
+            Class<?> klass, TestEnvironment testEnvironment, int timeoutSeconds, boolean profile) {
         this.monitor = monitor;
+        this.profile = profile;
         testClass = klass;
     }
 
     public boolean run(String actionName, Class<?> klass, String skipPast, String[] args) {
         monitor.outcomeStarted(this, actionName, actionName);
         try {
-            new Runner().run(ObjectArrays.concat(testClass.getName(), args));
+            String[] arguments = ObjectArrays.concat(testClass.getName(), args);
+            if (profile) {
+                arguments = ObjectArrays.concat("--debug", arguments);
+            }
+            new Runner().run(arguments);
         } catch (Exception ex) {
             ex.printStackTrace();
         }

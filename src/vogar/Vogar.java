@@ -184,6 +184,21 @@ public final class Vogar {
     @Option(names = { "--open-bugs-command" })
     private String openBugsCommand;
 
+    @Option(names = { "--profile" })
+    private boolean profile = false;
+
+    @Option(names = { "--profile-file" })
+    private File profileFile = new File("java.hprof.txt");
+
+    @Option(names = { "--profile-depth" })
+    private int profileDepth = 4;
+
+    @Option(names = { "--profile-interval" })
+    private int profileInterval = 10;
+
+    @Option(names = { "--profile-thread-group" })
+    private boolean profileThreadGroup = false;
+
     private Vogar() {}
 
     private void printUsage() {
@@ -222,6 +237,21 @@ public final class Vogar {
         System.out.println("  --benchmark: for use with dalvikvm, this dexes all files together,");
         System.out.println("      and is mandatory for running Caliper benchmarks, and a good idea");
         System.out.println("      other performance sensitive code.");
+        System.out.println();
+        System.out.println("  --profile: run with a profiler to produce an ASCII hprof file.");
+        System.out.println();
+        System.out.println("  --profile-file <filename>: filename for hprof profile data.");
+        System.out.println("      Default is: " + profileFile);
+        System.out.println();
+        System.out.println("  --profile-depth <count>: number of frames in profile stack traces.");
+        System.out.println("      Default is: " + profileDepth);
+        System.out.println();
+        System.out.println("  --profile-interval <milliseconds>: interval between profile samples.");
+        System.out.println("      Default is: " + profileInterval);
+        System.out.println();
+        System.out.println("  --profile-thread-group: profile thread group instead of single thread in dalvikvms");
+        System.out.println("      Note --mode jvm only supports full VM profiling.");
+        System.out.println("      Default is: " + profileThreadGroup);
         System.out.println();
         System.out.println("  --invoke-with: provide a command to invoke the VM with. Examples:");
         System.out.println("      --mode host --invoke-with \"valgrind --leak-check=full\"");
@@ -701,6 +731,26 @@ public final class Vogar {
 
         @Provides @Named("xmlReportsDirectory") File provideXmlReportsDirectory() {
             return xmlReportsDirectory;
+        }
+
+        @Provides @Named("profile") boolean provideProfile() {
+            return profile;
+        }
+
+        @Provides @Named("profileFile") File provideProfileFile() {
+            return profileFile;
+        }
+
+        @Provides @Named("profileDepth") int provideProfileDepth() {
+            return profileDepth;
+        }
+
+        @Provides @Named("profileInterval") int profileInterval() {
+            return profileInterval;
+        }
+
+        @Provides @Named("profileThreadGroup") boolean profileThreadGroup() {
+            return profileThreadGroup;
         }
     }
 }

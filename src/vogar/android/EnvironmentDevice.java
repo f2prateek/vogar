@@ -97,7 +97,7 @@ public final class EnvironmentDevice extends Environment {
     }
 
     /**
-     * Scans {@code dir} for xml files to grab.
+     * Scans {@code dir} for files to grab.
      */
     private void retrieveFiles(File destination, File source, FileFilter filenameFilter)
             throws FileNotFoundException {

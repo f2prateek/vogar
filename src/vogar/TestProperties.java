@@ -54,5 +54,30 @@ final public class TestProperties {
      */
     public static final String TIMEOUT = "timeout";
 
+    /**
+     * Profile enabled?
+     */
+    public static final String PROFILE = "profile";
+
+    /**
+     * Profile frame depth
+     */
+    public static final String PROFILE_DEPTH = "profileDepth";
+
+    /**
+     * Profile interval in milliseconds
+     */
+    public static final String PROFILE_INTERVAL = "profileInterval";
+
+    /**
+     * Profile output file
+     */
+    public static final String PROFILE_FILE = "profileFile";
+
+    /**
+     * Profile thread group instead of just single thread (where supported)
+     */
+    public static final String PROFILE_THREAD_GROUP = "profileThreadGroup";
+
     private TestProperties() {}
 }

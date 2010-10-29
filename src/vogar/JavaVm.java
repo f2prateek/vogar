@@ -21,6 +21,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import javax.inject.Inject;
+import javax.inject.Named;
 
 /**
  * A local Java virtual machine like Harmony or the RI.
@@ -29,10 +30,25 @@ final class JavaVm extends Vm {
 
     @Inject JavaVm() {}
 
+    @Inject @Named("profile") boolean profile;
+    @Inject @Named("profileFile") File profileFile;
+    @Inject @Named("profileDepth") int profileDepth;
+    @Inject @Named("profileInterval") int profileInterval;
+
     @Override protected VmCommandBuilder newVmCommandBuilder() {
         List<String> vmCommand = new ArrayList<String>();
         Iterables.addAll(vmCommand, invokeWith());
         vmCommand.add(javaPath("java"));
+        if (profile) {
+            vmCommand.add("-agentlib:hprof="
+                          + "cpu=samples,"
+                          + "format=a,"
+                          + "file=" + profileFile + ","
+                          + "depth=" + profileDepth + ","
+                          + "interval=" + profileInterval + ","
+                          + "thread=y,"
+                          + "verbose=n");
+        }
         return new VmCommandBuilder().vmCommand(vmCommand);
     }
 

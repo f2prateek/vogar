@@ -16,6 +16,7 @@
 
 package vogar.target;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
@@ -45,6 +46,11 @@ public final class TestRunner {
     protected final String skipPast;
     protected final int timeoutSeconds;
     protected final List<Runner> runners;
+    private final boolean profile;
+    private final int profileDepth;
+    private final int profileInterval;
+    private final File profileFile;
+    private final boolean profileThreadGroup;
     protected final String[] args;
     private boolean useSocketMonitor;
 
@@ -60,6 +66,14 @@ public final class TestRunner {
 
         int monitorPort = Integer.parseInt(properties.getProperty(TestProperties.MONITOR_PORT));
         String skipPast = null;
+        boolean profile = Boolean.parseBoolean(properties.getProperty(TestProperties.PROFILE));
+        int profileDepth = Integer.parseInt(properties.getProperty(TestProperties.PROFILE_DEPTH));
+        int profileInterval
+                = Integer.parseInt(properties.getProperty(TestProperties.PROFILE_INTERVAL));
+        File profileFile = new File(properties.getProperty(TestProperties.PROFILE_FILE));
+        boolean profileThreadGroup
+                = Boolean.parseBoolean(properties.getProperty(TestProperties.PROFILE_THREAD_GROUP));
+
         for (Iterator<String> i = argsList.iterator(); i.hasNext(); ) {
             String arg = i.next();
             if (arg.equals("--monitorPort")) {
@@ -76,6 +90,11 @@ public final class TestRunner {
 
         this.monitorPort = monitorPort;
         this.skipPast = skipPast;
+        this.profile = profile;
+        this.profileDepth = profileDepth;
+        this.profileInterval = profileInterval;
+        this.profileFile = profileFile;
+        this.profileThreadGroup = profileThreadGroup;
         this.args = argsList.toArray(new String[argsList.size()]);
     }
 
@@ -131,18 +150,18 @@ public final class TestRunner {
         return null;
     }
 
-    public void run(String... args) throws IOException {
+    public void run() throws IOException {
         TargetMonitor monitor = useSocketMonitor
                 ? TargetMonitor.await(monitorPort)
                 : TargetMonitor.forPrintStream(System.out);
         try {
-            run(monitor, args);
+            run(monitor);
         } finally {
             monitor.close();
         }
     }
 
-    public void run(final TargetMonitor monitor, String... args) {
+    public void run(final TargetMonitor monitor) {
         PrintStream monitorPrintStream = new PrintStream(System.out) {
             @Override public void print(long l) {
                 print(String.valueOf(l));
@@ -253,6 +272,10 @@ public final class TestRunner {
             classes.removeAll(toRemove);
         }
 
+        Profiler profiler = profile ? Profiler.getInstance() : null;
+        if (profiler != null) {
+            profiler.start(profileThreadGroup, profileDepth, profileInterval);
+        }
         for (Class<?> klass : classes) {
             Class<?> runnerClass = runnerClass(klass);
             if (runnerClass != null) {
@@ -260,7 +283,7 @@ public final class TestRunner {
                 try {
                     runner = (Runner) runnerClass.newInstance();
                     runner.init(monitor, qualifiedName, qualification, klass,
-                            testEnvironment, timeoutSeconds);
+                            testEnvironment, timeoutSeconds, profile);
                 } catch (Exception e) {
                     monitor.outcomeStarted(null, qualifiedName, qualifiedName);
                     e.printStackTrace();
@@ -275,10 +298,12 @@ public final class TestRunner {
                 monitor.outcomeFinished(Result.UNSUPPORTED);
             }
         }
+        if (profiler != null) {
+            profiler.stop(profileFile);
+        }
     }
 
     public static void main(String[] args) throws IOException {
-        TestRunner testRunner = new TestRunner(new ArrayList<String>(Arrays.asList(args)));
-        testRunner.run(testRunner.args);
+        new TestRunner(new ArrayList<String>(Arrays.asList(args))).run();
     }
 }

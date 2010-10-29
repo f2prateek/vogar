@@ -51,6 +51,11 @@ public abstract class Mode {
     @Inject @Named("smallTimeoutSeconds") int timeoutSeconds;
     @Inject @Named("useBootClasspath") boolean useBootClasspath;
     @Inject @Named("nativeOutput") boolean nativeOutput;
+    @Inject @Named("profile") boolean profile;
+    @Inject @Named("profileDepth") int profileDepth;
+    @Inject @Named("profileInterval") int profileInterval;
+    @Inject @Named("profileFile") File profileFile;
+    @Inject @Named("profileThreadGroup") boolean profileThreadGroup;
 
     /**
      * User classes that need to be included in the classpath for both
@@ -186,6 +191,12 @@ public abstract class Mode {
         properties.setProperty(TestProperties.QUALIFIED_NAME, action.getName());
         properties.setProperty(TestProperties.MONITOR_PORT, Integer.toString(firstMonitorPort));
         properties.setProperty(TestProperties.TIMEOUT, Integer.toString(timeoutSeconds));
+        properties.setProperty(TestProperties.PROFILE, Boolean.toString(profile));
+        properties.setProperty(TestProperties.PROFILE_DEPTH, Integer.toString(profileDepth));
+        properties.setProperty(TestProperties.PROFILE_INTERVAL, Integer.toString(profileInterval));
+        properties.setProperty(TestProperties.PROFILE_FILE, profileFile.getName());
+        properties.setProperty(TestProperties.PROFILE_THREAD_GROUP,
+                               Boolean.toString(profileThreadGroup));
     }
 
     /**

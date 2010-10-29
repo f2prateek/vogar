@@ -30,7 +30,7 @@ public interface Runner {
     boolean supports(Class<?> klass);
 
     void init(TargetMonitor monitor, String actionName, String qualification, Class<?> klass,
-            TestEnvironment testEnvironment, int timeoutSeconds);
+            TestEnvironment testEnvironment, int timeoutSeconds, boolean profile);
 
     /**
      * @return true if this run completed normally. Otherwise the calling

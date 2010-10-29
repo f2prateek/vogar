@@ -51,7 +51,7 @@ final class EnvironmentHost extends Environment {
     }
 
     /**
-     * Recursively scans {@code dir} for xml files to grab.
+     * Recursively scans {@code dir} for files to grab.
      */
     private void retrieveFiles(File destination, File source, FileFilter filenameFilter) {
         for (File file : source.listFiles(filenameFilter)) {

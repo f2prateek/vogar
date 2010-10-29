@@ -67,7 +67,7 @@ public final class JUnitRunner implements Runner {
             Threads.daemonThreadFactory("junitrunner"));
 
     public void init(TargetMonitor monitor, String actionName, String qualification,
-            Class<?> klass, TestEnvironment testEnvironment, int timeoutSeconds) {
+            Class<?> klass, TestEnvironment testEnvironment, int timeoutSeconds, boolean profile) {
         this.monitor = monitor;
         this.actionName = actionName;
         this.testEnvironment = testEnvironment;
