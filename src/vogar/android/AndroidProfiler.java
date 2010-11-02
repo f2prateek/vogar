@@ -28,6 +28,7 @@ public class AndroidProfiler extends Profiler {
     private final Constructor constructor;
     private final Method start;
     private final Method stop;
+    private final Method shutdown;
     private final Method writeHprofData;
     {
         try {
@@ -40,6 +41,7 @@ public class AndroidProfiler extends Profiler {
             constructor = SamplingProfiler.getConstructor(Integer.TYPE, ThreadSet);
             start = SamplingProfiler.getMethod("start", Integer.TYPE);
             stop = SamplingProfiler.getMethod("stop");
+            shutdown = SamplingProfiler.getMethod("shutdown");
             writeHprofData = SamplingProfiler.getMethod("writeHprofData", File.class);
 
         } catch (Exception e) {
@@ -47,28 +49,51 @@ public class AndroidProfiler extends Profiler {
         }
     }
 
+    private Thread[] thread = new Thread[1];
     private Object profiler;
+    private int interval;
 
-    @Override public void start(boolean profileThreadGroup, int depth, int interval) {
+    @Override public void setup(boolean profileThreadGroup, int depth, int interval) {
         try {
             Thread t = Thread.currentThread();
+            thread[0] = t;
             Object threadSet;
             if (profileThreadGroup) {
                 threadSet = newThreadGroupTheadSet.invoke(null, t.getThreadGroup());
             } else {
-                threadSet = newArrayThreadSet.invoke(null, (Object)new Thread[] { t });
+                threadSet = newArrayThreadSet.invoke(null, (Object)thread);
             }
+            this.profiler = constructor.newInstance(depth, threadSet);
+            this.interval = interval;
+        } catch (Exception e) {
+            throw new AssertionError(e);
+        }
 
-            profiler = constructor.newInstance(depth, threadSet);
+    }
+
+    @Override public void start() {
+        try {
+            // If using the array thread set, switch to the current
+            // thread.  Sometimes for timeout reasons Runners use
+            // seperate threads for test execution.
+            this.thread[0] = Thread.currentThread();
             start.invoke(profiler, interval);
         } catch (Exception e) {
             throw new AssertionError(e);
         }
     }
 
-    @Override public void stop(File file) {
+    @Override public void stop() {
         try {
             stop.invoke(profiler);
+        } catch (Exception e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    @Override public void shutdown(File file) {
+        try {
+            shutdown.invoke(profiler);
             writeHprofData.invoke(profiler, file);
         } catch (Exception e) {
             throw new AssertionError(e);

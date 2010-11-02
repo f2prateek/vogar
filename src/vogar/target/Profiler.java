@@ -29,6 +29,8 @@ public abstract class Profiler {
             return null;
         }
     }
-    public abstract void start(boolean profileThreadGroup, int depth, int interval);
-    public abstract void stop(File file);
+    public abstract void setup(boolean profileThreadGroup, int depth, int interval);
+    public abstract void start();
+    public abstract void stop();
+    public abstract void shutdown(File file);
 }

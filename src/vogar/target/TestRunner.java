@@ -274,7 +274,7 @@ public final class TestRunner {
 
         Profiler profiler = profile ? Profiler.getInstance() : null;
         if (profiler != null) {
-            profiler.start(profileThreadGroup, profileDepth, profileInterval);
+            profiler.setup(profileThreadGroup, profileDepth, profileInterval);
         }
         for (Class<?> klass : classes) {
             Class<?> runnerClass = runnerClass(klass);
@@ -290,7 +290,8 @@ public final class TestRunner {
                     monitor.outcomeFinished(Result.ERROR);
                     return;
                 }
-                boolean completedNormally = runner.run(qualifiedName, klass, skipPast, args);
+                boolean completedNormally
+                        = runner.run(qualifiedName, klass, skipPast, profiler, args);
                 monitor.completedNormally(completedNormally);
             } else {
                 monitor.outcomeStarted(null, klass.getName(), qualifiedName);
@@ -299,7 +300,7 @@ public final class TestRunner {
             }
         }
         if (profiler != null) {
-            profiler.stop(profileFile);
+            profiler.shutdown(profileFile);
         }
     }
 

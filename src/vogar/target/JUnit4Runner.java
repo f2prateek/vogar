@@ -78,7 +78,11 @@ public final class JUnit4Runner implements Runner {
         this.qualification = qualification;
     }
 
-    public boolean run(String actionName, Class<?> klass, String skipPast, String[] args) {
+    public boolean run(String actionName, Class<?> klass, String skipPast, Profiler profiler,
+                       String[] args) {
+        if (profiler != null) {
+            profiler.start();
+        }
         // ignore the timeoutSeconds parameter because JUnit4 performs tests
         // in test-class unit and it can't specify timeout in test-method unit
         if (args != null && args.length > 0) {
@@ -91,6 +95,9 @@ public final class JUnit4Runner implements Runner {
             runTests(klass);
         } else {
             runTests(klass, qualification);
+        }
+        if (profiler != null) {
+            profiler.stop();
         }
         return true;
     }

@@ -38,14 +38,20 @@ public final class CaliperRunner implements vogar.target.Runner {
         testClass = klass;
     }
 
-    public boolean run(String actionName, Class<?> klass, String skipPast, String[] args) {
+    public boolean run(String actionName, Class<?> klass, String skipPast, Profiler profiler, String[] args) {
         monitor.outcomeStarted(this, actionName, actionName);
         try {
             String[] arguments = ObjectArrays.concat(testClass.getName(), args);
             if (profile) {
                 arguments = ObjectArrays.concat("--debug", arguments);
             }
+            if (profiler != null) {
+                profiler.start();
+            }
             new Runner().run(arguments);
+            if (profiler != null) {
+                profiler.stop();
+            }
         } catch (Exception ex) {
             ex.printStackTrace();
         }

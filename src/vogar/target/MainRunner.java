@@ -40,10 +40,17 @@ public final class MainRunner implements Runner {
         }
     }
 
-    public boolean run(String actionName, Class<?> klass, String skipPast, String[] args) {
+    public boolean run(String actionName, Class<?> klass, String skipPast, Profiler profiler,
+                       String[] args) {
         monitor.outcomeStarted(this, actionName, actionName);
         try {
+            if (profiler != null) {
+                profiler.start();
+            }
             main.invoke(null, new Object[] { args });
+            if (profiler != null) {
+                profiler.stop();
+            }
             monitor.outcomeFinished(Result.SUCCESS);
         } catch (Throwable ex) {
             ex.printStackTrace();

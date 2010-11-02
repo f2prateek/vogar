@@ -80,7 +80,8 @@ public final class JUnitRunner implements Runner {
         }
     }
 
-    public boolean run(String actionName, Class<?> klass, String skipPast, String[] args) {
+    public boolean run(String actionName, Class<?> klass, String skipPast, Profiler profiler,
+                       String[] args) {
         // if target args were specified, perhaps only a few tests should be run?
         if (args != null && args.length > 0 && TestCase.class.isAssignableFrom(klass)) {
             TestSuite testSuite = new TestSuite();
@@ -102,7 +103,7 @@ public final class JUnitRunner implements Runner {
                 continue;
             }
 
-            test.run(new TimeoutTestResult());
+            test.run(new TimeoutTestResult(profiler));
 
             if (vmIsUnstable) {
                 return false;
@@ -145,6 +146,13 @@ public final class JUnitRunner implements Runner {
      * this no-longer-trustworthy process.
      */
     private class TimeoutTestResult extends TestResult {
+
+        private final Profiler profiler;
+
+        private TimeoutTestResult(Profiler profiler) {
+            this.profiler = profiler;
+        }
+
         @Override public void runProtected(Test test, final Protectable p) {
             testEnvironment.reset();
             monitor.outcomeStarted(JUnitRunner.this, getOutcomeName(test), actionName);
@@ -155,7 +163,13 @@ public final class JUnitRunner implements Runner {
                 public Throwable call() throws Exception {
                     executingThreadReference.set(Thread.currentThread());
                     try {
+                        if (profiler != null) {
+                            profiler.start();
+                        }
                         p.protect();
+                        if (profiler != null) {
+                            profiler.stop();
+                        }
                         return null;
                     } catch (Throwable throwable) {
                         return throwable;
