@@ -255,7 +255,7 @@ public final class Vogar {
         System.out.println();
         System.out.println("  --invoke-with: provide a command to invoke the VM with. Examples:");
         System.out.println("      --mode host --invoke-with \"valgrind --leak-check=full\"");
-        System.out.println("      --mode device --invoke-with \"strace -f -o/sdcard/strace.txt -x -s128\"");
+        System.out.println("      --mode device --invoke-with \"strace -f -o/sdcard/strace.txt\"");
         System.out.println();
         System.out.println("  --timeout <seconds>: maximum execution time of each action before the");
         System.out.println("      runner aborts it. Specifying zero seconds or using --debug will");
