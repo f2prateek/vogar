@@ -83,7 +83,7 @@ public final class Driver {
             new LinkedHashMap<String, Action>());
     private final Map<String, Outcome> outcomes = Collections.synchronizedMap(
             new LinkedHashMap<String, Outcome>());
-    private boolean disableResultRecord = false;
+    private boolean recordResults = true;
 
     /**
      * Builds and executes the actions in the given files.
@@ -247,7 +247,7 @@ public final class Driver {
         Console.getInstance().printResult(outcome.getName(), result, resultValue, expectation);
 
         AnnotatedOutcome annotatedOutcome = outcomeStore.read(outcome);
-        if (!disableResultRecord) {
+        if (recordResults) {
             outcomeStore.write(outcome, annotatedOutcome.outcomeChanged());
         }
 
@@ -280,8 +280,10 @@ public final class Driver {
         private final BlockingQueue<Action> readyToRun;
         private volatile Date killTime;
         private String lastStartedOutcome;
+        private String lastFinishedOutcome;
 
-        public ActionRunner(AtomicBoolean prematurelyExhaustedInput, int count, BlockingQueue<Action> readyToRun) {
+        public ActionRunner(AtomicBoolean prematurelyExhaustedInput, int count,
+                BlockingQueue<Action> readyToRun) {
             this.prematurelyExhaustedInput = prematurelyExhaustedInput;
             this.count = count;
             this.readyToRun = readyToRun;
@@ -329,13 +331,14 @@ public final class Driver {
          * Executes a single action and then prints the result.
          */
         private void execute(final Action action) {
-            Console.getInstance().action(action.getName());
-            Expectation expectation = expectationStore.get(action.getName());
+            String actionName = action.getName();
+            Console.getInstance().action(actionName);
+            Expectation expectation = expectationStore.get(actionName);
             int timeoutSeconds = expectation.getTags().contains("large")
                     ? largeTimeoutSeconds
                     : smallTimeoutSeconds;
 
-            Outcome earlyFailure = outcomes.get(action.getName());
+            Outcome earlyFailure = outcomes.get(actionName);
             if (earlyFailure != null) {
                 addEarlyResult(earlyFailure);
                 return;
@@ -350,7 +353,7 @@ public final class Driver {
                 String skipPast = lastStartedOutcome;
                 lastStartedOutcome = null;
 
-                if (skipPast == null && i != 0) {
+                if (skipPast == null && i != 0 || actionName.equals(skipPast)) {
                     break;
                 }
 
@@ -371,9 +374,15 @@ public final class Driver {
                     if (completedNormally) {
                         return;
                     }
+
+                    if (recordResults && lastStartedOutcome != null
+                            && !lastStartedOutcome.equals(lastFinishedOutcome)) {
+                        recordOutcome(new Outcome(lastStartedOutcome, Result.ERROR,
+                                "Target process did not complete normally: " + command));
+                    }
                 } catch (IOException e) {
                     // if the monitor breaks, assume the worst and don't retry
-                    addEarlyResult(new Outcome(action.getName(), Result.ERROR, e));
+                    addEarlyResult(new Outcome(actionName, Result.ERROR, e));
                     return;
                 } finally {
                     command.destroy();
@@ -421,9 +430,9 @@ public final class Driver {
                 }
                 Console.getInstance().verbose("running " + outcomeName + " with unlimited timeout");
                 resetKillTime(FOREVER);
-                disableResultRecord = true;
+                recordResults = false;
             } else {
-                disableResultRecord = false;
+                recordResults = true;
             }
         }
 
@@ -433,6 +442,7 @@ public final class Driver {
         }
 
         @Override public void finish(Outcome outcome) {
+            lastFinishedOutcome = outcome.getName();
             // TODO: support flexible timeouts for JUnit tests
             resetKillTime(smallTimeoutSeconds);
             recordOutcome(outcome);

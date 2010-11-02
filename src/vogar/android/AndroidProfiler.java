@@ -59,6 +59,13 @@ public class AndroidProfiler extends Profiler {
             thread[0] = t;
             Object threadSet;
             if (profileThreadGroup) {
+
+                System.out.println(t.getThreadGroup());
+                Thread[] threads = new Thread[10];
+                t.enumerate(threads);
+                System.out.println(java.util.Arrays.asList(threads));
+
+
                 threadSet = newThreadGroupTheadSet.invoke(null, t.getThreadGroup());
             } else {
                 threadSet = newArrayThreadSet.invoke(null, (Object)thread);
