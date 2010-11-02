@@ -375,10 +375,12 @@ public final class Driver {
                         return;
                     }
 
-                    if (recordResults && lastStartedOutcome != null
-                            && !lastStartedOutcome.equals(lastFinishedOutcome)) {
-                        recordOutcome(new Outcome(lastStartedOutcome, Result.ERROR,
-                                "Target process did not complete normally: " + command));
+                    if (lastStartedOutcome == null) {
+                        addEarlyResult(new Outcome(actionName, Result.ERROR,
+                            "Target process did not complete normally: " + command));
+                    } else if (lastStartedOutcome.equals(lastFinishedOutcome)) {
+                        addEarlyResult(new Outcome(lastStartedOutcome, Result.ERROR,
+                            "Target process did not complete normally: " + command));
                     }
                 } catch (IOException e) {
                     // if the monitor breaks, assume the worst and don't retry
