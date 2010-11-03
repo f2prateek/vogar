@@ -172,33 +172,40 @@ final class ClassPathScanner {
      */
     static class ApkClassFinder implements ClassFinder {
         public void find(File classPathEntry, String pathPrefix, String packageName,
-                Set<String> classNames, Set<String> subpackageNames) throws IOException {
-            DexFile dexFile;
+                Set<String> classNames, Set<String> subpackageNames) {
+            DexFile dexFile = null;
             try {
                 dexFile = new DexFile(classPathEntry);
-            } catch (IOException e) {
-                return; // okay, presumably the dex file didn't contain any classes 
-            }
-            Enumeration<String> apkClassNames = dexFile.entries();
-            while (apkClassNames.hasMoreElements()) {
-                String className = apkClassNames.nextElement();
-                if (!className.startsWith(packageName)) {
-                    continue;
-                }
+                Enumeration<String> apkClassNames = dexFile.entries();
+                while (apkClassNames.hasMoreElements()) {
+                    String className = apkClassNames.nextElement();
+                    if (!className.startsWith(packageName)) {
+                        continue;
+                    }
 
-                String subPackageName = packageName;
-                int lastPackageSeparator = className.lastIndexOf('.');
-                if (lastPackageSeparator > 0) {
-                    subPackageName = className.substring(0, lastPackageSeparator);
+                    String subPackageName = packageName;
+                    int lastPackageSeparator = className.lastIndexOf('.');
+                    if (lastPackageSeparator > 0) {
+                        subPackageName = className.substring(0, lastPackageSeparator);
+                    }
+                    if (subPackageName.length() > packageName.length()) {
+                        subpackageNames.add(subPackageName);
+                    } else if (isToplevelClass(className)) {
+                        classNames.add(className);
+                    }
                 }
-                if (subPackageName.length() > packageName.length()) {
-                    subpackageNames.add(subPackageName);
-                } else if (isToplevelClass(className)) {
-                    classNames.add(className);
+            } catch (IOException ignore) {
+                // okay, presumably the dex file didn't contain any classes
+            } finally {
+                if (dexFile != null) {
+                    try {
+                        dexFile.close();
+                    } catch (IOException ignore) {
+                    }
                 }
             }
         }
-    };
+    }
 
     /**
      * Returns true if a given file name represents a toplevel class.
