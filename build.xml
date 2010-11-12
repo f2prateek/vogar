@@ -30,6 +30,8 @@
 
     <target name="compile"
             description="Compile all Java source code">
+        <fail unless="android.platform.dir"
+               message="No android.platform.dir. Create local.properties or put Android tools on your $PATH."/>
         <mkdir dir="build/classes"/>
         <javac srcdir="src"
                includes="vogar/**"
