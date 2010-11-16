@@ -378,7 +378,7 @@ public final class Driver {
                     if (lastStartedOutcome == null) {
                         addEarlyResult(new Outcome(actionName, Result.ERROR,
                             "Target process did not complete normally: " + command));
-                    } else if (lastStartedOutcome.equals(lastFinishedOutcome)) {
+                    } else if (!lastStartedOutcome.equals(lastFinishedOutcome)) {
                         addEarlyResult(new Outcome(lastStartedOutcome, Result.ERROR,
                             "Target process did not complete normally: " + command));
                     }
