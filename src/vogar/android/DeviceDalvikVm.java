@@ -91,6 +91,8 @@ public final class DeviceDalvikVm extends Vm {
         Collections.addAll(vmCommand, "adb", "shell", getEnvironmentDevice().getAndroidData());
         Iterables.addAll(vmCommand, invokeWith());
         vmCommand.add("dalvikvm");
+
+        // If you edit this, see also HostDalvikVm...
         VmCommandBuilder vmCommandBuilder = new VmCommandBuilder()
                 .vmCommand(vmCommand)
                 .vmArgs("-Duser.home=" + deviceUserHome)
@@ -98,13 +100,15 @@ public final class DeviceDalvikVm extends Vm {
                 .vmArgs("-Duser.language=en")
                 .vmArgs("-Duser.region=US")
                 .vmArgs("-Djavax.net.ssl.trustStore=/system/etc/security/cacerts.bks")
-                .vmArgs("-Xverify:none")
                 .maxLength(1024);
         if (!fastMode) {
+            vmCommandBuilder.vmArgs("-Xverify:none");
             vmCommandBuilder.vmArgs("-Xdexopt:none");
+            vmCommandBuilder.vmArgs("-Xcheck:jni");
         }
+        // dalvikvm defaults to no limit, but the framework sets the limit at 2000.
+        vmCommandBuilder.vmArgs("-Xjnigreflimit:2000");
         return vmCommandBuilder;
-
     }
 
     @Override protected Classpath getRuntimeClasspath(Action action) {

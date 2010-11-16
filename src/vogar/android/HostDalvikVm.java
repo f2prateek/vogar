@@ -34,6 +34,7 @@ import vogar.commands.Mkdir;
 public class HostDalvikVm extends Vm {
 
     @Inject AndroidSdk androidSdk;
+    @Inject @Named("benchmark") boolean fastMode;
     @Inject @Named("hostBuild") boolean hostBuild;
 
     private String buildRoot;
@@ -96,11 +97,19 @@ public class HostDalvikVm extends Vm {
             trustStore = base + "/system/etc/security/cacerts.bks";
         }
 
+        // If you edit this, see also DeviceDalvikVm...
         builder.vmCommand(vmCommand)
                 .vmArgs("-Xbootclasspath:" + bootClasspath.toString())
                 .vmArgs("-Duser.language=en")
                 .vmArgs("-Duser.region=US")
                 .vmArgs("-Djavax.net.ssl.trustStore=" + trustStore);
+        if (!fastMode) {
+            builder.vmArgs("-Xverify:none");
+            builder.vmArgs("-Xdexopt:none");
+            builder.vmArgs("-Xcheck:jni");
+        }
+        // dalvikvm defaults to no limit, but the framework sets the limit at 2000.
+        builder.vmArgs("-Xjnigreflimit:2000");
         return builder;
     }
 
