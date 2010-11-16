@@ -103,6 +103,10 @@ public final class TestEnvironment {
         ResponseCache.setDefault(null);
         HttpsURLConnection.setDefaultHostnameVerifier(defaultHostnameVerifier);
         HttpsURLConnection.setDefaultSSLSocketFactory(defaultSSLSocketFactory);
+
+        // Cleanup to force CloseGuard warnings etc
+        System.gc();
+        System.runFinalization();
     }
 
     private static void resetPreferences(Preferences root) {
