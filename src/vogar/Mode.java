@@ -45,6 +45,7 @@ public abstract class Mode {
     @Inject protected Environment environment;
     @Inject @Named("buildClasspath") Classpath buildClasspath;
     @Inject @Named("sourcepath") List<File> sourcepath;
+    @Inject @Named("debugPort") Integer debugPort;
     @Inject @Named("javacArgs") List<String> javacArgs;
     @Inject @Named("javaHome") File javaHome;
     @Inject @Named("firstMonitorPort") int firstMonitorPort;
@@ -144,6 +145,9 @@ public abstract class Mode {
         Set<File> sourceFiles = new HashSet<File>();
         File javaFile = action.getJavaFile();
         Javac javac = new Javac(javaPath("javac"));
+        if (debugPort != null) {
+            javac.debug();
+        }
         if (javaFile != null) {
             if (!JAVA_SOURCE_PATTERN.matcher(javaFile.toString()).find()) {
                 throw new CommandFailedException(Collections.<String>emptyList(),

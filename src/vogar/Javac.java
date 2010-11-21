@@ -63,6 +63,11 @@ final class Javac {
         return this;
     }
 
+    public Javac debug() {
+        builder.args("-g");
+        return this;
+    }
+
     public Javac extra(List<String> extra) {
         builder.args(extra);
         return this;
