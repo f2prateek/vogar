@@ -23,6 +23,7 @@ import java.net.ResponseCache;
 import java.util.Locale;
 import java.util.Properties;
 import java.util.TimeZone;
+import java.util.logging.LogManager;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 import javax.net.ssl.HostnameVerifier;
@@ -103,6 +104,9 @@ public final class TestEnvironment {
         ResponseCache.setDefault(null);
         HttpsURLConnection.setDefaultHostnameVerifier(defaultHostnameVerifier);
         HttpsURLConnection.setDefaultSSLSocketFactory(defaultSSLSocketFactory);
+
+        // Logging
+        LogManager.getLogManager().reset();
 
         // Cleanup to force CloseGuard warnings etc
         System.gc();
