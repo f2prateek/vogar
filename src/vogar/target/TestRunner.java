@@ -278,30 +278,35 @@ public final class TestRunner {
         }
         for (Class<?> klass : classes) {
             Class<?> runnerClass = runnerClass(klass);
-            if (runnerClass != null) {
-                Runner runner;
-                try {
-                    runner = (Runner) runnerClass.newInstance();
-                    runner.init(monitor, qualifiedName, qualification, klass,
-                            testEnvironment, timeoutSeconds, profile);
-                } catch (Exception e) {
-                    monitor.outcomeStarted(null, qualifiedName, qualifiedName);
-                    e.printStackTrace();
-                    monitor.outcomeFinished(Result.ERROR);
-                    return;
-                }
-                boolean completedNormally
-                        = runner.run(qualifiedName, klass, skipPast, profiler, args);
-                monitor.completedNormally(completedNormally);
-            } else {
+            if (runnerClass == null) {
                 monitor.outcomeStarted(null, klass.getName(), qualifiedName);
-                System.out.println("Skipping " + klass.getName() + ": no associated runner class");
+                System.out.println("Skipping " + klass.getName()
+                        + ": no associated runner class");
                 monitor.outcomeFinished(Result.UNSUPPORTED);
+                continue;
+            }
+
+            Runner runner;
+            try {
+                runner = (Runner) runnerClass.newInstance();
+                runner.init(monitor, qualifiedName, qualification, klass, testEnvironment,
+                        timeoutSeconds, profile);
+            } catch (Exception e) {
+                monitor.outcomeStarted(null, qualifiedName, qualifiedName);
+                e.printStackTrace();
+                monitor.outcomeFinished(Result.ERROR);
+                return;
+            }
+            boolean completedNormally = runner.run(qualifiedName, klass, skipPast, profiler, args);
+            if (!completedNormally) {
+                return; // let the caller start another process
             }
         }
         if (profiler != null) {
             profiler.shutdown(profileFile);
         }
+
+        monitor.completedNormally(true);
     }
 
     public static void main(String[] args) throws IOException {
