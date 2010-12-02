@@ -371,20 +371,19 @@ public final class Driver {
                         return;
                     }
 
-                    if (lastStartedOutcome != null
-                            && !lastStartedOutcome.equals(actionName)
-                            && !lastStartedOutcome.equals(lastFinishedOutcome)) {
-                        addEarlyResult(new Outcome(lastStartedOutcome, Result.ERROR, "Outcome "
-                                + lastStartedOutcome + " did not complete normally: " + command));
-                        continue;
+                    if (lastStartedOutcome == null || lastStartedOutcome.equals(actionName)) {
+                        addEarlyResult(new Outcome(actionName, Result.ERROR,
+                                "Action " + action + " did not complete normally.\n"
+                                + "lastStartedOutcome=" + lastStartedOutcome + "\n"
+                                + "lastFinishedOutcome=" + lastFinishedOutcome + "\n"
+                                + "command=" + command));
+                        break;
                     }
 
-                    addEarlyResult(new Outcome(actionName, Result.ERROR,
-                            "Action " + action + " did not complete normally.\n"
-                            + "lastStartedOutcome=" + lastStartedOutcome + "\n"
-                            + "lastFinishedOutcome=" + lastFinishedOutcome + "\n"
-                            + "command=" + command));
-                    break;
+                    if (!lastStartedOutcome.equals(lastFinishedOutcome)) {
+                        addEarlyResult(new Outcome(lastStartedOutcome, Result.ERROR, "Outcome "
+                                + lastStartedOutcome + " did not complete normally: " + command));
+                    }
                 } catch (IOException e) {
                     // if the monitor breaks, assume the worst and don't retry
                     addEarlyResult(new Outcome(actionName, Result.ERROR, e));
