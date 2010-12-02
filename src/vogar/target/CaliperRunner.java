@@ -22,6 +22,8 @@ import com.google.common.collect.ObjectArrays;
 import vogar.Result;
 import vogar.monitor.TargetMonitor;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 /**
  * Runs a <a href="http://code.google.com/p/caliper/">Caliper</a> benchmark.
  */
@@ -32,14 +34,15 @@ public final class CaliperRunner implements vogar.target.Runner {
     private Class<?> testClass;
 
     public void init(TargetMonitor monitor, String actionName, String qualification,
-            Class<?> testClass, TestEnvironment testEnvironment, int timeoutSeconds,
-            boolean profile) {
+            Class<?> testClass, AtomicReference<String> skipPastReference,
+            TestEnvironment testEnvironment, int timeoutSeconds, boolean profile) {
         this.monitor = monitor;
         this.profile = profile;
         this.testClass = testClass;
     }
 
-    public boolean run(String actionName, String skipPast, Profiler profiler, String[] args) {
+    public boolean run(String actionName, Profiler profiler,
+            String[] args) {
         monitor.outcomeStarted(this, testClass.getName(), actionName);
         try {
             String[] arguments = ObjectArrays.concat(testClass.getName(), args);

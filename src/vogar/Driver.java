@@ -344,7 +344,7 @@ public final class Driver {
                 return;
             }
 
-            for (int i = 0; true; i++) {
+            while (true) {
                 /*
                  * If the target process failed midway through a set of
                  * outcomes, that's okay. We pickup right after the first
@@ -352,10 +352,6 @@ public final class Driver {
                  */
                 String skipPast = lastStartedOutcome;
                 lastStartedOutcome = null;
-
-                if (skipPast == null && i != 0 || actionName.equals(skipPast)) {
-                    break;
-                }
 
                 Command command = mode.createActionCommand(action, skipPast, monitorPort(-1));
                 try {
@@ -375,17 +371,24 @@ public final class Driver {
                         return;
                     }
 
-                    if (lastStartedOutcome == null) {
-                        addEarlyResult(new Outcome(actionName, Result.ERROR,
-                            "Target process did not complete normally: " + command));
-                    } else if (!lastStartedOutcome.equals(lastFinishedOutcome)) {
-                        addEarlyResult(new Outcome(lastStartedOutcome, Result.ERROR,
-                            "Target process did not complete normally: " + command));
+                    if (lastStartedOutcome != null
+                            && !lastStartedOutcome.equals(actionName)
+                            && !lastStartedOutcome.equals(lastFinishedOutcome)) {
+                        addEarlyResult(new Outcome(lastStartedOutcome, Result.ERROR, "Outcome "
+                                + lastStartedOutcome + " did not complete normally: " + command));
+                        continue;
                     }
+
+                    addEarlyResult(new Outcome(actionName, Result.ERROR,
+                            "Action " + action + " did not complete normally.\n"
+                            + "lastStartedOutcome=" + lastStartedOutcome + "\n"
+                            + "lastFinishedOutcome=" + lastFinishedOutcome + "\n"
+                            + "command=" + command));
+                    break;
                 } catch (IOException e) {
                     // if the monitor breaks, assume the worst and don't retry
                     addEarlyResult(new Outcome(actionName, Result.ERROR, e));
-                    return;
+                    break;
                 } finally {
                     command.destroy();
                 }

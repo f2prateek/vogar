@@ -16,6 +16,7 @@
 
 package vogar.target;
 
+import java.util.concurrent.atomic.AtomicReference;
 import static org.mockito.Mockito.*;
 
 import java.io.ByteArrayOutputStream;
@@ -37,6 +38,7 @@ public class JUnitRunnerTest extends TestCase {
     private Runner runner;
     private TargetMonitor monitor;
     private TestEnvironment testEnvironment = new TestEnvironment();
+    private final AtomicReference<String> skipPastReference = new AtomicReference<String>();
 
     public void setUp() {
         runner = new JUnitRunner();
@@ -61,8 +63,8 @@ public class JUnitRunnerTest extends TestCase {
 
     public void test_init_and_run_for_SimpleTest_should_perform_test() {
         Class<?> target = SimpleTest.class;
-        runner.init(monitor, "", null, target, testEnvironment, 0, false);
-        runner.run("", null, null, null);
+        runner.init(monitor, "", null, target, skipPastReference, testEnvironment, 0, false);
+        runner.run("", null, null);
 
         verify(monitor).outcomeStarted(runner,
                 target.getName() + "#testSimple", "");
@@ -71,8 +73,8 @@ public class JUnitRunnerTest extends TestCase {
 
     public void test_init_and_run_for_SuiteTest_should_perform_tests() {
         Class<?> target = SuiteTest.class;
-        runner.init(monitor, "", null, target, testEnvironment, 0, false);
-        runner.run("", null, null, null);
+        runner.init(monitor, "", null, target, skipPastReference, testEnvironment, 0, false);
+        runner.run("", null, null);
 
         verify(monitor).outcomeStarted(runner,
                 "vogar.target.junit3.SimpleTest#testSimple", "");
@@ -88,8 +90,8 @@ public class JUnitRunnerTest extends TestCase {
     public void test_init_and_run_for_SimpleTest2_with_ActionName_should_perform_test() {
         Class<?> target = SimpleTest2.class;
         String actionName = "actionName";
-        runner.init(monitor, actionName, null, target, testEnvironment, 0, false);
-        runner.run("", null, null, null);
+        runner.init(monitor, actionName, null, target, skipPastReference, testEnvironment, 0, false);
+        runner.run("", null, null);
 
         verify(monitor).outcomeStarted(runner,
                 target.getName() + "#testSimple1", actionName);
@@ -103,8 +105,8 @@ public class JUnitRunnerTest extends TestCase {
     public void test_init_and_run_for_SimpleTest2_limitting_to_1method_should_perform_test() {
         Class<?> target = SimpleTest2.class;
         String actionName = "actionName";
-        runner.init(monitor, actionName, null, target, testEnvironment, 0, false);
-        runner.run("", null, null, new String[] { "testSimple2" });
+        runner.init(monitor, actionName, null, target, skipPastReference, testEnvironment, 0, false);
+        runner.run("", null, new String[] { "testSimple2" });
 
         verify(monitor).outcomeStarted(runner,
                 target.getName() + "#testSimple2", actionName);
@@ -114,8 +116,8 @@ public class JUnitRunnerTest extends TestCase {
     public void test_init_and_run_for_SimpleTest2_limitting_to_2methods_should_perform_test() {
         Class<?> target = SimpleTest2.class;
         String actionName = "actionName";
-        runner.init(monitor, actionName, null, target, testEnvironment, 0, false);
-        runner.run("", null, null, new String[] { "testSimple2", "testSimple3" });
+        runner.init(monitor, actionName, null, target, skipPastReference, testEnvironment, 0, false);
+        runner.run("", null, new String[] { "testSimple2", "testSimple3" });
 
         verify(monitor).outcomeStarted(runner,
                 target.getName() + "#testSimple2", actionName);
@@ -127,8 +129,8 @@ public class JUnitRunnerTest extends TestCase {
     public void test_init_limitting_to_1method_and_run_for_SimpleTest2_should_perform_test() {
         Class<?> target = SimpleTest2.class;
         String actionName = "actionName";
-        runner.init(monitor, actionName, "testSimple2", target, testEnvironment, 0, false);
-        runner.run("", null, null, null);
+        runner.init(monitor, actionName, "testSimple2", target, skipPastReference, testEnvironment, 0, false);
+        runner.run("", null, null);
 
         verify(monitor).outcomeStarted(runner,
                 target.getName() + "#testSimple2", actionName);
@@ -140,8 +142,8 @@ public class JUnitRunnerTest extends TestCase {
         Class<?> target = SuiteTest.class;
 
         try {
-            runner.init(monitor, "", "testSimple", target, testEnvironment, 0, false);
-            runner.run("", null, null, null);
+            runner.init(monitor, "", "testSimple", target, skipPastReference, testEnvironment, 0, false);
+            runner.run("", null, null);
             fail("should throw ClassCastException.");
         } catch (ClassCastException e) {
         }
@@ -153,8 +155,8 @@ public class JUnitRunnerTest extends TestCase {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         System.setOut(new PrintStream(baos));
 
-        runner.init(monitor, actionName, "testSimple5", target, testEnvironment, 0, false);
-        runner.run("", null, null, null);
+        runner.init(monitor, actionName, "testSimple5", target, skipPastReference, testEnvironment, 0, false);
+        runner.run("", null, null);
 
         verify(monitor).outcomeStarted(runner,
                 target.getName() + "#testSimple5", actionName);
@@ -169,8 +171,8 @@ public class JUnitRunnerTest extends TestCase {
     public void test_init_and_run_for_SimpleTest2_limitting_to_1method_with_both_init_and_run_should_perform_test() {
         Class<?> target = SimpleTest2.class;
         String actionName = "actionName";
-        runner.init(monitor, actionName, "testSimple3", target, testEnvironment, 0, false);
-        runner.run("", null, null, new String[] { "testSimple2" });
+        runner.init(monitor, actionName, "testSimple3", target, skipPastReference, testEnvironment, 0, false);
+        runner.run("", null, new String[] { "testSimple2" });
 
         verify(monitor).outcomeStarted(runner,
                 target.getName() + "#testSimple2", actionName);
@@ -184,8 +186,8 @@ public class JUnitRunnerTest extends TestCase {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         System.setOut(new PrintStream(baos));
 
-        runner.init(monitor, actionName, null, target, testEnvironment, 0, false);
-        runner.run("", null, null, null);
+        runner.init(monitor, actionName, null, target, skipPastReference, testEnvironment, 0, false);
+        runner.run("", null, null);
 
         verify(monitor).outcomeStarted(runner,
                 target.getName() + "#testSuccess", actionName);
@@ -209,8 +211,8 @@ public class JUnitRunnerTest extends TestCase {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         System.setOut(new PrintStream(baos));
 
-        runner.init(monitor, actionName, null, target, testEnvironment, 0, false);
-        runner.run("", null, null, null);
+        runner.init(monitor, actionName, null, target, skipPastReference, testEnvironment, 0, false);
+        runner.run("", null, null);
 
         verify(monitor).outcomeStarted(runner, target.getName() + "#test",
                 actionName);
@@ -224,8 +226,8 @@ public class JUnitRunnerTest extends TestCase {
         Class<?> target = LongTest2.class;
         String actionName = "actionName";
 
-        runner.init(monitor, actionName, null, target, testEnvironment, 0, false);
-        runner.run("", null, null, null);
+        runner.init(monitor, actionName, null, target, skipPastReference, testEnvironment, 0, false);
+        runner.run("", null, null);
 
         verify(monitor, times(8)).outcomeFinished(Result.SUCCESS);
     }

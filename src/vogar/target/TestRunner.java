@@ -27,6 +27,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
+
 import vogar.Result;
 import vogar.TestProperties;
 import vogar.monitor.TargetMonitor;
@@ -43,7 +45,9 @@ public final class TestRunner {
 
     /** the monitor port if a monitor is expected, or null for no monitor */
     protected final Integer monitorPort;
-    protected final String skipPast;
+
+    /** use an atomic reference so the runner can null it out when it is encountered. */
+    protected final AtomicReference<String> skipPastReference;
     protected final int timeoutSeconds;
     protected final List<Runner> runners;
     private final boolean profile;
@@ -89,7 +93,7 @@ public final class TestRunner {
         }
 
         this.monitorPort = monitorPort;
-        this.skipPast = skipPast;
+        this.skipPastReference = new AtomicReference<String>(skipPast);
         this.profile = profile;
         this.profileDepth = profileDepth;
         this.profileInterval = profileInterval;
@@ -289,15 +293,15 @@ public final class TestRunner {
             Runner runner;
             try {
                 runner = (Runner) runnerClass.newInstance();
-                runner.init(monitor, qualifiedName, qualification, klass, testEnvironment,
-                        timeoutSeconds, profile);
+                runner.init(monitor, qualifiedName, qualification, klass, skipPastReference,
+                        testEnvironment, timeoutSeconds, profile);
             } catch (Exception e) {
                 monitor.outcomeStarted(null, qualifiedName, qualifiedName);
                 e.printStackTrace();
                 monitor.outcomeFinished(Result.ERROR);
                 return;
             }
-            boolean completedNormally = runner.run(qualifiedName, skipPast, profiler, args);
+            boolean completedNormally = runner.run(qualifiedName, profiler, args);
             if (!completedNormally) {
                 return; // let the caller start another process
             }

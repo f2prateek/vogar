@@ -17,6 +17,8 @@
 package vogar.target;
 
 import java.lang.reflect.Method;
+import java.util.concurrent.atomic.AtomicReference;
+
 import org.junit.runner.Description;
 import org.junit.runner.JUnitCore;
 import org.junit.runner.Request;
@@ -50,8 +52,8 @@ public final class JUnit4Runner implements Runner {
     }
 
     public void init(final TargetMonitor monitor, final String actionName, String qualification,
-            Class<?> testClass, TestEnvironment testEnvironment, int timeoutSeconds,
-            boolean profile) {
+            Class<?> testClass, AtomicReference<String> skipPastReference,
+            TestEnvironment testEnvironment, int timeoutSeconds, boolean profile) {
         this.testClass = testClass;
         jUnitCore = new JUnitCore();
         jUnitCore.addListener(new RunListener() {
@@ -81,7 +83,7 @@ public final class JUnit4Runner implements Runner {
         this.qualification = qualification;
     }
 
-    public boolean run(String actionName, String skipPast, Profiler profiler, String[] args) {
+    public boolean run(String actionName, Profiler profiler, String[] args) {
         if (profiler != null) {
             profiler.start();
         }

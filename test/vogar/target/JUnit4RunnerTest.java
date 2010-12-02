@@ -70,8 +70,8 @@ public class JUnit4RunnerTest {
     @Test
     public void init_and_run_for_SimpleTest_should_perform_test() {
         Class<?> target = SimpleTest.class;
-        runner.init(monitor, "", null, target, testEnvironment, 0, false);
-        runner.run("", null, null, null);
+        runner.init(monitor, "", null, target, null, testEnvironment, 0, false);
+        runner.run("", null, null);
 
         verify(monitor).outcomeStarted(runner,
                 target.getName() + "#simpleTest", "");
@@ -81,8 +81,8 @@ public class JUnit4RunnerTest {
     @Test
     public void init_and_run_for_SuiteTest_should_perform_tests() {
         Class<?> target = SuiteTest.class;
-        runner.init(monitor, "", null, target, testEnvironment, 0, false);
-        runner.run("", null, null, null);
+        runner.init(monitor, "", null, target, null, testEnvironment, 0, false);
+        runner.run("", null, null);
 
         verify(monitor).outcomeStarted(runner,
                 "vogar.target.junit4.SimpleTest#simpleTest", "");
@@ -99,8 +99,8 @@ public class JUnit4RunnerTest {
     public void init_and_run_for_SimpleTest2_with_ActionName_should_perform_test() {
         Class<?> target = SimpleTest2.class;
         String actionName = "actionName";
-        runner.init(monitor, actionName, null, target, testEnvironment, 0, false);
-        runner.run("", null, null, null);
+        runner.init(monitor, actionName, null, target, null, testEnvironment, 0, false);
+        runner.run("", null, null);
 
         verify(monitor).outcomeStarted(runner,
                 target.getName() + "#simpleTest1", actionName);
@@ -115,8 +115,8 @@ public class JUnit4RunnerTest {
     public void init_and_run_for_SimpleTest2_limitting_to_1method_should_perform_test() {
         Class<?> target = SimpleTest2.class;
         String actionName = "actionName";
-        runner.init(monitor, actionName, null, target, testEnvironment, 0, false);
-        runner.run("", null, null, new String[] { "simpleTest2" });
+        runner.init(monitor, actionName, null, target, null, testEnvironment, 0, false);
+        runner.run("", null, new String[] { "simpleTest2" });
 
         verify(monitor).outcomeStarted(runner,
                 target.getName() + "#simpleTest2", actionName);
@@ -127,8 +127,8 @@ public class JUnit4RunnerTest {
     public void init_and_run_for_SimpleTest2_limitting_to_2methods_should_perform_test() {
         Class<?> target = SimpleTest2.class;
         String actionName = "actionName";
-        runner.init(monitor, actionName, null, target, testEnvironment, 0, false);
-        runner.run("", null, null, new String[] { "simpleTest2", "simpleTest3" });
+        runner.init(monitor, actionName, null, target, null, testEnvironment, 0, false);
+        runner.run("", null, new String[] { "simpleTest2", "simpleTest3" });
 
         verify(monitor).outcomeStarted(runner,
                 target.getName() + "#simpleTest2", actionName);
@@ -141,8 +141,8 @@ public class JUnit4RunnerTest {
     public void init_limitting_to_1method_and_run_for_SimpleTest2_should_perform_test() {
         Class<?> target = SimpleTest2.class;
         String actionName = "actionName";
-        runner.init(monitor, actionName, "simpleTest2", target, testEnvironment, 0, false);
-        runner.run("", null, null, null);
+        runner.init(monitor, actionName, "simpleTest2", target, null, testEnvironment, 0, false);
+        runner.run("", null, null);
 
         verify(monitor).outcomeStarted(runner,
                 target.getName() + "#simpleTest2", actionName);
@@ -153,8 +153,8 @@ public class JUnit4RunnerTest {
     @Test
     public void init_limitting_to_1method_and_run_for_SuiteTest_should_FAIL_test() {
         Class<?> target = SuiteTest.class;
-        runner.init(monitor, "", "testSimple", target, testEnvironment, 0, false);
-        runner.run("", null, null, null);
+        runner.init(monitor, "", "testSimple", target, null, testEnvironment, 0, false);
+        runner.run("", null, null);
 
         verify(monitor).outcomeStarted(runner,
                 "org.junit.runner.manipulation.Filter#initializationError", "");
@@ -168,8 +168,8 @@ public class JUnit4RunnerTest {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         System.setOut(new PrintStream(baos));
 
-        runner.init(monitor, actionName, "testSimple5", target, testEnvironment, 0, false);
-        runner.run("", null, null, null);
+        runner.init(monitor, actionName, "testSimple5", target, null, testEnvironment, 0, false);
+        runner.run("", null, null);
 
         verify(monitor).outcomeStarted(runner,
                 "org.junit.runner.manipulation.Filter#initializationError",
@@ -186,8 +186,8 @@ public class JUnit4RunnerTest {
     public void init_and_run_for_SimpleTest2_limitting_to_1method_with_both_init_and_run_should_perform_test() {
         Class<?> target = SimpleTest2.class;
         String actionName = "actionName";
-        runner.init(monitor, actionName, "simpleTest3", target, testEnvironment, 0, false);
-        runner.run("", null, null, new String[] { "simpleTest2" });
+        runner.init(monitor, actionName, "simpleTest3", target, null, testEnvironment, 0, false);
+        runner.run("", null, new String[] { "simpleTest2" });
 
         verify(monitor).outcomeStarted(runner,
                 target.getName() + "#simpleTest2", actionName);
@@ -202,8 +202,8 @@ public class JUnit4RunnerTest {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         System.setOut(new PrintStream(baos));
 
-        runner.init(monitor, actionName, null, target, testEnvironment, 0, false);
-        runner.run("", null, null, null);
+        runner.init(monitor, actionName, null, target, null, testEnvironment, 0, false);
+        runner.run("", null, null);
 
         verify(monitor).outcomeStarted(runner,
                 target.getName() + "#successTest", actionName);
@@ -228,8 +228,8 @@ public class JUnit4RunnerTest {
         Class<?> target = LongTest.class;
         String actionName = "actionName";
 
-        runner.init(monitor, actionName, null, target, testEnvironment, 0, false);
-        runner.run("", null, null, null);
+        runner.init(monitor, actionName, null, target, null, testEnvironment, 0, false);
+        runner.run("", null, null);
 
         verify(monitor).outcomeStarted(runner, target.getName() + "#longTest",
                 actionName);
@@ -241,8 +241,8 @@ public class JUnit4RunnerTest {
         Class<?> target = LongTest2.class;
         String actionName = "actionName";
 
-        runner.init(monitor, actionName, null, target, testEnvironment, 0, false);
-        runner.run("", null, null, null);
+        runner.init(monitor, actionName, null, target, null, testEnvironment, 0, false);
+        runner.run("", null, null);
 
         verify(monitor, times(8)).outcomeFinished(Result.SUCCESS);
     }

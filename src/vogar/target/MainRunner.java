@@ -17,6 +17,8 @@
 package vogar.target;
 
 import java.lang.reflect.Method;
+import java.util.concurrent.atomic.AtomicReference;
+
 import vogar.ClassAnalyzer;
 import vogar.Result;
 import vogar.monitor.TargetMonitor;
@@ -31,8 +33,8 @@ public final class MainRunner implements Runner {
     private Method main;
 
     public void init(TargetMonitor monitor, String actionName, String qualification,
-            Class<?> mainClass, TestEnvironment testEnvironment, int timeoutSeconds,
-            boolean profile) {
+            Class<?> mainClass, AtomicReference<String> skipPastReference,
+            TestEnvironment testEnvironment, int timeoutSeconds, boolean profile) {
         this.monitor = monitor;
         this.mainClass = mainClass;
         try {
@@ -43,7 +45,7 @@ public final class MainRunner implements Runner {
         }
     }
 
-    public boolean run(String actionName, String skipPast, Profiler profiler, String[] args) {
+    public boolean run(String actionName, Profiler profiler, String[] args) {
         monitor.outcomeStarted(this, mainClass.getName(), actionName);
         try {
             if (profiler != null) {

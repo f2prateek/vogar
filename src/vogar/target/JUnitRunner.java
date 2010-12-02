@@ -58,6 +58,7 @@ public final class JUnitRunner implements Runner {
 
     private TargetMonitor monitor;
     private Class<?> testClass;
+    private AtomicReference<String> skipPastReference;
     private String actionName;
     private TestEnvironment testEnvironment;
     private Test junitTest;
@@ -68,10 +69,11 @@ public final class JUnitRunner implements Runner {
             Threads.daemonThreadFactory("junitrunner"));
 
     public void init(TargetMonitor monitor, String actionName, String qualification,
-            Class<?> testClass, TestEnvironment testEnvironment, int timeoutSeconds,
-            boolean profile) {
+            Class<?> testClass, AtomicReference<String> skipPastReference,
+            TestEnvironment testEnvironment, int timeoutSeconds, boolean profile) {
         this.monitor = monitor;
         this.testClass = testClass;
+        this.skipPastReference = skipPastReference;
         this.actionName = actionName;
         this.testEnvironment = testEnvironment;
         this.timeoutSeconds = timeoutSeconds;
@@ -83,7 +85,7 @@ public final class JUnitRunner implements Runner {
         }
     }
 
-    public boolean run(String actionName, String skipPast, Profiler profiler, String[] args) {
+    public boolean run(String actionName, Profiler profiler, String[] args) {
         // if target args were specified, perhaps only a few tests should be run?
         if (args != null && args.length > 0 && TestCase.class.isAssignableFrom(testClass)) {
             TestSuite testSuite = new TestSuite();
@@ -98,9 +100,10 @@ public final class JUnitRunner implements Runner {
         Collections.sort(tests, ORDER_BY_OUTCOME_NAME);
 
         for (Test test : tests) {
+            String skipPast = skipPastReference.get();
             if (skipPast != null) {
                 if (skipPast.equals(getOutcomeName(test))) {
-                    skipPast = null;
+                    skipPastReference.set(null);
                 }
                 continue;
             }
