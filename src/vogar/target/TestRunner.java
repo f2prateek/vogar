@@ -297,7 +297,7 @@ public final class TestRunner {
                 monitor.outcomeFinished(Result.ERROR);
                 return;
             }
-            boolean completedNormally = runner.run(qualifiedName, klass, skipPast, profiler, args);
+            boolean completedNormally = runner.run(qualifiedName, skipPast, profiler, args);
             if (!completedNormally) {
                 return; // let the caller start another process
             }

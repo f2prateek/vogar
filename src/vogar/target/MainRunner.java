@@ -27,22 +27,24 @@ import vogar.monitor.TargetMonitor;
 public final class MainRunner implements Runner {
 
     private TargetMonitor monitor;
+    private Class<?> mainClass;
     private Method main;
 
     public void init(TargetMonitor monitor, String actionName, String qualification,
-            Class<?> klass, TestEnvironment testEnvironment, int timeoutSeconds, boolean profile) {
+            Class<?> mainClass, TestEnvironment testEnvironment, int timeoutSeconds,
+            boolean profile) {
         this.monitor = monitor;
+        this.mainClass = mainClass;
         try {
-            this.main = klass.getMethod("main", String[].class);
+            this.main = mainClass.getMethod("main", String[].class);
         } catch (NoSuchMethodException e) {
             // Don't create a MainRunner without first checking supports().
             throw new IllegalArgumentException(e);
         }
     }
 
-    public boolean run(String actionName, Class<?> klass, String skipPast, Profiler profiler,
-                       String[] args) {
-        monitor.outcomeStarted(this, actionName, actionName);
+    public boolean run(String actionName, String skipPast, Profiler profiler, String[] args) {
+        monitor.outcomeStarted(this, mainClass.getName(), actionName);
         try {
             if (profiler != null) {
                 profiler.start();

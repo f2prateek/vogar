@@ -57,6 +57,7 @@ public final class JUnitRunner implements Runner {
     };
 
     private TargetMonitor monitor;
+    private Class<?> testClass;
     private String actionName;
     private TestEnvironment testEnvironment;
     private Test junitTest;
@@ -67,26 +68,27 @@ public final class JUnitRunner implements Runner {
             Threads.daemonThreadFactory("junitrunner"));
 
     public void init(TargetMonitor monitor, String actionName, String qualification,
-            Class<?> klass, TestEnvironment testEnvironment, int timeoutSeconds, boolean profile) {
+            Class<?> testClass, TestEnvironment testEnvironment, int timeoutSeconds,
+            boolean profile) {
         this.monitor = monitor;
+        this.testClass = testClass;
         this.actionName = actionName;
         this.testEnvironment = testEnvironment;
         this.timeoutSeconds = timeoutSeconds;
 
         if (qualification == null) {
-            junitTest = new junit.textui.TestRunner().getTest(klass.getName());
+            junitTest = new junit.textui.TestRunner().getTest(testClass.getName());
         } else {
-            junitTest = TestSuite.createTest(klass, qualification);
+            junitTest = TestSuite.createTest(testClass, qualification);
         }
     }
 
-    public boolean run(String actionName, Class<?> klass, String skipPast, Profiler profiler,
-                       String[] args) {
+    public boolean run(String actionName, String skipPast, Profiler profiler, String[] args) {
         // if target args were specified, perhaps only a few tests should be run?
-        if (args != null && args.length > 0 && TestCase.class.isAssignableFrom(klass)) {
+        if (args != null && args.length > 0 && TestCase.class.isAssignableFrom(testClass)) {
             TestSuite testSuite = new TestSuite();
             for (String arg : args) {
-                testSuite.addTest(TestSuite.createTest(klass, arg));
+                testSuite.addTest(TestSuite.createTest(testClass, arg));
             }
             this.junitTest = testSuite;
         }

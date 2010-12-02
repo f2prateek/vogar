@@ -29,6 +29,7 @@ import vogar.monitor.TargetMonitor;
  * Adapts a JUnit4 test for use by vogar.
  */
 public final class JUnit4Runner implements Runner {
+    private Class<?> testClass;
     private JUnitCore jUnitCore;
     private String qualification;
 
@@ -49,7 +50,9 @@ public final class JUnit4Runner implements Runner {
     }
 
     public void init(final TargetMonitor monitor, final String actionName, String qualification,
-            Class<?> klass, TestEnvironment testEnvironment, int timeoutSeconds, boolean profile) {
+            Class<?> testClass, TestEnvironment testEnvironment, int timeoutSeconds,
+            boolean profile) {
+        this.testClass = testClass;
         jUnitCore = new JUnitCore();
         jUnitCore.addListener(new RunListener() {
             private Failure failure;
@@ -78,8 +81,7 @@ public final class JUnit4Runner implements Runner {
         this.qualification = qualification;
     }
 
-    public boolean run(String actionName, Class<?> klass, String skipPast, Profiler profiler,
-                       String[] args) {
+    public boolean run(String actionName, String skipPast, Profiler profiler, String[] args) {
         if (profiler != null) {
             profiler.start();
         }
@@ -87,14 +89,14 @@ public final class JUnit4Runner implements Runner {
         // in test-class unit and it can't specify timeout in test-method unit
         if (args != null && args.length > 0) {
             for (String arg : args) {
-                runTests(klass, arg);
+                runTests(testClass, arg);
             }
             return true;
         }
         if (qualification == null) {
-            runTests(klass);
+            runTests(testClass);
         } else {
-            runTests(klass, qualification);
+            runTests(testClass, qualification);
         }
         if (profiler != null) {
             profiler.stop();
