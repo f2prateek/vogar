@@ -187,8 +187,11 @@ public final class Vogar {
     @Option(names = { "--profile" })
     private boolean profile = false;
 
+    @Option(names = { "--profile-binary" })
+    private boolean profileBinary = false;
+
     @Option(names = { "--profile-file" })
-    private File profileFile = new File("java.hprof.txt");
+    private File profileFile;
 
     @Option(names = { "--profile-depth" })
     private int profileDepth = 4;
@@ -238,10 +241,12 @@ public final class Vogar {
         System.out.println("      and is mandatory for running Caliper benchmarks, and a good idea");
         System.out.println("      other performance sensitive code.");
         System.out.println();
-        System.out.println("  --profile: run with a profiler to produce an ASCII hprof file.");
+        System.out.println("  --profile: run with a profiler to produce an hprof file.");
+        System.out.println();
+        System.out.println("  --profile-binary: produce a binary hprof file instead of the default ASCII.");
         System.out.println();
         System.out.println("  --profile-file <filename>: filename for hprof profile data.");
-        System.out.println("      Default is: " + profileFile);
+        System.out.println("      Default is java.hprof.txt in ASCII mode and java.hprof in binary mode.");
         System.out.println();
         System.out.println("  --profile-depth <count>: number of frames in profile stack traces.");
         System.out.println("      Default is: " + profileDepth);
@@ -482,6 +487,10 @@ public final class Vogar {
 
         if (firstMonitorPort == -1) {
             firstMonitorPort = mode.isHost() ? 8788 : 8787;
+        }
+
+        if (profileFile == null) {
+            profileFile = new File(profileBinary ? "java.hprof" : "java.hprof.txt");
         }
 
         // separate the actions and the target args
@@ -735,6 +744,10 @@ public final class Vogar {
 
         @Provides @Named("profile") boolean provideProfile() {
             return profile;
+        }
+
+        @Provides @Named("profileBinary") boolean provideProfileBinary() {
+            return profileBinary;
         }
 
         @Provides @Named("profileFile") File provideProfileFile() {

@@ -31,6 +31,7 @@ final class JavaVm extends Vm {
     @Inject JavaVm() {}
 
     @Inject @Named("profile") boolean profile;
+    @Inject @Named("profileBinary") boolean profileBinary;
     @Inject @Named("profileFile") File profileFile;
     @Inject @Named("profileDepth") int profileDepth;
     @Inject @Named("profileInterval") int profileInterval;
@@ -42,7 +43,7 @@ final class JavaVm extends Vm {
         if (profile) {
             vmCommand.add("-agentlib:hprof="
                           + "cpu=samples,"
-                          + "format=a,"
+                          + "format=" + (profileBinary ? 'b' : 'a') + ","
                           + "file=" + profileFile + ","
                           + "depth=" + profileDepth + ","
                           + "interval=" + profileInterval + ","
