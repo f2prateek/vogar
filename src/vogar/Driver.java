@@ -279,6 +279,7 @@ public final class Driver {
         private final int count;
         private final BlockingQueue<Action> readyToRun;
         private volatile Date killTime;
+        private String actionName;
         private String lastStartedOutcome;
         private String lastFinishedOutcome;
 
@@ -317,8 +318,9 @@ public final class Driver {
                 return;
             }
 
+            actionName = action.getName();
             String threadName = Thread.currentThread().getName();
-            Thread.currentThread().setName("runner-" + action.getName());
+            Thread.currentThread().setName("runner-" + actionName);
             try {
                 execute(action);
                 mode.cleanup(action);
@@ -331,7 +333,6 @@ public final class Driver {
          * Executes a single action and then prints the result.
          */
         private void execute(final Action action) {
-            String actionName = action.getName();
             Console.getInstance().action(actionName);
             Expectation expectation = expectationStore.get(actionName);
             int timeoutSeconds = expectation.getTags().contains("large")
@@ -424,7 +425,22 @@ public final class Driver {
             this.killTime = new Date(System.currentTimeMillis() + delay);
         }
 
+        /**
+         * Test suites that use main classes in the default package have lame
+         * outcome names like "Clear" rather than "com.foo.Bar.Clear". In that
+         * case, just replace the outcome name with the action name.
+         */
+        private String toQualifiedOutcomeName(String outcomeName) {
+            if (actionName.endsWith("." + outcomeName)
+                    && !outcomeName.contains(".") && !outcomeName.contains("#")) {
+                return actionName;
+            } else {
+                return outcomeName;
+            }
+        }
+
         @Override public void start(String outcomeName, String runnerClass) {
+            outcomeName = toQualifiedOutcomeName(outcomeName);
             lastStartedOutcome = outcomeName;
             // TODO add to Outcome knowledge about what class was used to run it
             if (CaliperRunner.class.getName().equals(runnerClass)) {
@@ -441,15 +457,16 @@ public final class Driver {
         }
 
         @Override public void output(String outcomeName, String output) {
+            outcomeName = toQualifiedOutcomeName(outcomeName);
             Console.getInstance().outcome(outcomeName);
             Console.getInstance().streamOutput(outcomeName, output);
         }
 
         @Override public void finish(Outcome outcome) {
-            lastFinishedOutcome = outcome.getName();
+            lastFinishedOutcome = toQualifiedOutcomeName(outcome.getName());
             // TODO: support flexible timeouts for JUnit tests
             resetKillTime(smallTimeoutSeconds);
-            recordOutcome(outcome);
+            recordOutcome(new Outcome(lastFinishedOutcome, outcome.getResult(), outcome.getOutputLines()));
         }
 
         @Override public void print(String string) {
