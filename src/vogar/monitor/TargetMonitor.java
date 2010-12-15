@@ -83,7 +83,9 @@ public class TargetMonitor {
         writer.print(marker + gson.toJson(jsonObject) + "\n");
     }
 
-    public synchronized void close() throws IOException {}
+    public synchronized void close() throws IOException {
+        writer.close();
+    }
 
     public void completedNormally(boolean completedNormally) {
         JsonObject jsonObject = new JsonObject();
