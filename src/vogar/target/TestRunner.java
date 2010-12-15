@@ -315,5 +315,6 @@ public final class TestRunner {
 
     public static void main(String[] args) throws IOException {
         new TestRunner(new ArrayList<String>(Arrays.asList(args))).run();
+        System.exit(0);
     }
 }
