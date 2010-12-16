@@ -46,23 +46,23 @@ public final class TestEnvironment {
         systemProperties.putAll(System.getProperties());
 
         String tmpDir = systemProperties.getProperty("java.io.tmpdir");
-        if (tmpDir == null) {
-            throw new NullPointerException("tmpDir == null");
-        }
         String userHome = systemProperties.getProperty("user.home");
-        if (userHome == null) {
-            throw new NullPointerException("userHome == null");
-        }
         String userDir = systemProperties.getProperty("user.dir");
-        if (userDir == null) {
-            throw new NullPointerException("userDir == null");
+        if (tmpDir == null || userHome == null || userDir == null) {
+            throw new NullPointerException("java.io.tmpdir=" + tmpDir + ", user.home="
+                    + userHome + "user.dir=" + userDir);
         }
 
-        // Dalvik requires a writable java.home directory for preferences
+        // Require writable java.home and user.dir directories for preferences
         if ("Dalvik".equals(System.getProperty("java.vm.name"))) {
             String javaHome = tmpDir + "/java.home";
             makeDirectory(new File(javaHome));
             systemProperties.put("java.home", javaHome);
+        }
+        if (userHome.length() == 0) {
+            userHome = tmpDir + "/user.home";
+            makeDirectory(new File(userHome));
+            systemProperties.put("user.home", userHome);
         }
 
         defaultHostnameVerifier = HttpsURLConnection.getDefaultHostnameVerifier();
