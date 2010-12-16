@@ -80,11 +80,13 @@ public class AndroidSdk {
     }
 
     private final File[] androidClasses;
-    private final File androidToolsDir;
+    private final String dx;
+    private final String aapt;
 
-    private AndroidSdk(File[] androidClasses, File androidToolsDir) {
+    private AndroidSdk(File[] androidClasses, String dx, String aapt) {
         this.androidClasses = androidClasses;
-        this.androidToolsDir = androidToolsDir;
+        this.dx = dx;
+        this.aapt = aapt;
         dexCache = new Md5Cache("dex", new HostFileCache());
     }
 
@@ -100,8 +102,16 @@ public class AndroidSdk {
          * We probably get adb from either a copy of the Android SDK or a copy
          * of the Android source code.
          *
-         * Android SDK:
+         * Android SDK < v9 (gingerbread):
          *  <sdk>/tools/adb
+         *  <sdk>/platforms/android-?/tools/dx
+         *  <sdk>/platforms/android-?/tools/aapt
+         *  <sdk>/platforms/android-?/android.jar
+         *
+         * Android SDK >= v9 (gingerbread):
+         *  <sdk>/platform-tools/adb
+         *  <sdk>/platform-tools/dx
+         *  <sdk>/platform-tools/aapt
          *  <sdk>/platforms/android-?/android.jar
          *
          * Android build tree:
@@ -109,35 +119,43 @@ public class AndroidSdk {
          *  <source>/out/target/common/obj/JAVA_LIBRARIES/core_intermediates/classes.jar
          */
 
-        if ("tools".equals(parentFileName)) {
-            File sdkRoot = adb.getParentFile().getParentFile();
-            Console.getInstance().verbose("using android sdk: " + sdkRoot);
+        String dx = "dx";
+        String aapt = "aapt";
+        File[] androidClasses;
 
+        if ("tools".equals(parentFileName) || "platform-tools".equals(parentFileName)) {
+            File sdkRoot = adb.getParentFile().getParentFile();
             List<File> platforms = Arrays.asList(new File(sdkRoot, "platforms").listFiles());
             Collections.sort(platforms, ORDER_BY_NAME);
             File newestPlatform = platforms.get(platforms.size() - 1);
             Console.getInstance().verbose("using android platform: " + newestPlatform);
 
-            return new AndroidSdk(new File[] { new File(newestPlatform, "android.jar") },
-                                  new File(newestPlatform, "tools"));
+            // don't assume dx and aapt are on the $PATH
+            if ("tools".equals(parentFileName)) {
+                dx = newestPlatform.getPath() + "/tools/dx";
+                aapt = newestPlatform.getPath() + "/tools/aapt";
+            }
+
+            androidClasses = new File[] { new File(newestPlatform, "android.jar") };
+            Console.getInstance().verbose("using android sdk: " + sdkRoot);
 
         } else if ("bin".equals(parentFileName)) {
             File sourceRoot = adb.getParentFile().getParentFile()
                     .getParentFile().getParentFile().getParentFile();
             Console.getInstance().verbose("using android build tree: " + sourceRoot);
 
-            File[] androidClasses = new File[BOOTCLASSPATH.length];
+            androidClasses = new File[BOOTCLASSPATH.length];
             for (int i = 0; i < BOOTCLASSPATH.length; i++) {
                 String jar = BOOTCLASSPATH[i];
                 androidClasses[i] = new File(sourceRoot,
                                              "out/target/common/obj/JAVA_LIBRARIES/"
                                              + jar + "_intermediates/classes.jar");
             }
-            return new AndroidSdk(androidClasses, null);
-
         } else {
             throw new RuntimeException("Couldn't derive Android home from " + adb);
         }
+
+        return new AndroidSdk(androidClasses, dx, aapt);
     }
 
     public static Collection<File> defaultExpectations() {
@@ -161,18 +179,6 @@ public class AndroidSdk {
 
     public void setDeviceCache(DeviceFileCache deviceCache) {
         this.pushCache = new Md5Cache("pushed", deviceCache);
-    }
-
-    /**
-     * Returns the path to a version-specific tool.
-     *
-     * An SDK has two tools directories: a version-independent one containing "adb" and a few
-     * others, plus a version-specific one containing "dx" and a few others.
-     *
-     * If you're running from an Android build tree, everything is already on your path.
-     */
-    private String toolPath(String tool) {
-        return (androidToolsDir != null) ? new File(androidToolsDir, tool).toString() : tool;
     }
 
     /**
@@ -216,7 +222,7 @@ public class AndroidSdk {
          * handle large dx input when building dex for APK.
          */
         new Command.Builder()
-                .args(toolPath("dx"))
+                .args(dx)
                 .args("-JXms16M")
                 .args("-JXmx1536M")
                 .args("--dex")
@@ -227,7 +233,7 @@ public class AndroidSdk {
     }
 
     public void packageApk(File apk, File manifest) {
-        List<String> aapt = new ArrayList<String>(Arrays.asList(toolPath("aapt"),
+        List<String> aapt = new ArrayList<String>(Arrays.asList(this.aapt,
                                                                 "package",
                                                                 "-F", apk.getPath(),
                                                                 "-M", manifest.getPath()));
@@ -239,7 +245,7 @@ public class AndroidSdk {
     }
 
     public void addToApk(File apk, File dex) {
-        new Command(toolPath("aapt"), "add", "-k", apk.getPath(), dex.getPath()).execute();
+        new Command(this.aapt, "add", "-k", apk.getPath(), dex.getPath()).execute();
     }
 
     public void mkdir(File name) {
