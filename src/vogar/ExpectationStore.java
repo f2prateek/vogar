@@ -25,11 +25,9 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
-import vogar.commands.Command;
 
 /**
  * A database of expected outcomes. Entries in this database come in two forms.
@@ -222,38 +220,35 @@ final class ExpectationStore {
      * Sets the bugIsOpen status on all expectations by querying an external bug
      * tracker.
      */
-    public void loadBugStatuses(String openBugsCommand) {
+    public void loadBugStatuses(BugDatabase bugDatabase) {
         Iterable<Expectation> allExpectations
                 = Iterables.concat(outcomes.values(), failures.values());
 
         // figure out what bug IDs we're interested in
-        Set<String> bugs = new LinkedHashSet<String>();
+        Set<Long> bugs = new LinkedHashSet<Long>();
         for (Expectation expectation : allExpectations) {
             if (expectation.getBug() != -1) {
-                bugs.add(Long.toString(expectation.getBug()));
+                bugs.add(expectation.getBug());
             }
         }
         if (bugs.isEmpty()) {
             return;
         }
 
-        // query the external app for open bugs
-        List<String> openBugs = new Command.Builder(log)
-                .args(openBugsCommand)
-                .args(bugs)
-                .execute();
-        Set<Long> openBugsSet = new LinkedHashSet<Long>();
-        for (String bug : openBugs) {
-            openBugsSet.add(Long.parseLong(bug));
-        }
+        Set<Long> openBugs = bugDatabase.bugsToOpenBugs(bugs);
 
-        log.verbose("tracking " + openBugsSet.size() + " open bugs: " + openBugs);
+        log.verbose("tracking " + openBugs.size() + " open bugs: " + openBugs);
 
         // update our expectations with that set
         for (Expectation expectation : allExpectations) {
-            if (openBugsSet.contains(expectation.getBug())) {
+            if (openBugs.contains(expectation.getBug())) {
                 expectation.setBugIsOpen(true);
             }
         }
     }
+
+    interface BugDatabase {
+        Set<Long> bugsToOpenBugs(Set<Long> bugs);
+    }
+
 }

@@ -631,17 +631,23 @@ public final class Vogar {
                     : environmentDeviceProvider.get();
         }
 
-        @Provides @Singleton ExpectationStore provideExpectationStore(Console console)
-            throws IOException {
+        @Provides @Singleton ExpectationStore provideExpectationStore(
+                Console console, ExpectationStore.BugDatabase bugDatabase) throws IOException {
             ExpectationStore result = ExpectationStore.parse(console, expectationFiles, mode);
-            if (openBugsCommand != null) {
-                result.loadBugStatuses(openBugsCommand);
+            if (bugDatabase != null) {
+                result.loadBugStatuses(bugDatabase);
             }
             return result;
         }
 
         @Provides @Named("fastMode") boolean provideFastMode() {
             return benchmark;
+        }
+
+        @Provides @Singleton ExpectationStore.BugDatabase provideBugDatabase(Log log) {
+            return openBugsCommand != null
+                    ? new CommandBugDatabase(log, openBugsCommand)
+                    : null;
         }
 
         @Provides @Named("firstMonitorPort") int provideFirstMonitorPort() {
