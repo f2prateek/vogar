@@ -24,6 +24,7 @@ import java.util.Locale;
 import java.util.Properties;
 import java.util.TimeZone;
 import java.util.logging.LogManager;
+import java.util.logging.Logger;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 import javax.net.ssl.HostnameVerifier;
@@ -95,8 +96,17 @@ public final class TestEnvironment {
         TimeZone.setDefault(TimeZone.getTimeZone("America/Los_Angeles"));
 
         // Preferences
-        resetPreferences(Preferences.systemRoot());
-        resetPreferences(Preferences.userRoot());
+        // Temporarily silence the java.util.prefs logger, which otherwise emits
+        // an unactionable warning. See RI bug 4751540.
+        Logger loggerToMute = Logger.getLogger("java.util.prefs");
+        boolean usedParentHandlers = loggerToMute.getUseParentHandlers();
+        loggerToMute.setUseParentHandlers(false);
+        try {
+            resetPreferences(Preferences.systemRoot());
+            resetPreferences(Preferences.userRoot());
+        } finally {
+            loggerToMute.setUseParentHandlers(usedParentHandlers);
+        }
 
         // HttpURLConnection
         Authenticator.setDefault(null);
