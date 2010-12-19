@@ -18,7 +18,6 @@ package vogar.target;
 
 import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicReference;
-
 import org.junit.runner.Description;
 import org.junit.runner.JUnitCore;
 import org.junit.runner.Request;

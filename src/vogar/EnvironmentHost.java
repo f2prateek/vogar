@@ -24,6 +24,8 @@ import vogar.commands.Mkdir;
 
 final class EnvironmentHost extends Environment {
 
+    @Inject Log log;
+    @Inject Mkdir mkdir;
     @Inject RetrievedFilesFilter retrievedFiles;
 
     @Inject EnvironmentHost() {}
@@ -40,11 +42,11 @@ final class EnvironmentHost extends Environment {
 
         File resourcesDirectory = action.getResourcesDirectory();
         if (resourcesDirectory != null) {
-            new Mkdir().mkdirs(actionUserDir.getParentFile());
-            new Command("cp", "-r", resourcesDirectory.toString(),
+            mkdir.mkdirs(actionUserDir.getParentFile());
+            new Command(log, "cp", "-r", resourcesDirectory.toString(),
                     actionUserDir.toString()).execute();
         } else {
-            new Mkdir().mkdirs(actionUserDir);
+            mkdir.mkdirs(actionUserDir);
         }
 
         action.setUserDir(actionUserDir);
@@ -55,9 +57,9 @@ final class EnvironmentHost extends Environment {
      */
     private void retrieveFiles(File destination, File source, FileFilter filenameFilter) {
         for (File file : source.listFiles(filenameFilter)) {
-            Console.getInstance().info("Moving " + file + " to " + destination);
-            new Mkdir().mkdirs(destination);
-            new Command("cp", file.getPath(), destination.getPath()).execute();
+            log.info("Moving " + file + " to " + destination);
+            mkdir.mkdirs(destination);
+            new Command(log, "cp", file.getPath(), destination.getPath()).execute();
         }
 
         FileFilter directoryFilter = new FileFilter() {

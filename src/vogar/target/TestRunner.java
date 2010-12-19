@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
-
 import vogar.Result;
 import vogar.TestProperties;
 import vogar.monitor.TargetMonitor;

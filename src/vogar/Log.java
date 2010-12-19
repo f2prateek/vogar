@@ -14,23 +14,14 @@
  * limitations under the License.
  */
 
-package vogar.target;
+package vogar;
 
-import java.io.File;
-import vogar.android.AndroidProfiler;
-
-public abstract class Profiler {
-    public static Profiler getInstance() {
-        try {
-            return new AndroidProfiler();
-        } catch (Exception e) {
-            // will fail if AndroidProfiler is unsupported such as in
-            // mode jvm
-            return null;
-        }
-    }
-    public abstract void setup(boolean profileThreadGroup, int depth, int interval);
-    public abstract void start();
-    public abstract void stop();
-    public abstract void shutdown(File file);
+/**
+ * Emits output to the console, device log or file.
+ */
+public interface Log {
+    void verbose(String s);
+    void info(String s);
+    void info(String s, Throwable exception);
+    void warn(String s);
 }

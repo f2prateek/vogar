@@ -54,7 +54,8 @@ public abstract class Vm extends Mode {
     /**
      * Returns a VM for action execution.
      */
-    @Override protected Command createActionCommand(Action action, String skipPast, int monitorPort) {
+    @Override protected Command createActionCommand(
+            Action action, String skipPast, int monitorPort) {
         VmCommandBuilder vmCommandBuilder = newVmCommandBuilder();
         if (useBootClasspath) {
             vmCommandBuilder.bootClasspath(getRuntimeClasspath(action));
@@ -68,8 +69,6 @@ public abstract class Vm extends Mode {
         if (skipPast != null) {
             vmCommandBuilder.args("--skipPast", skipPast);
         }
-
-        vmCommandBuilder.setNativeOutput(nativeOutput);
 
         File workingDirectory = action.getUserDir();
         return vmCommandBuilder
@@ -96,34 +95,22 @@ public abstract class Vm extends Mode {
     /**
      * Builds a virtual machine command.
      */
-    public static class VmCommandBuilder {
+    public class VmCommandBuilder {
         private File temp;
         private Classpath bootClasspath = new Classpath();
         private Classpath classpath = new Classpath();
-        private File workingDir;
         private File userDir;
         private Integer debugPort;
         private String mainClass;
         private PrintStream output;
         private int maxLength = -1;
-        private boolean nativeOutput;
         private List<String> vmCommand = Collections.singletonList("java");
         private List<String> vmArgs = new ArrayList<String>();
         private List<String> args = new ArrayList<String>();
         private Map<String, String> env = new LinkedHashMap<String, String>();
 
-        public VmCommandBuilder vmCommand(String... vmCommand) {
-            this.vmCommand = Arrays.asList(vmCommand.clone());
-            return this;
-        }
-
         public VmCommandBuilder vmCommand(List<String> vmCommand) {
             this.vmCommand = new ArrayList<String>(vmCommand);
-            return this;
-        }
-
-        public VmCommandBuilder setNativeOutput(boolean nativeOutput) {
-            this.nativeOutput = nativeOutput;
             return this;
         }
 
@@ -139,15 +126,6 @@ public abstract class Vm extends Mode {
 
         public VmCommandBuilder classpath(Classpath classpath) {
             this.classpath.addAll(classpath);
-            return this;
-        }
-
-        /**
-         * The working directory on the host. This directory must exist on the
-         * local disk.
-         */
-        public VmCommandBuilder workingDir(File workingDir) {
-            this.workingDir = workingDir;
             return this;
         }
 
@@ -204,7 +182,7 @@ public abstract class Vm extends Mode {
         }
 
         public Command build() {
-            Command.Builder builder = new Command.Builder();
+            Command.Builder builder = new Command.Builder(log);
 
             for (Map.Entry<String, String> entry : env.entrySet()) {
                 builder.env(entry.getKey(), entry.getValue());
@@ -217,9 +195,6 @@ public abstract class Vm extends Mode {
                 builder.args("-Xbootclasspath/a:" + bootClasspath);
             }
             builder.args("-Duser.dir=" + userDir);
-            if (workingDir != null) {
-                builder.workingDirectory(workingDir);
-            }
 
             if (temp != null) {
                 builder.args("-Djava.io.tmpdir=" + temp);
@@ -233,8 +208,6 @@ public abstract class Vm extends Mode {
             builder.args(vmArgs);
             builder.args(mainClass);
             builder.args(args);
-
-            builder.setNativeOutput(nativeOutput);
             builder.tee(output);
             builder.maxLength(maxLength);
             return builder.build();

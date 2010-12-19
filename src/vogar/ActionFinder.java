@@ -24,10 +24,12 @@ import java.util.Map;
  * Handles finding actions to perform, given files and classes.
  */
 public final class ActionFinder {
+    private final Log log;
     private final Map<String, Action> actions;
     private final Map<String, Outcome> outcomes;
 
-    public ActionFinder(Map<String, Action> actions, Map<String, Outcome> outcomes) {
+    public ActionFinder(Log log, Map<String, Action> actions, Map<String, Outcome> outcomes) {
+        this.log = log;
         this.actions = actions;
         this.outcomes = outcomes;
     }
@@ -43,7 +45,7 @@ public final class ActionFinder {
                 findActionsRecursive(child, depth + 1);
             }
             if (depth < 3) {
-                Console.getInstance().verbose("Found " + (actions.size() - size) + " actions in " + file);
+                log.verbose("found " + (actions.size() - size) + " actions in " + file);
             }
             return;
         }

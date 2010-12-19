@@ -43,6 +43,8 @@ public abstract class Mode {
     private static final Pattern JAVA_SOURCE_PATTERN = Pattern.compile("\\/(\\w)+\\.java$");
 
     @Inject protected Environment environment;
+    @Inject Log log;
+    @Inject Mkdir mkdir;
     @Inject @Named("buildClasspath") Classpath buildClasspath;
     @Inject @Named("sourcepath") List<File> sourcepath;
     @Inject @Named("debugPort") Integer debugPort;
@@ -51,7 +53,6 @@ public abstract class Mode {
     @Inject @Named("firstMonitorPort") int firstMonitorPort;
     @Inject @Named("smallTimeoutSeconds") int timeoutSeconds;
     @Inject @Named("useBootClasspath") boolean useBootClasspath;
-    @Inject @Named("nativeOutput") boolean nativeOutput;
     @Inject @Named("profile") boolean profile;
     @Inject @Named("profileDepth") int profileDepth;
     @Inject @Named("profileInterval") int profileInterval;
@@ -117,7 +118,7 @@ public abstract class Mode {
      *      failure otherwise.
      */
     public Outcome buildAndInstall(Action action) {
-        Console.getInstance().verbose("build " + action.getName());
+        log.verbose("build " + action.getName());
         environment.prepareUserDir(action);
 
         try {
@@ -139,12 +140,12 @@ public abstract class Mode {
      */
     private File compile(Action action) throws IOException {
         File classesDir = environment.file(action, "classes");
-        new Mkdir().mkdirs(classesDir);
+        mkdir.mkdirs(classesDir);
         createJarMetadataFiles(action, classesDir);
 
         Set<File> sourceFiles = new HashSet<File>();
         File javaFile = action.getJavaFile();
-        Javac javac = new Javac(javaPath("javac"));
+        Javac javac = new Javac(log, javaPath("javac"));
         if (debugPort != null) {
             javac.debug();
         }
@@ -169,7 +170,7 @@ public abstract class Mode {
         }
 
         File jar = environment.hostJar(action);
-        new Command(javaPath("jar"), "cvfM", jar.getPath(),
+        new Command(log, javaPath("jar"), "cvfM", jar.getPath(),
                 "-C", classesDir.getPath(), "./").execute();
         return jar;
     }

@@ -16,9 +16,8 @@
 
 package vogar.target;
 
-import vogar.monitor.TargetMonitor;
-
 import java.util.concurrent.atomic.AtomicReference;
+import vogar.monitor.TargetMonitor;
 
 /**
  * Interface between the generic TestRunner and the more specific

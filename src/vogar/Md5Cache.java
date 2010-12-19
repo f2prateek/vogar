@@ -25,6 +25,7 @@ import java.security.MessageDigest;
  */
 public final class Md5Cache {
 
+    private final Log log;
     private final String keyPrefix;
     private final FileCache fileCache;
 
@@ -32,7 +33,8 @@ public final class Md5Cache {
      * Creates a new cache accessor. There's only one directory on disk, so 'keyPrefix' is really
      * just a convenience for humans inspecting the cache.
      */
-    public Md5Cache(String keyPrefix, FileCache fileCache) {
+    public Md5Cache(Log log, String keyPrefix, FileCache fileCache) {
+        this.log = log;
         this.keyPrefix = keyPrefix;
         this.fileCache = fileCache;
     }
@@ -114,7 +116,7 @@ public final class Md5Cache {
         if (key == null) {
             return;
         }
-        Console.getInstance().verbose("inserting " + key);
+        log.verbose("inserting " + key);
         fileCache.copyToCache(content, key);
     }
 }

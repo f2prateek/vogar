@@ -26,7 +26,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
-import vogar.commands.Mkdir;
 
 /**
  * A representation of a previous invocation of Vogar.
@@ -67,7 +66,7 @@ public class Tag {
             throw new RuntimeException("Tag \"" + tag + "\" already exists, add "
                     + "\"--tag-overwrite\" to override");
         }
-        new Mkdir().mkdirs(argsFile.getParentFile());
+        argsFile.getParentFile().mkdirs();
         BufferedWriter tagWriter;
         try {
             tagWriter = new BufferedWriter(new FileWriter(argsFile));

@@ -27,7 +27,7 @@ import java.util.Properties;
 import javax.inject.Inject;
 import vogar.Action;
 import vogar.Classpath;
-import vogar.Console;
+import vogar.Log;
 import vogar.Mode;
 import vogar.TestProperties;
 import vogar.commands.Command;
@@ -38,9 +38,9 @@ import vogar.commands.Command;
 public final class ActivityMode extends Mode {
     private static final String TEST_ACTIVITY_CLASS = "vogar.target.TestActivity";
 
-    private File keystore;
+    @Inject Log log;
 
-    @Inject ActivityMode() {}
+    private File keystore;
 
     private EnvironmentDevice getEnvironmentDevice() {
         return (EnvironmentDevice) environment;
@@ -55,7 +55,7 @@ public final class ActivityMode extends Mode {
         try {
             keystore = environment.file("activity", "vogar.keystore");
             keystore.getParentFile().mkdirs();
-            Console.getInstance().verbose("extracting keystore to " + keystore);
+            log.verbose("extracting keystore to " + keystore);
             InputStream in = new BufferedInputStream(
                     getClass().getResourceAsStream("/vogar/vogar.keystore"));
             OutputStream out = new BufferedOutputStream(new FileOutputStream(keystore));
@@ -72,7 +72,7 @@ public final class ActivityMode extends Mode {
     }
 
     @Override protected void postCompile(Action action, File jar) {
-        Console.getInstance().verbose("aapt and push " + action.getName());
+        log.verbose("aapt and push " + action.getName());
 
         // We can't put multiple dex files in one apk.
         // We can't just give dex multiple jars with conflicting class names
@@ -148,7 +148,7 @@ public final class ActivityMode extends Mode {
          *     keytool -genkey -v -keystore src/vogar/vogar.keystore \
          *         -keyalg RSA -validity 10000 -alias vogar
          */
-        new Command("jarsigner",
+        new Command(log, "jarsigner",
                 "--storepass", "password",
                 "-keystore", keystore.getPath(),
                 apkUnsigned.getPath(),
@@ -172,7 +172,7 @@ public final class ActivityMode extends Mode {
             throw new IllegalArgumentException("ActivityMode doesn't support runtime monitor ports!");
         }
 
-        return new Command(
+        return new Command(log,
                 "adb", "shell", "am", "start", "-W",
                 "-a", "android.intent.action.MAIN",
                 "-n", (packageName(action) + "/" + TEST_ACTIVITY_CLASS));

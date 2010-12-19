@@ -61,6 +61,8 @@ public final class Driver {
 
     private final Timer actionTimeoutTimer = new Timer("action timeout", true);
 
+    @Inject Console console;
+    @Inject Mkdir mkdir;
     @Inject @Named("localTemp") File localTemp;
     @Inject ExpectationStore expectationStore;
     @Inject Mode mode;
@@ -93,17 +95,17 @@ public final class Driver {
             throw new IllegalStateException("Drivers are not reusable");
         }
 
-        new Mkdir().mkdirs(localTemp);
+        mkdir.mkdirs(localTemp);
 
         filesToActions(files);
         classesToActions(classes);
 
         if (actions.isEmpty()) {
-            Console.getInstance().info("Nothing to do.");
+            console.info("Nothing to do.");
             return false;
         }
 
-        Console.getInstance().info("Actions: " + actions.size());
+        console.info("Actions: " + actions.size());
         final long t0 = System.currentTimeMillis();
 
         // mode.prepare before mode.buildAndInstall to ensure the runner is
@@ -115,7 +117,7 @@ public final class Driver {
         // threads helps for packages that contain many unsupported actions
         final BlockingQueue<Action> readyToRun = new ArrayBlockingQueue<Action>(4);
 
-        ExecutorService builders = Threads.threadPerCpuExecutor("builder");
+        ExecutorService builders = Threads.threadPerCpuExecutor(console, "builder");
 
         int totalToRun = 0;
         for (final Action action : actions.values()) {
@@ -133,7 +135,7 @@ public final class Driver {
             builders.execute(new Runnable() {
                 public void run() {
                     try {
-                        Console.getInstance().verbose("installing action " + runIndex + "; "
+                        console.verbose("installing action " + runIndex + "; "
                                 + readyToRun.size() + " are runnable");
                         Outcome outcome = mode.buildAndInstall(action);
                         if (outcome != null) {
@@ -141,21 +143,21 @@ public final class Driver {
                         }
 
                         readyToRun.put(action);
-                        Console.getInstance().verbose("installed action " + runIndex + "; "
+                        console.verbose("installed action " + runIndex + "; "
                                 + readyToRun.size() + " are runnable");
                     } catch (Throwable e) {
-                        Console.getInstance().info("unexpected failure!", e);
+                        console.info("unexpected failure!", e);
                     }
                 }
             });
         }
         builders.shutdown();
 
-        Console.getInstance().verbose(numRunnerThreads > 1
+        console.verbose(numRunnerThreads > 1
                 ? ("running actions in parallel (" + numRunnerThreads + " threads)")
                 : ("running actions in serial"));
 
-        ExecutorService runners = Threads.fixedThreadsExecutor("runner", numRunnerThreads);
+        ExecutorService runners = Threads.fixedThreadsExecutor(console, "runner", numRunnerThreads);
 
         final AtomicBoolean prematurelyExhaustedInput = new AtomicBoolean();
         for (int i = 0; i < totalToRun; i++) {
@@ -174,30 +176,30 @@ public final class Driver {
         }
 
         if (reportPrinter.isReady()) {
-            Console.getInstance().info("Printing XML Reports... ");
+            console.info("Printing XML Reports... ");
             int numFiles = reportPrinter.generateReports(outcomes.values());
-            Console.getInstance().info(numFiles + " XML files written.");
+            console.info(numFiles + " XML files written.");
         }
 
         mode.shutdown();
         final long t1 = System.currentTimeMillis();
 
-        Console.getInstance().summarizeOutcomes(annotatedOutcomes);
+        console.summarizeOutcomes(annotatedOutcomes);
 
         List<String> jarStringList = jarSuggestions.getStringList();
         if (!jarStringList.isEmpty()) {
-            Console.getInstance().warn(
+            console.warn(
                     "consider adding the following to the classpath:",
                     jarStringList);
         }
 
         if (failures > 0 || skipped > 0) {
-            Console.getInstance().info(String.format(
+            console.info(String.format(
                     "Outcomes: %s. Passed: %d, Failed: %d, Skipped: %d. Took %s.",
                     (successes + failures + skipped), successes, failures, skipped,
                     TimeUtilities.msToString(t1 - t0)));
         } else {
-            Console.getInstance().info(String.format("Outcomes: %s. All successful. Took %s.",
+            console.info(String.format("Outcomes: %s. All successful. Took %s.",
                     successes, TimeUtilities.msToString(t1 - t0)));
         }
         return failures == 0;
@@ -212,18 +214,18 @@ public final class Driver {
 
     private void filesToActions(Collection<File> files) {
         for (File file : files) {
-            new ActionFinder(actions, outcomes).findActions(file);
+            new ActionFinder(console, actions, outcomes).findActions(file);
         }
     }
 
     private synchronized void addEarlyResult(Outcome earlyFailure) {
         if (earlyFailure.getResult() == Result.UNSUPPORTED) {
-            Console.getInstance().verbose("skipped " + earlyFailure.getName());
+            console.verbose("skipped " + earlyFailure.getName());
             skipped++;
 
         } else {
             for (String line : earlyFailure.getOutputLines()) {
-                Console.getInstance().streamOutput(earlyFailure.getName(), line + "\n");
+                console.streamOutput(earlyFailure.getName(), line + "\n");
             }
             recordOutcome(earlyFailure);
         }
@@ -243,8 +245,8 @@ public final class Driver {
         }
 
         Result result = outcome.getResult();
-        Console.getInstance().outcome(outcome.getName());
-        Console.getInstance().printResult(outcome.getName(), result, resultValue, expectation);
+        console.outcome(outcome.getName());
+        console.printResult(outcome.getName(), result, resultValue, expectation);
 
         AnnotatedOutcome annotatedOutcome = outcomeStore.read(outcome);
         if (recordResults) {
@@ -258,7 +260,7 @@ public final class Driver {
                 mode.getClasspath());
         List<String> jarStringList = singleOutcomeJarSuggestions.getStringList();
         if (!jarStringList.isEmpty()) {
-            Console.getInstance().warn(
+            console.warn(
                     "may have failed because some of these jars are missing from the classpath:",
                     jarStringList);
         }
@@ -301,7 +303,7 @@ public final class Driver {
                 return;
             }
 
-            Console.getInstance().verbose("executing action " + count + "; "
+            console.verbose("executing action " + count + "; "
                     + readyToRun.size() + " are ready to run");
 
             // if it takes 5 minutes for build and install, something is broken
@@ -333,7 +335,7 @@ public final class Driver {
          * Executes a single action and then prints the result.
          */
         private void execute(final Action action) {
-            Console.getInstance().action(actionName);
+            console.action(actionName);
             Expectation expectation = expectationStore.get(actionName);
             int timeoutSeconds = expectation.getTags().contains("large")
                     ? largeTimeoutSeconds
@@ -363,7 +365,7 @@ public final class Driver {
                         scheduleTaskKiller(command, action, timeoutSeconds);
                     }
 
-                    HostMonitor hostMonitor = new HostMonitor(this);
+                    HostMonitor hostMonitor = new HostMonitor(console, this);
                     boolean completedNormally = mode.useSocketMonitor()
                             ? hostMonitor.attach(monitorPort(firstMonitorPort))
                             : hostMonitor.followStream(command.getInputStream());
@@ -404,7 +406,7 @@ public final class Driver {
                         scheduleTaskKiller(command, action, timeoutSeconds);
                         return;
                     }
-                    Console.getInstance().verbose("killing " + action + " because it timed out "
+                    console.verbose("killing " + action + " because it timed out "
                             + "after " + timeoutSeconds + " seconds. Last started outcome is "
                             + lastStartedOutcome);
                     command.destroy();
@@ -448,7 +450,7 @@ public final class Driver {
                     throw new RuntimeException("you must use --benchmark when running Caliper "
                             + "benchmarks.");
                 }
-                Console.getInstance().verbose("running " + outcomeName + " with unlimited timeout");
+                console.verbose("running " + outcomeName + " with unlimited timeout");
                 resetKillTime(FOREVER);
                 recordResults = false;
             } else {
@@ -458,8 +460,8 @@ public final class Driver {
 
         @Override public void output(String outcomeName, String output) {
             outcomeName = toQualifiedOutcomeName(outcomeName);
-            Console.getInstance().outcome(outcomeName);
-            Console.getInstance().streamOutput(outcomeName, output);
+            console.outcome(outcomeName);
+            console.streamOutput(outcomeName, output);
         }
 
         @Override public void finish(Outcome outcome) {
@@ -470,7 +472,7 @@ public final class Driver {
         }
 
         @Override public void print(String string) {
-            Console.getInstance().streamOutput(string);
+            console.streamOutput(string);
         }
     }
 }

@@ -47,10 +47,14 @@ import vogar.commands.Command;
  */
 final class ExpectationStore {
     private static final int PATTERN_FLAGS = Pattern.MULTILINE | Pattern.DOTALL;
+
+    private final Log log;
     private final Map<String, Expectation> outcomes = new LinkedHashMap<String, Expectation>();
     private final Map<String, Expectation> failures = new LinkedHashMap<String, Expectation>();
 
-    private ExpectationStore() {}
+    private ExpectationStore(Log log) {
+        this.log = log;
+    }
 
     /**
      * Finds the expected result for the specified action or outcome name. This
@@ -102,8 +106,9 @@ final class ExpectationStore {
         }
     }
 
-    public static ExpectationStore parse(Set<File> expectationFiles, ModeId mode) throws IOException {
-        ExpectationStore result = new ExpectationStore();
+    public static ExpectationStore parse(Log log, Set<File> expectationFiles, ModeId mode)
+            throws IOException {
+        ExpectationStore result = new ExpectationStore(log);
         for (File f : expectationFiles) {
             if (f.exists()) {
                 result.parse(f, mode);
@@ -113,7 +118,7 @@ final class ExpectationStore {
     }
 
     public void parse(File expectationsFile, ModeId mode) throws IOException {
-        Console.getInstance().verbose("loading expectations file " + expectationsFile);
+        log.verbose("loading expectations file " + expectationsFile);
 
         int count = 0;
         JsonReader reader = null;
@@ -127,7 +132,7 @@ final class ExpectationStore {
             }
             reader.endArray();
 
-            Console.getInstance().verbose("loaded " + count + " expectations from " + expectationsFile);
+            log.verbose("loaded " + count + " expectations from " + expectationsFile);
         } finally {
             if (reader != null) {
                 reader.close();
@@ -160,18 +165,20 @@ final class ExpectationStore {
             } else if (name.equals("pattern")) {
                 pattern = Pattern.compile(reader.nextString(), PATTERN_FLAGS);
             } else if (name.equals("substring")) {
-                pattern = Pattern.compile(".*" + Pattern.quote(reader.nextString()) + ".*", PATTERN_FLAGS);
+                pattern = Pattern.compile(
+                        ".*" + Pattern.quote(reader.nextString()) + ".*", PATTERN_FLAGS);
             } else if (name.equals("tags")) {
                 readStrings(reader, tags);
             } else if (name.equals("description")) {
-                Iterable<String> split = Splitter.on("\n").omitEmptyStrings().trimResults().split(reader.nextString());
+                Iterable<String> split = Splitter.on("\n").omitEmptyStrings().trimResults()
+                        .split(reader.nextString());
                 description = Joiner.on("\n").join(split);
             } else if (name.equals("bug")) {
                 buganizerBug = reader.nextLong();
             } else if (name.equals("modes")) {
                 modes = readModes(reader);
             } else {
-                Console.getInstance().warn("Unhandled name in expectations file: " + name);
+                log.warn("Unhandled name in expectations file: " + name);
                 reader.skipValue();
             }
         }
@@ -216,7 +223,8 @@ final class ExpectationStore {
      * tracker.
      */
     public void loadBugStatuses(String openBugsCommand) {
-        Iterable<Expectation> allExpectations = Iterables.concat(outcomes.values(), failures.values());
+        Iterable<Expectation> allExpectations
+                = Iterables.concat(outcomes.values(), failures.values());
 
         // figure out what bug IDs we're interested in
         Set<String> bugs = new LinkedHashSet<String>();
@@ -230,7 +238,7 @@ final class ExpectationStore {
         }
 
         // query the external app for open bugs
-        List<String> openBugs = new Command.Builder()
+        List<String> openBugs = new Command.Builder(log)
                 .args(openBugsCommand)
                 .args(bugs)
                 .execute();
@@ -239,7 +247,7 @@ final class ExpectationStore {
             openBugsSet.add(Long.parseLong(bug));
         }
 
-        Console.getInstance().verbose("tracking " + openBugsSet.size() + " open bugs: " + openBugs);
+        log.verbose("tracking " + openBugsSet.size() + " open bugs: " + openBugs);
 
         // update our expectations with that set
         for (Expectation expectation : allExpectations) {

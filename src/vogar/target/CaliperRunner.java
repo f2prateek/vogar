@@ -19,10 +19,9 @@ package vogar.target;
 import com.google.caliper.Runner;
 import com.google.caliper.SimpleBenchmark;
 import com.google.common.collect.ObjectArrays;
+import java.util.concurrent.atomic.AtomicReference;
 import vogar.Result;
 import vogar.monitor.TargetMonitor;
-
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Runs a <a href="http://code.google.com/p/caliper/">Caliper</a> benchmark.

@@ -37,6 +37,7 @@ import vogar.android.DeviceDalvikVm;
 import vogar.android.DeviceFileCache;
 import vogar.android.EnvironmentDevice;
 import vogar.android.HostDalvikVm;
+import vogar.commands.Mkdir;
 import vogar.util.Strings;
 
 /**
@@ -56,7 +57,6 @@ public final class Vogar {
     public static File dotFile (String name) {
         return new File(System.getProperty("user.home", "."), name);
     }
-
 
     @Option(names = { "--expectations" })
     private Set<File> expectationFiles = new LinkedHashSet<File>();
@@ -139,9 +139,6 @@ public final class Vogar {
         sourcepath.addAll(AndroidSdk.defaultSourcePath());
     }
 
-    @Option(names = { "--device-cache" })
-    private boolean deviceCache = true;
-
     @Option(names = { "--jar-search-dir" })
     private List<File> jarSearchDirs = Lists.newArrayList();
 
@@ -174,9 +171,6 @@ public final class Vogar {
 
     @Option(names = { "--invoke-with" })
     private String invokeWith = null;
-
-    @Option(names = { "--native-output" })
-    private boolean nativeOutput = false;
 
     @Option(names = { "--benchmark" })
     private boolean benchmark = false;
@@ -327,11 +321,6 @@ public final class Vogar {
         System.out.println("      which javac gets used. When unset, java is used from the PATH.");
         System.out.println();
         System.out.println("EXOTIC OPTIONS");
-        System.out.println();
-        System.out.println("  --device-cache: keep copies of dexed files on the SD card so they");
-        System.out.println("      don't need to be pushed each time a test is run, improving");
-        System.out.println("      start times (default). Only affects device mode. Disable with");
-        System.out.println("      --no-device-cache to save space on the SD card.");
         System.out.println();
         System.out.println("  --suggest-classpaths: build an index of jar files under the");
         System.out.println("      directories given by --jar-search-dir arguments. If Vogar then ");
@@ -539,12 +528,6 @@ public final class Vogar {
     }
 
     private boolean run() {
-        System.out.println(System.getProperty("java.class.path"));
-        Console.init(stream);
-        Console.getInstance().setUseColor(color, passColor, warnColor, failColor);
-        Console.getInstance().setAnsi(ansi);
-        Console.getInstance().setIndent(indent);
-        Console.getInstance().setVerbose(verbose);
         Driver driver = MiniGuice.inject(Driver.class, new Module());
         return driver.buildAndRun(actionFiles, actionClassesAndPackages);
     }
@@ -560,15 +543,34 @@ public final class Vogar {
     }
 
     private class Module {
+        @Provides @Singleton Console provideConsole() {
+            Console console = stream
+                    ? new Console.StreamingConsole()
+                    : new Console.MultiplexingConsole();
+            console.setUseColor(color, passColor, warnColor, failColor);
+            console.setAnsi(ansi);
+            console.setIndent(indent);
+            console.setVerbose(verbose);
+            return console;
+        }
+
+        @Provides Log provideLog(Console console) {
+            return console;
+        }
+
         @Provides @Named("additionalVmArgs") List<String> provideAdditionalVmArgs() {
             return vmArgs;
         }
 
-        @Provides @Singleton AndroidSdk provideAndroidSdk() {
-            AndroidSdk androidSdk = AndroidSdk.getFromPath();
-            if (deviceCache) {
-                androidSdk.setDeviceCache(new DeviceFileCache(deviceDir, androidSdk));
-            }
+        @Provides @Named("deviceDir") File provideDeviceDir() {
+            return deviceDir;
+        }
+
+        @Provides @Singleton AndroidSdk provideAndroidSdk(
+                Log log, Mkdir mkdir, HostFileCache hostFileCache) {
+            AndroidSdk androidSdk = new AndroidSdk(log, mkdir);
+            // resolve the circular dependency between device file cache & android SDK manually
+            androidSdk.setCaches(hostFileCache, new DeviceFileCache(log, deviceDir, androidSdk));
             return androidSdk;
         }
 
@@ -585,8 +587,8 @@ public final class Vogar {
             return result;
         }
 
-        @Provides ClassFileIndex provideClassFileIndex() {
-            ClassFileIndex classFileIndex = new ClassFileIndex(jarSearchDirs);
+        @Provides ClassFileIndex provideClassFileIndex(Log log, Mkdir mkdir) {
+            ClassFileIndex classFileIndex = new ClassFileIndex(log, mkdir, jarSearchDirs);
             if (suggestClasspaths) {
                 classFileIndex.createIndex();
             }
@@ -629,8 +631,9 @@ public final class Vogar {
                     : environmentDeviceProvider.get();
         }
 
-        @Provides @Singleton ExpectationStore provideExpectationStore() throws IOException {
-            ExpectationStore result = ExpectationStore.parse(expectationFiles, mode);
+        @Provides @Singleton ExpectationStore provideExpectationStore(Console console)
+            throws IOException {
+            ExpectationStore result = ExpectationStore.parse(console, expectationFiles, mode);
             if (openBugsCommand != null) {
                 result.loadBugStatuses(openBugsCommand);
             }
@@ -667,10 +670,6 @@ public final class Vogar {
 
         @Provides @Singleton @Named("localTemp") File provideLocalTemp() {
             return new File("/tmp/vogar/" + UUID.randomUUID());
-        }
-
-        @Provides @Named("nativeOutput") boolean provideNativeOutput() {
-            return nativeOutput;
         }
 
         @Provides @Named("numRunners") int provideNumRunners() {

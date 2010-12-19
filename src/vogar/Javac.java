@@ -28,9 +28,10 @@ import vogar.util.Strings;
  */
 final class Javac {
 
-    private final Command.Builder builder = new Command.Builder();
+    private final Command.Builder builder;
 
-    Javac(String javac) {
+    Javac(Log log, String javac) {
+        builder = new Command.Builder(log);
         builder.args(javac);
     }
 
@@ -74,8 +75,7 @@ final class Javac {
     }
 
     public List<String> compile(Collection<File> files) {
-        return builder.args(Strings.objectsToStrings(files))
-                .execute();
+        return builder.args(Strings.objectsToStrings(files)).execute();
     }
 
     public List<String> compile(File... files) {

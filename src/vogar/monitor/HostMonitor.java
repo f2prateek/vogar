@@ -27,7 +27,7 @@ import java.net.ConnectException;
 import java.net.Socket;
 import java.net.SocketException;
 import java.nio.charset.Charset;
-import vogar.Console;
+import vogar.Log;
 import vogar.Outcome;
 import vogar.Result;
 import vogar.util.IoUtils;
@@ -39,10 +39,12 @@ import vogar.util.IoUtils;
 public final class HostMonitor {
     private static final Charset UTF8 = Charset.forName("UTF-8");
 
+    private Log log;
     private Handler handler;
     private final String marker = "//00xx";
 
-    public HostMonitor(Handler handler) {
+    public HostMonitor(Log log, Handler handler) {
+        this.log = log;
         this.handler = handler;
     }
 
@@ -56,8 +58,7 @@ public final class HostMonitor {
                 socket = new Socket("localhost", port);
                 InputStream in = new BufferedInputStream(socket.getInputStream());
                 if (checkStream(in)) {
-                    Console.getInstance().verbose("action monitor connected to "
-                            + socket.getRemoteSocketAddress());
+                    log.verbose("action monitor connected to " + socket.getRemoteSocketAddress());
                     return followStream(in);
                 }
             } catch (ConnectException ignored) {
@@ -66,7 +67,7 @@ public final class HostMonitor {
                 IoUtils.closeQuietly(socket);
             }
 
-            Console.getInstance().verbose("connection " + attempt + " to localhost:"
+            log.verbose("connection " + attempt + " to localhost:"
                     + port + " failed; retrying in 1s");
             try {
                 Thread.sleep(1000);

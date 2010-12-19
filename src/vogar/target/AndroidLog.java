@@ -16,21 +16,32 @@
 
 package vogar.target;
 
-import java.io.File;
-import vogar.android.AndroidProfiler;
+import android.util.Log;
 
-public abstract class Profiler {
-    public static Profiler getInstance() {
-        try {
-            return new AndroidProfiler();
-        } catch (Exception e) {
-            // will fail if AndroidProfiler is unsupported such as in
-            // mode jvm
-            return null;
-        }
+/**
+ * Logs everything to Android's log.
+ */
+public final class AndroidLog implements vogar.Log {
+
+    private final String tag;
+
+    public AndroidLog(String tag) {
+        this.tag = tag;
     }
-    public abstract void setup(boolean profileThreadGroup, int depth, int interval);
-    public abstract void start();
-    public abstract void stop();
-    public abstract void shutdown(File file);
+
+    @Override public void verbose(String s) {
+        Log.v(tag, s);
+    }
+
+    @Override public void info(String s) {
+        Log.i(tag, s);
+    }
+
+    @Override public void info(String s, Throwable exception) {
+        Log.i(tag, s, exception);
+    }
+
+    @Override public void warn(String s) {
+        Log.w(tag, s);
+    }
 }

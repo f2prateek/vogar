@@ -25,7 +25,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import vogar.Action;
 import vogar.Classpath;
-import vogar.Console;
+import vogar.Log;
 import vogar.Vm;
 import vogar.Vogar;
 
@@ -34,6 +34,7 @@ import vogar.Vogar;
  */
 public final class DeviceDalvikVm extends Vm {
 
+    @Inject Log log;
     @Inject @Named("benchmark") boolean fastMode;
     @Inject @Named("deviceUserHome") File deviceUserHome;
 
@@ -68,7 +69,7 @@ public final class DeviceDalvikVm extends Vm {
     }
 
     private void dexAndPush(String name, File jar, boolean forAction) {
-        Console.getInstance().verbose("dex and push " + name);
+        log.verbose("dex and push " + name);
 
         // make the local dex (inside a jar)
         File localDex = environment.file(name, name + ".dx.jar");
@@ -96,7 +97,7 @@ public final class DeviceDalvikVm extends Vm {
         VmCommandBuilder vmCommandBuilder = new VmCommandBuilder()
                 .vmCommand(vmCommand)
                 .vmArgs("-Duser.home=" + deviceUserHome)
-                .vmArgs("-Duser.name=" + AndroidSdk.getDeviceUserName())
+                .vmArgs("-Duser.name=" + getSdk().getDeviceUserName())
                 .vmArgs("-Duser.language=en")
                 .vmArgs("-Duser.region=US")
                 .vmArgs("-Djavax.net.ssl.trustStore=/system/etc/security/cacerts.bks")

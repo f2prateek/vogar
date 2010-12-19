@@ -52,6 +52,9 @@ public final class OutcomeStore {
         }
     };
 
+    @Inject Log log;
+    @Inject Mkdir mkdir;
+    @Inject Rm rm;
     @Inject @Named("tagDir") File tagDir;
     @Inject @Named("tagName") String tagName;
     @Inject @Named("compareToTag") String compareToTag;
@@ -113,12 +116,12 @@ public final class OutcomeStore {
                         if (previousOutcome != null) {
                             previousOutcomes.put(time, previousOutcome);
                         } else {
-                            Console.getInstance().warn("No outcome: " + lineParts.next());
+                            log.warn("No outcome: " + lineParts.next());
                         }
                     }
                     hasMetadata = true;
                 } catch (Exception e) {
-                    Console.getInstance().info("failed to read outcome metadata", e);
+                    log.info("failed to read outcome metadata", e);
                 }
             } else {
                 for (Outcome previousOutcome : outcomesByFileName.values()) {
@@ -139,7 +142,7 @@ public final class OutcomeStore {
         File outcomeResultDir = new File(autoResultsDir(), outcome.getPath());
 
         if (recordResults) {
-            new Mkdir().mkdirs(outcomeResultDir);
+            mkdir.mkdirs(outcomeResultDir);
 
             // record the outcome's result (only if the outcome has changed)
             SimpleDateFormat dateFormat = new SimpleDateFormat(FILE_NAME_DATE_FORMAT);
@@ -175,7 +178,7 @@ public final class OutcomeStore {
                         fileNameContainingOutcome));
                 metadataPrintStream.close();
             } catch (Exception e) {
-                Console.getInstance().info("failed to write outcome metadata", e);
+                log.info("failed to write outcome metadata", e);
             }
         }
 
@@ -186,7 +189,7 @@ public final class OutcomeStore {
             File tagOutcomeResultDir = new File(tagDir, outcome.getPath());
             File outcomeTagFile = new File(tagOutcomeResultDir, tagOutputFileName);
             if (outcomeTagFile.exists()) {
-                new Rm().file(outcomeTagFile);
+                rm.file(outcomeTagFile);
             }
             if (!tagOutcomeResultDir.mkdirs() && !tagOutcomeResultDir.exists()) {
                 throw new RuntimeException("Failed to create directory " + tagOutcomeResultDir);

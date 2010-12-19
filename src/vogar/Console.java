@@ -36,20 +36,12 @@ import vogar.util.MarkResetConsole;
  *       then prints it completely.
  * </ul>
  */
-public abstract class Console {
+public abstract class Console implements Log {
 
     static final long DAY_MILLIS = 1000 * 60 * 60 * 24;
     static final long HOUR_MILLIS = 1000 * 60 * 60;
     static final long WARNING_HOURS = 12;
     static final long FAILURE_HOURS = 48;
-
-    private static Console NULL_CONSOLE = new Console() {
-        @Override public void streamOutput(String outcomeName, String output) {
-            throw new IllegalStateException("Call Console.init() first");
-        }
-    };
-
-    private static Console INSTANCE = NULL_CONSOLE;
 
     private boolean useColor;
     private boolean ansi;
@@ -61,14 +53,6 @@ public abstract class Console {
     protected MarkResetConsole.Mark currentStreamMark;
 
     private Console() {}
-
-    public static void init(boolean streaming) {
-        INSTANCE = streaming ? new StreamingConsole() : new MultiplexingConsole();
-    }
-
-    public static Console getInstance() {
-        return INSTANCE;
-    }
 
     public void setIndent(String indent) {
         this.indent = indent;
@@ -127,10 +111,6 @@ public abstract class Console {
         for (String item : list) {
             out.println(colorString(indent + item, Color.WARN));
         }
-    }
-
-    public synchronized void nativeOutput(String s) {
-        info("[native] " + s);
     }
 
     public synchronized void info(String s) {
@@ -257,12 +237,11 @@ public abstract class Console {
                 brokeThisMessage = colorString(" (no test history available)", Color.WARN);
             }
 
-            List<ResultValue> previousResultValues =
-                    annotatedOutcome.getPreviousResultValues();
+            List<ResultValue> previousResultValues = annotatedOutcome.getPreviousResultValues();
             int numPreviousResultValues = previousResultValues.size();
             int numResultValuesToShow = Math.min(10, numPreviousResultValues);
-            List<ResultValue> previousResultValuesToShow = previousResultValues.subList(numPreviousResultValues - numResultValuesToShow,
-                            numPreviousResultValues);
+            List<ResultValue> previousResultValuesToShow = previousResultValues.subList(
+                    numPreviousResultValues - numResultValuesToShow, numPreviousResultValues);
 
             StringBuilder sb = new StringBuilder();
             sb.append(indent);
@@ -459,7 +438,7 @@ public abstract class Console {
      * This console prints output as it's emitted. It supports at most one
      * action at a time.
      */
-    private static class StreamingConsole extends Console {
+    static class StreamingConsole extends Console {
         private String currentName;
 
         @Override public synchronized void action(String name) {
@@ -493,7 +472,7 @@ public abstract class Console {
      * This console buffers output, only printing when a result is found. It
      * supports multiple concurrent actions.
      */
-    private static class MultiplexingConsole extends Console {
+    static class MultiplexingConsole extends Console {
         private final Map<String, StringBuilder> bufferedOutputByOutcome = new HashMap<String, StringBuilder>();
 
         @Override public synchronized void streamOutput(String outcomeName, String output) {

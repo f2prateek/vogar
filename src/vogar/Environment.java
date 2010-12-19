@@ -26,6 +26,8 @@ import vogar.util.Strings;
  * A target runtime environment such as a remote device or the local host
  */
 public abstract class Environment {
+    @Inject Log log;
+    @Inject Rm rm;
     @Inject @Named("cleanBefore") boolean cleanBefore;
     @Inject @Named("cleanAfter") boolean cleanAfter;
     @Inject @Named("debugPort") Integer debugPort;
@@ -62,8 +64,8 @@ public abstract class Environment {
      */
     public void cleanup(Action action) {
         if (cleanAfter) {
-            Console.getInstance().verbose("clean " + action.getName());
-            new Rm().directoryTree(file(action));
+            log.verbose("clean " + action.getName());
+            rm.directoryTree(file(action));
         }
     }
 
@@ -82,7 +84,7 @@ public abstract class Environment {
 
     public void shutdown() {
         if (cleanAfter) {
-            new Rm().directoryTree(localTemp);
+            rm.directoryTree(localTemp);
         }
     }
 }

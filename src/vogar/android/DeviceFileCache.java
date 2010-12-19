@@ -20,27 +20,28 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.HashSet;
 import java.util.Set;
-import vogar.Console;
 import vogar.FileCache;
+import vogar.Log;
 
 public class DeviceFileCache implements FileCache {
+    private final Log log;
     private final File cacheRoot;
-    private final AndroidSdk androidSdk;
+    private AndroidSdk androidSdk;
+
+    /** filled lazily */
     private Set<File> cachedFiles;
 
-    public DeviceFileCache(File deviceRunnerDir, AndroidSdk androidSdk) {
-        this.cacheRoot = new File(deviceRunnerDir, "md5-cache");
+    public DeviceFileCache(Log log, File deviceDir, AndroidSdk androidSdk) {
+        this.log = log;
+        this.cacheRoot = new File(deviceDir, "md5-cache");
         this.androidSdk = androidSdk;
-        // filled lazily
-        this.cachedFiles = null;
     }
 
     public boolean existsInCache(String key) {
         if (cachedFiles == null) {
             try {
                 cachedFiles = androidSdk.ls(cacheRoot);
-                Console.getInstance().verbose("indexed on-device cache: " + cachedFiles.size()
-                        + " entries.");
+                log.verbose("indexed on-device cache: " + cachedFiles.size() + " entries.");
             } catch (FileNotFoundException e) {
                 // cacheRoot probably just hasn't been created yet.
                 cachedFiles = new HashSet<File>();

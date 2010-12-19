@@ -32,8 +32,8 @@ import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import vogar.Classpath;
-import vogar.Console;
 import vogar.HostFileCache;
+import vogar.Log;
 import vogar.Md5Cache;
 import vogar.commands.Command;
 import vogar.commands.CommandFailedException;
@@ -60,10 +60,6 @@ public class AndroidSdk {
             "bouncycastle-hostdex",
     };
 
-    private final Md5Cache dexCache;
-    private Md5Cache pushCache;
-    private Set<File> mkdirCache = new HashSet<File>();
-
     private static final Comparator<File> ORDER_BY_NAME = new Comparator<File>() {
         public int compare(File a, File b) {
             // TODO: this should be a numeric comparison, but we don't
@@ -79,19 +75,32 @@ public class AndroidSdk {
         BANNED_NAMES.add("javalib");
     }
 
+    private final Log log;
+    private final Mkdir mkdir;
     private final File[] androidClasses;
     private final String dx;
     private final String aapt;
 
-    private AndroidSdk(File[] androidClasses, String dx, String aapt) {
-        this.androidClasses = androidClasses;
-        this.dx = dx;
-        this.aapt = aapt;
-        dexCache = new Md5Cache("dex", new HostFileCache());
+    private Md5Cache dexCache;
+    private Md5Cache pushCache;
+    private final Set<File> mkdirCache = new HashSet<File>();
+
+
+    public static Collection<File> defaultExpectations() {
+        File[] files = new File("libcore/expectations").listFiles(new FilenameFilter() {
+            // ignore obviously temporary files
+            public boolean accept(File dir, String name) {
+                return !name.endsWith("~") && !name.startsWith(".");
+            }
+        });
+        return (files != null) ? Arrays.asList(files) : Collections.<File>emptyList();
     }
 
-    public static AndroidSdk getFromPath() {
-        List<String> path = new Command("which", "adb").execute();
+    public AndroidSdk(Log log, Mkdir mkdir) {
+        this.log = log;
+        this.mkdir = mkdir;
+
+        List<String> path = new Command(log, "which", "adb").execute();
         if (path.isEmpty()) {
             throw new RuntimeException("Adb not found");
         }
@@ -119,30 +128,32 @@ public class AndroidSdk {
          *  <source>/out/target/common/obj/JAVA_LIBRARIES/core_intermediates/classes.jar
          */
 
-        String dx = "dx";
-        String aapt = "aapt";
-        File[] androidClasses;
-
         if ("tools".equals(parentFileName) || "platform-tools".equals(parentFileName)) {
             File sdkRoot = adb.getParentFile().getParentFile();
             List<File> platforms = Arrays.asList(new File(sdkRoot, "platforms").listFiles());
             Collections.sort(platforms, ORDER_BY_NAME);
             File newestPlatform = platforms.get(platforms.size() - 1);
-            Console.getInstance().verbose("using android platform: " + newestPlatform);
+            log.verbose("using android platform: " + newestPlatform);
 
             // don't assume dx and aapt are on the $PATH
             if ("tools".equals(parentFileName)) {
                 dx = newestPlatform.getPath() + "/tools/dx";
                 aapt = newestPlatform.getPath() + "/tools/aapt";
+            } else {
+                dx = "dx";
+                aapt = "aapt";
             }
 
             androidClasses = new File[] { new File(newestPlatform, "android.jar") };
-            Console.getInstance().verbose("using android sdk: " + sdkRoot);
+            log.verbose("using android sdk: " + sdkRoot);
 
         } else if ("bin".equals(parentFileName)) {
+            dx = "dx";
+            aapt = "aapt";
+
             File sourceRoot = adb.getParentFile().getParentFile()
                     .getParentFile().getParentFile().getParentFile();
-            Console.getInstance().verbose("using android build tree: " + sourceRoot);
+            log.verbose("using android build tree: " + sourceRoot);
 
             androidClasses = new File[BOOTCLASSPATH.length];
             for (int i = 0; i < BOOTCLASSPATH.length; i++) {
@@ -154,18 +165,6 @@ public class AndroidSdk {
         } else {
             throw new RuntimeException("Couldn't derive Android home from " + adb);
         }
-
-        return new AndroidSdk(androidClasses, dx, aapt);
-    }
-
-    public static Collection<File> defaultExpectations() {
-        File[] files = new File("libcore/expectations").listFiles(new FilenameFilter() {
-            // ignore obviously temporary files
-            public boolean accept(File dir, String name) {
-                return !name.endsWith("~") && !name.startsWith(".");
-            }
-        });
-        return (files != null) ? Arrays.asList(files) : Collections.<File>emptyList();
     }
 
     public static Collection<File> defaultSourcePath() {
@@ -177,8 +176,9 @@ public class AndroidSdk {
         return androidClasses;
     }
 
-    public void setDeviceCache(DeviceFileCache deviceCache) {
-        this.pushCache = new Md5Cache("pushed", deviceCache);
+    public void setCaches(HostFileCache hostFileCache, DeviceFileCache deviceCache) {
+        this.dexCache = new Md5Cache(log, "dex", hostFileCache);
+        this.pushCache = new Md5Cache(log, "pushed", deviceCache);
     }
 
     /**
@@ -202,12 +202,12 @@ public class AndroidSdk {
      * Converts all the .class files on 'classpath' into a dex file written to 'output'.
      */
     public void dex(File output, Classpath classpath) {
-        new Mkdir().mkdirs(output.getParentFile());
+        mkdir.mkdirs(output.getParentFile());
 
         String key = dexCache.makeKey(classpath);
         boolean cacheHit = dexCache.getFromCache(output, key);
         if (cacheHit) {
-            Console.getInstance().verbose("dex cache hit for " + classpath);
+            log.verbose("dex cache hit for " + classpath);
             return;
         }
         /*
@@ -221,7 +221,7 @@ public class AndroidSdk {
          * Memory options pulled from build/core/definitions.mk to
          * handle large dx input when building dex for APK.
          */
-        new Command.Builder()
+        new Command.Builder(log)
                 .args(dx)
                 .args("-JXms16M")
                 .args("-JXmx1536M")
@@ -241,11 +241,11 @@ public class AndroidSdk {
             aapt.add("-I");
             aapt.add(jar.getPath());
         }
-        new Command(aapt).execute();
+        new Command(log, aapt).execute();
     }
 
     public void addToApk(File apk, File dex) {
-        new Command(this.aapt, "add", "-k", apk.getPath(), dex.getPath()).execute();
+        new Command(log, this.aapt, "add", "-k", apk.getPath(), dex.getPath()).execute();
     }
 
     public void mkdir(File name) {
@@ -254,7 +254,7 @@ public class AndroidSdk {
             return;
         }
         List<String> args = Arrays.asList("adb", "shell", "mkdir", name.getPath());
-        List<String> rawResult = new Command(args).execute();
+        List<String> rawResult = new Command(log, args).execute();
         // fail if this failed for any reason other than the file existing.
         if (!rawResult.isEmpty() && !rawResult.get(0).contains("File exists")) {
             throw new CommandFailedException(args, rawResult);
@@ -281,28 +281,29 @@ public class AndroidSdk {
     }
 
     public void mv(File source, File destination) {
-        new Command("adb", "shell", "mv", source.getPath(), destination.getPath()).execute();
+        new Command(log, "adb", "shell", "mv", source.getPath(), destination.getPath()).execute();
     }
 
     public void rm(File name) {
-        new Command("adb", "shell", "rm", "-r", name.getPath()).execute();
+        new Command(log, "adb", "shell", "rm", "-r", name.getPath()).execute();
     }
 
     public void cp(File source, File destination) {
         // adb doesn't support "cp" command directly
-        new Command("adb", "shell", "cat", source.getPath(), ">", destination.getPath()).execute();
+        new Command(log, "adb", "shell", "cat", source.getPath(), ">", destination.getPath())
+                .execute();
     }
 
-    public static String getDeviceUserName() {
+    public String getDeviceUserName() {
         // The default environment doesn't include $USER, so dalvikvm doesn't set "user.name".
         // DeviceDalvikVm uses this to set "user.name" manually with -D.
-        String line = new Command("adb", "shell", "id").execute().get(0);
+        String line = new Command(log, "adb", "shell", "id").execute().get(0);
         Matcher m = Pattern.compile("uid=\\d+\\((\\S+)\\) gid=\\d+\\(\\S+\\)").matcher(line);
         return m.matches() ? m.group(1) : "root";
     }
 
     public Set<File> ls(File dir) throws FileNotFoundException {
-        List<String> rawResult = new Command("adb", "shell", "ls", dir.getPath()).execute();
+        List<String> rawResult = new Command(log, "adb", "shell", "ls", dir.getPath()).execute();
         Set<File> files = new HashSet<File>();
         for (String fileString : rawResult) {
             if (fileString.equals(dir.getPath() + ": No such file or directory")) {
@@ -319,45 +320,45 @@ public class AndroidSdk {
     }
 
     public void pull(File remote, File local) {
-        new Command("adb", "pull", remote.getPath(), local.getPath()).execute();
+        new Command(log, "adb", "pull", remote.getPath(), local.getPath()).execute();
     }
 
     public void push(File local, File remote) {
-        Command fallbackCommand = new Command("adb", "push", local.getPath(), remote.getPath());
+        Command fallback = new Command(log, "adb", "push", local.getPath(), remote.getPath());
         mkdirs(remote.getParentFile());
         // don't yet cache directories (only used by jtreg tests)
         if (pushCache != null && local.isFile()) {
             String key = pushCache.makeKey(local);
             boolean cacheHit = pushCache.getFromCache(remote, key);
             if (cacheHit) {
-                Console.getInstance().verbose("device cache hit for " + local);
+                log.verbose("device cache hit for " + local);
                 return;
             }
-            fallbackCommand.execute();
+            fallback.execute();
             pushCache.insert(key, remote);
         } else {
-            fallbackCommand.execute();
+            fallback.execute();
         }
     }
 
     public void install(File apk) {
-        new Command("adb", "install", "-r", apk.getPath()).execute();
+        new Command(log, "adb", "install", "-r", apk.getPath()).execute();
     }
 
     public void uninstall(String packageName) {
-        new Command("adb", "uninstall", packageName).execute();
+        new Command(log, "adb", "uninstall", packageName).execute();
     }
 
     public void forwardTcp(int localPort, int devicePort) {
-        new Command("adb", "forward", "tcp:" + localPort, "tcp:" + devicePort).execute();
+        new Command(log, "adb", "forward", "tcp:" + localPort, "tcp:" + devicePort).execute();
     }
 
     public void remount() {
-        new Command("adb", "remount").execute();
+        new Command(log, "adb", "remount").execute();
     }
 
     public void waitForDevice() {
-        new Command("adb", "wait-for-device").execute();
+        new Command(log, "adb", "wait-for-device").execute();
     }
 
     /**
@@ -380,7 +381,7 @@ public class AndroidSdk {
             if (!file) {
                 pathArgument += "/";
             }
-            Command command = new Command("adb", "shell", "ls", pathArgument);
+            Command command = new Command(log, "adb", "shell", "ls", pathArgument);
             List<String> output;
             try {
                 output = command.executeWithTimeout(remainingSeconds);

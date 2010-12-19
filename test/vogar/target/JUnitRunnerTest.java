@@ -16,17 +16,22 @@
 
 package vogar.target;
 
-import java.util.concurrent.atomic.AtomicReference;
-import static org.mockito.Mockito.*;
-
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-
+import java.util.concurrent.atomic.AtomicReference;
 import junit.framework.TestCase;
-
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import vogar.Result;
 import vogar.monitor.TargetMonitor;
-import vogar.target.junit3.*;
+import vogar.target.junit3.FailTest;
+import vogar.target.junit3.LongTest;
+import vogar.target.junit3.LongTest2;
+import vogar.target.junit3.SimpleTest;
+import vogar.target.junit3.SimpleTest2;
+import vogar.target.junit3.SuiteTest;
+import vogar.target.junit3.WrongSuiteTest;
 
 // This test class is designed for both JUnit3 and newer than JUnit4.8.2
 // because it can work for original vogar which uses JUnit3 and new vogar which uses JUnit4.8.2
@@ -46,7 +51,7 @@ public class JUnitRunnerTest extends TestCase {
     }
 
     public void test_supports_should_judge_whether_Object_is_not_supported() {
-        assertEquals(false, runner.supports(new Object().getClass()));
+        assertEquals(false, runner.supports(Object.class));
     }
 
     public void test_supports_should_judge_whether_SimpleTest_which_inferits_from_TestCase_is_supported() {

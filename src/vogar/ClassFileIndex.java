@@ -43,39 +43,46 @@ import vogar.util.Strings;
  * Indexes the locations of commonly used classes to assist in constructing correct Vogar commands.
  */
 public final class ClassFileIndex {
-    // how many milliseconds before the cache expires and we reindex jars
-    private final long cacheExpiry = 86400000; // = one day
-    private final  String DELIMITER = "\t";
-    private final File classFileIndexFile =
-            new File(System.getProperty("user.home"), ".vogar/classfileindex");
-    // regular expressions representing things that make sense on the classpath
-    private final List<String> JAR_PATTERN_STRINGS = Arrays.asList(
+
+    /** how many milliseconds before the cache expires and we reindex jars */
+    private static final long CACHE_EXPIRY = 86400000; // = one day
+
+    /** regular expressions representing things that make sense on the classpath */
+    private static final List<String> JAR_PATTERN_STRINGS = Arrays.asList(
             "classes\\.jar"
     );
-    // regular expressions representing failures probably due to things missing on the classpath
-    private final List<String> FAILURE_PATTERN_STRINGS = Arrays.asList(
+    /** regular expressions representing failures probably due to things missing on the classpath */
+    private static final List<String> FAILURE_PATTERN_STRINGS = Arrays.asList(
             ".*package (.*) does not exist.*",
             ".*import (.*);.*",
             ".*ClassNotFoundException: (\\S*).*",
             ".*NoClassDefFoundError: Could not initialize class (\\S*).*"
     );
-    private final List<Pattern> JAR_PATTERNS = new ArrayList<Pattern>();
-    {
+    private static final List<Pattern> JAR_PATTERNS = new ArrayList<Pattern>();
+    static {
         for (String patternString : JAR_PATTERN_STRINGS) {
-            this.JAR_PATTERNS.add(Pattern.compile(patternString));
+            JAR_PATTERNS.add(Pattern.compile(patternString));
         }
     }
-    private final List<Pattern> FAILURE_PATTERNS = new ArrayList<Pattern>();
-    {
+    private static final List<Pattern> FAILURE_PATTERNS = new ArrayList<Pattern>();
+    static {
         for (String patternString : FAILURE_PATTERN_STRINGS) {
             // DOTALL flag allows proper handling of multiline strings
-            this.FAILURE_PATTERNS.add(Pattern.compile(patternString, Pattern.DOTALL));
+            FAILURE_PATTERNS.add(Pattern.compile(patternString, Pattern.DOTALL));
         }
     }
+
+    private final Log log;
+    private final Mkdir mkdir;
+    private final String DELIMITER = "\t";
+    private final File classFileIndexFile =
+            new File(System.getProperty("user.home"), ".vogar/classfileindex");
     private final Map<String, Set<File>> classFileMap = new HashMap<String, Set<File>>();
     private final List<File> jarSearchDirs;
 
-    public ClassFileIndex(List<File> jarSearchDirs) {
+    public ClassFileIndex(Log log, Mkdir mkdir, List<File> jarSearchDirs) {
+        this.log = log;
+        this.mkdir = mkdir;
         this.jarSearchDirs = jarSearchDirs;
     }
 
@@ -113,27 +120,26 @@ public final class ClassFileIndex {
         if (classFileIndexFile.exists()) {
             long lastModified = classFileIndexFile.lastModified();
             long curTime = new Date().getTime();
-            boolean cacheExpired = lastModified < curTime - cacheExpiry;
+            boolean cacheExpired = lastModified < curTime - CACHE_EXPIRY;
             if (cacheExpired) {
-                Console.getInstance().verbose("class file index expired, rebuilding");
+                log.verbose("class file index expired, rebuilding");
             } else {
                 readIndexCache();
                 return;
             }
         }
 
-        Console.getInstance().verbose("building class file index");
+        log.verbose("building class file index");
 
         // Create index
         for (File jarSearchDir : jarSearchDirs) {
             if (!jarSearchDir.exists()) {
-                Console.getInstance().warn("directory \"" + jarSearchDir + "\" in jar paths"
-                        + " doesn't exist");
+                log.warn("directory \"" + jarSearchDir + "\" in jar paths doesn't exist");
                 continue;
             }
 
             // traverse the jar directory, looking for files called ending in .jar
-            Console.getInstance().verbose("looking in " + jarSearchDir + " for .jar files");
+            log.verbose("looking in " + jarSearchDir + " for .jar files");
 
             Set<File> jarFiles = new HashSet<File>();
             getJarFiles(jarFiles, jarSearchDir);
@@ -167,7 +173,7 @@ public final class ClassFileIndex {
                 }
             }
         } catch (IOException e) {
-            Console.getInstance().warn("failed to read " + file + ": " + e.getMessage());
+            log.warn("failed to read " + file + ": " + e.getMessage());
         }
     }
 
@@ -189,10 +195,10 @@ public final class ClassFileIndex {
     }
 
     private void writeIndexCache() {
-        Console.getInstance().verbose("writing index cache");
+        log.verbose("writing index cache");
 
         BufferedWriter indexCacheWriter;
-        new Mkdir().mkdirs(classFileIndexFile.getParentFile());
+        mkdir.mkdirs(classFileIndexFile.getParentFile());
         try {
             indexCacheWriter = new BufferedWriter(new FileWriter(classFileIndexFile));
             for (Map.Entry<String, Set<File>> entry : classFileMap.entrySet()) {
@@ -207,7 +213,7 @@ public final class ClassFileIndex {
     }
 
     private void readIndexCache() {
-        Console.getInstance().verbose("reading class file index cache");
+        log.verbose("reading class file index cache");
 
         BufferedReader reader;
         try {

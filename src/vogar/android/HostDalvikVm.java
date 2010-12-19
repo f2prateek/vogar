@@ -24,7 +24,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import vogar.Action;
 import vogar.Classpath;
-import vogar.Console;
+import vogar.Log;
 import vogar.Vm;
 import vogar.commands.Mkdir;
 
@@ -33,6 +33,8 @@ import vogar.commands.Mkdir;
  */
 public class HostDalvikVm extends Vm {
 
+    @Inject Log log;
+    @Inject Mkdir mkdir;
     @Inject AndroidSdk androidSdk;
     @Inject @Named("benchmark") boolean fastMode;
     @Inject @Named("hostBuild") boolean hostBuild;
@@ -49,7 +51,7 @@ public class HostDalvikVm extends Vm {
             dex(androidSdk.basenameOfJar(classpathElement), classpathElement);
         }
 
-        new Mkdir().mkdirs(dalvikCache());
+        mkdir.mkdirs(dalvikCache());
         buildRoot = System.getenv("ANDROID_BUILD_TOP");
     }
 
@@ -62,7 +64,7 @@ public class HostDalvikVm extends Vm {
     }
 
     private void dex(String name, File jar) {
-        Console.getInstance().verbose("dex " + name);
+        log.verbose("dex " + name);
         androidSdk.dex(nameDexFile(name), Classpath.of(jar));
     }
 

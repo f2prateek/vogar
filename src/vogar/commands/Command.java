@@ -35,7 +35,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import vogar.Console;
+import vogar.Log;
 import vogar.util.Strings;
 import vogar.util.Threads;
 
@@ -43,28 +43,29 @@ import vogar.util.Threads;
  * An out of process executable.
  */
 public final class Command {
+    private final Log log;
     private final List<String> args;
     private final Map<String, String> env;
     private final File workingDirectory;
     private final boolean permitNonZeroExitStatus;
     private final PrintStream tee;
-    private final boolean nativeOutput;
     private volatile Process process;
 
-    public Command(String... args) {
-        this(Arrays.asList(args));
+    public Command(Log log, String... args) {
+        this(log, Arrays.asList(args));
     }
 
-    public Command(List<String> args) {
+    public Command(Log log, List<String> args) {
+        this.log = log;
         this.args = new ArrayList<String>(args);
         this.env = Collections.emptyMap();
         this.workingDirectory = null;
         this.permitNonZeroExitStatus = false;
         this.tee = null;
-        this.nativeOutput = false;
     }
 
     private Command(Builder builder) {
+        this.log = builder.log;
         this.args = new ArrayList<String>(builder.args);
         this.env = builder.env;
         this.workingDirectory = builder.workingDirectory;
@@ -77,7 +78,6 @@ public final class Command {
                                                 + " exceeded by: " + string);
             }
         }
-        this.nativeOutput = builder.nativeOutput;
     }
 
     public void start() throws IOException {
@@ -85,7 +85,7 @@ public final class Command {
             throw new IllegalStateException("Already started!");
         }
 
-        Console.getInstance().verbose("executing " + this);
+        log.verbose("executing " + this);
 
         ProcessBuilder processBuilder = new ProcessBuilder()
                 .command(args)
@@ -124,9 +124,6 @@ public final class Command {
         while ((outputLine = in.readLine()) != null) {
             if (tee != null) {
                 tee.println(outputLine);
-            }
-            if (nativeOutput) {
-                Console.getInstance().nativeOutput(outputLine);
             }
             outputLines.add(outputLine);
         }
@@ -184,7 +181,7 @@ public final class Command {
      * @return a future to retrieve the command's output.
      */
     public Future<List<String>> executeLater() {
-        ExecutorService executor = Threads.fixedThreadsExecutor("command", 1);
+        ExecutorService executor = Threads.fixedThreadsExecutor(log, "command", 1);
         Future<List<String>> result = executor.submit(new Callable<List<String>>() {
             public List<String> call() throws Exception {
                 start();
@@ -207,12 +204,11 @@ public final class Command {
         try {
             process.waitFor();
             int exitValue = process.exitValue();
-            Console.getInstance().verbose("received exit value " + exitValue
-                    + " from destroyed command " + this);
+            log.verbose("received exit value " + exitValue + " from destroyed command " + this);
         } catch (IllegalThreadStateException destroyUnsuccessful) {
-            Console.getInstance().warn("couldn't destroy " + this);
+            log.warn("couldn't destroy " + this);
         } catch (InterruptedException e) {
-            Console.getInstance().warn("couldn't destroy " + this);
+            log.warn("couldn't destroy " + this);
         }
     }
 
@@ -222,23 +218,22 @@ public final class Command {
     }
 
     public static class Builder {
+        private final Log log;
         private final List<String> args = new ArrayList<String>();
         private final Map<String, String> env = new LinkedHashMap<String, String>();
         private File workingDirectory;
         private boolean permitNonZeroExitStatus = false;
         private PrintStream tee = null;
-        private boolean nativeOutput;
         private int maxLength = -1;
+
+        public Builder(Log log) {
+            this.log = log;
+        }
 
         public Builder args(Object... objects) {
             for (Object object : objects) {
                 args(object.toString());
             }
-            return this;
-        }
-
-        public Builder setNativeOutput(boolean nativeOutput) {
-            this.nativeOutput = nativeOutput;
             return this;
         }
 

@@ -18,7 +18,6 @@ package vogar.target;
 
 import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicReference;
-
 import vogar.ClassAnalyzer;
 import vogar.Result;
 import vogar.monitor.TargetMonitor;

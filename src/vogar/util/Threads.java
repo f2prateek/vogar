@@ -21,7 +21,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import vogar.Console;
+import vogar.Log;
 
 /**
  * Utility methods for working with threads.
@@ -40,17 +40,18 @@ public final class Threads {
         };
     }
 
-    public static ExecutorService threadPerCpuExecutor(String name) {
-        return fixedThreadsExecutor(name, Runtime.getRuntime().availableProcessors());
+    public static ExecutorService threadPerCpuExecutor(Log log, String name) {
+        return fixedThreadsExecutor(log, name, Runtime.getRuntime().availableProcessors());
     }
 
-    public static ExecutorService fixedThreadsExecutor(String name, int count) {
+    public static ExecutorService fixedThreadsExecutor(final Log log, String name, int count) {
         ThreadFactory threadFactory = daemonThreadFactory(name);
 
         return new ThreadPoolExecutor(count, count, 10, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<Runnable>(Integer.MAX_VALUE), threadFactory) {
-            @Override protected void afterExecute(Runnable runnable, Throwable throwable) {                if (throwable != null) {
-                    Console.getInstance().info("Unexpected failure from " + runnable, throwable);
+            @Override protected void afterExecute(Runnable runnable, Throwable throwable) {
+                if (throwable != null) {
+                    log.info("Unexpected failure from " + runnable, throwable);
                 }
             }
         };

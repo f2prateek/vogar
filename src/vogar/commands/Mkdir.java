@@ -17,13 +17,17 @@
 package vogar.commands;
 
 import java.io.File;
+import javax.inject.Inject;
+import vogar.Log;
 
 /**
  * A mkdir command.
  */
 public final class Mkdir {
 
+    @Inject Log log;
+
     public void mkdirs(File directory) {
-        new Command("mkdir", "-p", directory.getPath()).execute();
+        new Command(log, "mkdir", "-p", directory.getPath()).execute();
     }
 }

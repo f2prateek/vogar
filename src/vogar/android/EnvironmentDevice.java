@@ -25,12 +25,14 @@ import java.util.Collection;
 import javax.inject.Inject;
 import javax.inject.Named;
 import vogar.Action;
-import vogar.Console;
 import vogar.Environment;
+import vogar.Log;
 import vogar.RetrievedFilesFilter;
 import vogar.commands.Mkdir;
 
 public final class EnvironmentDevice extends Environment {
+    @Inject Log log;
+    @Inject Mkdir mkdir;
     @Inject AndroidSdk androidSdk;
     @Inject RetrievedFilesFilter retrievedFiles;
     @Inject @Named("runnerDir") File runnerDir;
@@ -103,8 +105,8 @@ public final class EnvironmentDevice extends Environment {
             throws FileNotFoundException {
         for (File file : androidSdk.ls(source)) {
             if (filenameFilter.accept(file)) {
-                Console.getInstance().info("Moving " + file + " to " + destination);
-                new Mkdir().mkdirs(destination);
+                log.info("Moving " + file + " to " + destination);
+                mkdir.mkdirs(destination);
                 androidSdk.pull(file, destination);
             }
         }
@@ -127,7 +129,7 @@ public final class EnvironmentDevice extends Environment {
             retrieveFiles(new File("./vogar-results"),
                     actionClassesDirOnDevice(action), retrievedFiles);
         } catch (FileNotFoundException e) {
-            Console.getInstance().info("Failed to retrieve all files: ", e);
+            log.info("Failed to retrieve all files: ", e);
         }
         super.cleanup(action);
         if (cleanAfter()) {

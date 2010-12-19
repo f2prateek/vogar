@@ -17,17 +17,21 @@
 package vogar.commands;
 
 import java.io.File;
+import javax.inject.Inject;
+import vogar.Log;
 
 /**
  * A rm command.
  */
 public final class Rm {
 
+    @Inject Log log;
+
     public void file(File file) {
-        new Command("rm", "-f", file.getPath()).execute();
+        new Command(log, "rm", "-f", file.getPath()).execute();
     }
 
     public void directoryTree(File directory) {
-        new Command("rm", "-rf", directory.getPath()).execute();
+        new Command(log, "rm", "-rf", directory.getPath()).execute();
     }
 }

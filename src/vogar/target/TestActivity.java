@@ -43,7 +43,8 @@ public class TestActivity extends Activity {
         log("TestActivity starting...");
         setContentView(view);
 
-        ExecutorService executor = Threads.fixedThreadsExecutor("testactivity", 1);
+        AndroidLog log = new AndroidLog(TAG);
+        ExecutorService executor = Threads.fixedThreadsExecutor(log, "testactivity", 1);
         executor.execute(new Runnable() {
             public void run() {
                 try {
