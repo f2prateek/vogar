@@ -230,19 +230,14 @@ public final class Command {
             this.log = log;
         }
 
-        public Builder args(Object... objects) {
-            for (Object object : objects) {
-                args(object.toString());
-            }
-            return this;
-        }
-
-        public Builder args(String... args) {
+        public Builder args(Object... args) {
             return args(Arrays.asList(args));
         }
 
-        public Builder args(Collection<String> args) {
-            this.args.addAll(args);
+        public Builder args(Collection<?> args) {
+            for (Object object : args) {
+                this.args.add(object.toString());
+            }
             return this;
         }
 
