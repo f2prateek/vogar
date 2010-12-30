@@ -32,13 +32,13 @@ import vogar.Vogar;
 /**
  * Execute actions on a Dalvik VM using an Android device or emulator.
  */
-public final class DeviceDalvikVm extends Vm {
+public class DeviceDalvikVm extends Vm {
 
     @Inject Log log;
     @Inject @Named("benchmark") boolean fastMode;
     @Inject @Named("deviceUserHome") File deviceUserHome;
 
-    private EnvironmentDevice getEnvironmentDevice() {
+    protected EnvironmentDevice getEnvironmentDevice() {
         return (EnvironmentDevice) environment;
     }
 
@@ -87,7 +87,7 @@ public final class DeviceDalvikVm extends Vm {
         return new File(getEnvironmentDevice().runnerDir, name + ".jar");
     }
 
-    @Override protected VmCommandBuilder newVmCommandBuilder() {
+    @Override protected VmCommandBuilder newVmCommandBuilder(Action action) {
         List<String> vmCommand = new ArrayList<String>();
         Collections.addAll(vmCommand, "adb", "shell", getEnvironmentDevice().getAndroidData());
         Iterables.addAll(vmCommand, invokeWith());

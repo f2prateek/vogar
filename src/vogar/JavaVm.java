@@ -36,7 +36,7 @@ final class JavaVm extends Vm {
     @Inject @Named("profileDepth") int profileDepth;
     @Inject @Named("profileInterval") int profileInterval;
 
-    @Override protected VmCommandBuilder newVmCommandBuilder() {
+    @Override protected VmCommandBuilder newVmCommandBuilder(Action action) {
         List<String> vmCommand = new ArrayList<String>();
         Iterables.addAll(vmCommand, invokeWith());
         vmCommand.add(javaPath("java"));

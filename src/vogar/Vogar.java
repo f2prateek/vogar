@@ -33,6 +33,7 @@ import javax.inject.Provider;
 import javax.inject.Singleton;
 import vogar.android.ActivityMode;
 import vogar.android.AndroidSdk;
+import vogar.android.AppProcessMode;
 import vogar.android.DeviceDalvikVm;
 import vogar.android.DeviceFileCache;
 import vogar.android.EnvironmentDevice;
@@ -687,7 +688,8 @@ public final class Vogar {
         @Provides Mode provideMode(Provider<JavaVm> javaVmProvider,
                 Provider<HostDalvikVm> hostDalvikVmProvider,
                 Provider<DeviceDalvikVm> deviceDalvikVmProvider,
-                Provider<ActivityMode> activityModeProvider) {
+                Provider<ActivityMode> activityModeProvider,
+                Provider<AppProcessMode> appProcessModeProvider) {
             switch (Vogar.this.mode) {
                 case JVM:
                     return javaVmProvider.get();
@@ -698,8 +700,10 @@ public final class Vogar {
                     return deviceDalvikVmProvider.get();
                 case ACTIVITY:
                     return activityModeProvider.get();
+                case APP_PROCESS:
+                    return appProcessModeProvider.get();
                 default:
-                    throw new AssertionError();
+                    throw new AssertionError("Unknown mode " + Vogar.this.mode);
             }
         }
 

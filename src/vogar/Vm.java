@@ -56,7 +56,7 @@ public abstract class Vm extends Mode {
      */
     @Override protected Command createActionCommand(
             Action action, String skipPast, int monitorPort) {
-        VmCommandBuilder vmCommandBuilder = newVmCommandBuilder();
+        VmCommandBuilder vmCommandBuilder = newVmCommandBuilder(action);
         if (useBootClasspath) {
             vmCommandBuilder.bootClasspath(getRuntimeClasspath(action));
         } else {
@@ -84,7 +84,7 @@ public abstract class Vm extends Mode {
     /**
      * Returns a VM for action execution.
      */
-    protected abstract VmCommandBuilder newVmCommandBuilder();
+    protected abstract VmCommandBuilder newVmCommandBuilder(Action action);
 
     /**
      * Returns the classpath containing JUnit and the dalvik annotations
@@ -97,6 +97,7 @@ public abstract class Vm extends Mode {
      */
     public class VmCommandBuilder {
         private File temp;
+        private boolean classpathViaProperty;
         private Classpath bootClasspath = new Classpath();
         private Classpath classpath = new Classpath();
         private File userDir;
@@ -126,6 +127,11 @@ public abstract class Vm extends Mode {
 
         public VmCommandBuilder classpath(Classpath classpath) {
             this.classpath.addAll(classpath);
+            return this;
+        }
+
+        public VmCommandBuilder classpathViaProperty(boolean classpathViaProperty) {
+            this.classpathViaProperty = classpathViaProperty;
             return this;
         }
 
@@ -189,8 +195,13 @@ public abstract class Vm extends Mode {
             }
 
             builder.args(vmCommand);
-            builder.args("-classpath", classpath.toString());
-            // Only output this if there's something on the boot classpath, otherwise dalvikvm gets upset.
+            if (classpathViaProperty) {
+                builder.args("-Djava.class.path=" + classpath);
+            } else {
+                builder.args("-classpath", classpath.toString());
+            }
+            // Only output this if there's something on the boot classpath,
+            // otherwise dalvikvm gets upset.
             if (!bootClasspath.isEmpty()) {
                 builder.args("-Xbootclasspath/a:" + bootClasspath);
             }

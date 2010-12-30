@@ -68,7 +68,7 @@ public class HostDalvikVm extends Vm {
         androidSdk.dex(nameDexFile(name), Classpath.of(jar));
     }
 
-    @Override protected VmCommandBuilder newVmCommandBuilder() {
+    @Override protected VmCommandBuilder newVmCommandBuilder(Action action) {
         List<File> jars = new ArrayList<File>();
         for (String jar : AndroidSdk.HOST_BOOTCLASSPATH) {
             jars.add(new File(buildRoot, "out/host/linux-x86/framework/" + jar + ".jar"));

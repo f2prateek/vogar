@@ -17,7 +17,7 @@
 package vogar;
 
 public enum ModeId {
-    DEVICE, JVM, ACTIVITY, SIM, HOST;
+    DEVICE, JVM, ACTIVITY, SIM, HOST, APP_PROCESS;
 
     public boolean acceptsVmArgs() {
         return this != ACTIVITY;
@@ -28,6 +28,7 @@ public enum ModeId {
     }
 
     public boolean requiresAndroidSdk() {
-        return this == DEVICE || this == ACTIVITY || this == SIM || this == HOST;
+        return this == DEVICE || this == ACTIVITY || this == SIM || this == HOST
+                || this == APP_PROCESS;
     }
 }
