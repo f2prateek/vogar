@@ -228,7 +228,7 @@ public class AndroidSdk {
                 .args("--dex")
                 .args("--output=" + output)
                 .args("--core-library")
-                .args(Strings.objectsToStrings(classpath.getElements())).execute();
+                .args((Object[]) Strings.objectsToStrings(classpath.getElements())).execute();
         dexCache.insert(key, output);
     }
 

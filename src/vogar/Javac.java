@@ -75,7 +75,7 @@ final class Javac {
     }
 
     public List<String> compile(Collection<File> files) {
-        return builder.args(Strings.objectsToStrings(files)).execute();
+        return builder.args((Object[]) Strings.objectsToStrings(files)).execute();
     }
 
     public List<String> compile(File... files) {
