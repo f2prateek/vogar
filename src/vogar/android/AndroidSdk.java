@@ -205,11 +205,14 @@ public class AndroidSdk {
         mkdir.mkdirs(output.getParentFile());
 
         String key = dexCache.makeKey(classpath);
-        boolean cacheHit = dexCache.getFromCache(output, key);
-        if (cacheHit) {
-            log.verbose("dex cache hit for " + classpath);
-            return;
+        if (key != null) {
+            boolean cacheHit = dexCache.getFromCache(output, key);
+            if (cacheHit) {
+                log.verbose("dex cache hit for " + classpath);
+                return;
+            }
         }
+
         /*
          * We pass --core-library so that we can write tests in the
          * same package they're testing, even when that's a core
