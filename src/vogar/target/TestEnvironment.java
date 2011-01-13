@@ -23,6 +23,7 @@ import java.net.ResponseCache;
 import java.util.Locale;
 import java.util.Properties;
 import java.util.TimeZone;
+import java.util.logging.ConsoleHandler;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
 import java.util.prefs.BackingStoreException;
@@ -117,6 +118,7 @@ public final class TestEnvironment {
 
         // Logging
         LogManager.getLogManager().reset();
+        Logger.getLogger("").addHandler(new ConsoleHandler());
 
         // Cleanup to force CloseGuard warnings etc
         System.gc();
