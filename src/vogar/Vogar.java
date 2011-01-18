@@ -353,7 +353,7 @@ public final class Vogar {
         System.out.println("  --fail-color: ANSI color code to use for failures.");
         System.out.println("      Default: 31 (red)");
         System.out.println();
-        System.out.println("  --ansi: use ASNI escape sequences to remove intermediate output.");
+        System.out.println("  --ansi: use ANSI escape sequences to remove intermediate output.");
         System.out.println();
         System.out.println("  --expectations <file>: include the specified file when looking for");
         System.out.println("      action expectations. The file should include qualified action names");
