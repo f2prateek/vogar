@@ -58,6 +58,7 @@ public class AndroidSdk {
     public static final String[] HOST_BOOTCLASSPATH = new String[] {
             "core-hostdex",
             "bouncycastle-hostdex",
+            "apache-xml-hostdex",
     };
 
     private static final Comparator<File> ORDER_BY_NAME = new Comparator<File>() {
