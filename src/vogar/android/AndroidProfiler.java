@@ -17,6 +17,7 @@
 package vogar.android;
 
 import java.io.File;
+import java.io.PrintStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import vogar.target.Profiler;
@@ -42,7 +43,7 @@ public class AndroidProfiler extends Profiler {
             start = SamplingProfiler.getMethod("start", Integer.TYPE);
             stop = SamplingProfiler.getMethod("stop");
             shutdown = SamplingProfiler.getMethod("shutdown");
-            writeHprofData = SamplingProfiler.getMethod("writeHprofData", File.class);
+            writeHprofData = SamplingProfiler.getMethod("writeHprofData", PrintStream.class);
 
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -94,7 +95,9 @@ public class AndroidProfiler extends Profiler {
     @Override public void shutdown(File file) {
         try {
             shutdown.invoke(profiler);
-            writeHprofData.invoke(profiler, file);
+            PrintStream stream = new PrintStream(file);
+            writeHprofData.invoke(profiler, stream);
+            stream.close();
         } catch (Exception e) {
             throw new AssertionError(e);
         }
