@@ -17,7 +17,8 @@
 package vogar.android;
 
 import java.io.File;
-import java.io.PrintStream;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import vogar.target.Profiler;
@@ -26,28 +27,29 @@ public class AndroidProfiler extends Profiler {
     // SamplingProfiler methods
     private final Method newArrayThreadSet;
     private final Method newThreadGroupTheadSet;
-    private final Constructor constructor;
+    private final Constructor newThreadSet;
     private final Method start;
     private final Method stop;
     private final Method shutdown;
-    private final Method writeHprofData;
-    {
-        try {
-            Class<?> ThreadSet = Class.forName("dalvik.system.SamplingProfiler$ThreadSet");
-            Class<?> SamplingProfiler = Class.forName("dalvik.system.SamplingProfiler");
-            newArrayThreadSet = SamplingProfiler.getMethod("newArrayThreadSet",
-                                                           Thread[].class);
-            newThreadGroupTheadSet = SamplingProfiler.getMethod("newThreadGroupTheadSet",
-                                                                ThreadGroup.class);
-            constructor = SamplingProfiler.getConstructor(Integer.TYPE, ThreadSet);
-            start = SamplingProfiler.getMethod("start", Integer.TYPE);
-            stop = SamplingProfiler.getMethod("stop");
-            shutdown = SamplingProfiler.getMethod("shutdown");
-            writeHprofData = SamplingProfiler.getMethod("writeHprofData", PrintStream.class);
+    private final Constructor<?> newAsciiHprofWriter;
+    private final Method getHprofData;
+    private final Method write;
 
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+    public AndroidProfiler() throws Exception {
+        Class<?> ThreadSet = Class.forName("dalvik.system.SamplingProfiler$ThreadSet");
+        Class<?> SamplingProfiler = Class.forName("dalvik.system.SamplingProfiler");
+        Class<?> HprofData = Class.forName("dalvik.system.SamplingProfiler$HprofData");
+        Class<?> Writer = Class.forName("dalvik.system.SamplingProfiler$AsciiHprofWriter");
+        newArrayThreadSet = SamplingProfiler.getMethod("newArrayThreadSet", Thread[].class);
+        newThreadGroupTheadSet = SamplingProfiler.getMethod("newThreadGroupTheadSet",
+                                                            ThreadGroup.class);
+        newThreadSet = SamplingProfiler.getConstructor(Integer.TYPE, ThreadSet);
+        start = SamplingProfiler.getMethod("start", Integer.TYPE);
+        stop = SamplingProfiler.getMethod("stop");
+        shutdown = SamplingProfiler.getMethod("shutdown");
+        getHprofData = SamplingProfiler.getMethod("getHprofData");
+        newAsciiHprofWriter = Writer.getConstructor(HprofData, OutputStream.class);
+        write = Writer.getMethod("write");
     }
 
     private Thread[] thread = new Thread[1];
@@ -64,7 +66,7 @@ public class AndroidProfiler extends Profiler {
             } else {
                 threadSet = newArrayThreadSet.invoke(null, (Object)thread);
             }
-            this.profiler = constructor.newInstance(depth, threadSet);
+            this.profiler = newThreadSet.newInstance(depth, threadSet);
             this.interval = interval;
         } catch (Exception e) {
             throw new AssertionError(e);
@@ -95,9 +97,11 @@ public class AndroidProfiler extends Profiler {
     @Override public void shutdown(File file) {
         try {
             shutdown.invoke(profiler);
-            PrintStream stream = new PrintStream(file);
-            writeHprofData.invoke(profiler, stream);
-            stream.close();
+
+            FileOutputStream out = new FileOutputStream(file);
+            Object writer = newAsciiHprofWriter.newInstance(getHprofData.invoke(profiler), out);
+            write.invoke(writer);
+            out.close();
         } catch (Exception e) {
             throw new AssertionError(e);
         }
