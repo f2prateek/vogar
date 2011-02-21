@@ -17,7 +17,6 @@
 package vogar;
 
 import com.google.common.collect.Lists;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -219,19 +218,11 @@ public abstract class Console implements Log {
 
             String brokeThisMessage = "";
             ResultValue mostRecentResultValue = annotatedOutcome.getMostRecentResultValue(null);
-            boolean resultValueChangedSinceTag =
-                    annotatedOutcome.hasTag() && annotatedOutcome.getTagResultValue() != resultValue;
             if (mostRecentResultValue != null && resultValue != mostRecentResultValue) {
                 if (resultValue == ResultValue.OK) {
                     brokeThisMessage = colorString(" (you might have fixed this)", Color.WARN);
                 } else {
                     brokeThisMessage = colorString(" (you might have broken this)", Color.WARN);
-                }
-            } else if (resultValueChangedSinceTag) {
-                if (resultValue == ResultValue.OK) {
-                    brokeThisMessage = colorString(" (fixed since tag)", Color.WARN);
-                } else {
-                    brokeThisMessage = colorString(" (broken since tag)", Color.WARN);
                 }
             } else if (mostRecentResultValue == null) {
                 brokeThisMessage = colorString(" (no test history available)", Color.WARN);
@@ -246,11 +237,6 @@ public abstract class Console implements Log {
             StringBuilder sb = new StringBuilder();
             sb.append(indent);
             sb.append(colorString(annotatedOutcome.getOutcome().getName(), color));
-            if (annotatedOutcome.hasTag()) {
-                sb.append(String.format(" [%s at tag %s]",
-                        generateSparkLine(Arrays.asList(annotatedOutcome.getTagResultValue())),
-                        annotatedOutcome.getTagName()));
-            }
             if (!previousResultValuesToShow.isEmpty()) {
                 sb.append(String.format(" [last %d: %s] [last run: %s]",
                         previousResultValuesToShow.size(),

@@ -146,21 +146,6 @@ public final class Vogar {
     @Option(names = { "--vogar-dir" })
     private File vogarDir = Vogar.dotFile(".vogar");
 
-    @Option(names = { "--tag-dir" })
-    private File tagDir = null;
-
-    @Option(names = { "--tag" }, savedInTag = false)
-    private String tagName = null;
-
-    @Option(names = { "--run-tag" }, savedInTag = false)
-    private String runTag = null;
-
-    @Option(names = { "--compare-to-tag" }, savedInTag = false)
-    private String compareToTag = null;
-
-    @Option(names = { "--tag-overwrite" }, savedInTag = false)
-    private boolean tagOverwrite = false;
-
     @Option(names = { "--record-results" })
     private boolean recordResults = false;
 
@@ -277,30 +262,14 @@ public final class Vogar {
         System.out.println("  --sourcepath <directory>: add the directory to the build sourcepath.");
         System.out.println();
         System.out.println("  --vogar-dir <directory>: directory in which to find Vogar");
-        System.out.println("      configuration information, caches, saved results, and tags,");
+        System.out.println("      configuration information, caches, saved and results");
         System.out.println("      unless they've been put explicitly elsewhere.");
         System.out.println("      Default is: " + vogarDir);
-        System.out.println();
-        System.out.println("  --tag-dir <directory>: directory in which to find tag information.");
-        System.out.println("      Default is: " + vogarDir + "/tags");
-        System.out.println();
-        System.out.println("  --tag <tag name>: creates a tag recording the arguments to this");
-        System.out.println("      invocation of Vogar so that it can be rerun later.");
-        System.out.println();
-        System.out.println("  --run-tag <tag name>: runs Vogar with arguments as specified by the");
-        System.out.println("      tag. Any arguments supplied for this run will override those");
-        System.out.println("      supplied by the tag.");
-        System.out.println();
-        System.out.println("  --compare-to-tag <tag name>: compares the results of this run with");
-        System.out.println("      the results saved when the tag was created. Defaults to the value");
-        System.out.println("      of --run-tag if that argument is given.");
         System.out.println();
         System.out.println("  --record-results: record test results for future comparison.");
         System.out.println();
         System.out.println("  --results-dir <directory>: read and write (if --record-results used)");
         System.out.println("      results from and to this directory.");
-        System.out.println();
-        System.out.println("  --tag-overwrite: allow --tag to overwrite an existing tag.");
         System.out.println();
         System.out.println("  --verbose: turn on persistent verbose output.");
         System.out.println();
@@ -408,39 +377,6 @@ public final class Vogar {
             return false;
         }
 
-        if (runTag != null && tagName != null) {
-            System.out.println("Cannot use both --run-tag and --tag options");
-            return false;
-        }
-
-        if (runTag != null) {
-            String oldTag = tagName;
-            String[] runTagArgs;
-            if (tagDir == null) {
-                tagDir = new File(vogarDir, "/tags");
-            }
-            try {
-                runTagArgs = new Tag(tagDir, runTag, false).getArgs();
-                System.out.println("Executing Vogar with additional arguments from tag \""
-                        + runTag + "\":");
-                System.out.println(Strings.join(" ", (Object[]) runTagArgs));
-            } catch (FileNotFoundException e) {
-                System.out.println("Tag \"" + runTag + "\" doesn't exist");
-                System.out.println("Existing tags are: "
-                        + Strings.join(", ", (Object[]) Tag.getAllTags(tagDir)));
-                return false;
-            }
-            // rollback changes already made by the optionParser to insert tag arguments
-            optionParser.reset();
-            actionsAndTargetArgs = optionParser.parse(configArgs);
-            // runTags options are applied first so that the current command's arguments win if
-            // there is a conflict
-            actionsAndTargetArgs.addAll(optionParser.parse(runTagArgs));
-            // tag is the only argument we don't allow to be supplied by the run tag
-            tagName = oldTag;
-            actionsAndTargetArgs.addAll(optionParser.parse(args));
-        }
-
         //
         // Semantic error validation
         //
@@ -516,13 +452,6 @@ public final class Vogar {
         if (!mode.acceptsVmArgs() && !targetArgs.isEmpty()) {
             System.out.println("Target args " + targetArgs + " should not be specified for mode " + mode);
             return false;
-        }
-
-        if (tagName != null) {
-            if (tagDir == null) {
-                tagDir = new File(vogarDir, "/tags");
-            }
-            new Tag(tagDir, tagName, tagOverwrite).saveArgs(args);
         }
 
         return true;
@@ -606,11 +535,6 @@ public final class Vogar {
 
         @Provides @Named("cleanBefore") boolean provideCleanBefore() {
             return cleanBefore;
-        }
-
-        @Provides @Named("compareToTag") String provideCompareToTag() {
-            // Automatically compare to a tag if we explicitly run it
-            return (runTag != null && compareToTag == null) ? runTag : compareToTag;
         }
 
         @Provides Date provideDate() {
@@ -729,14 +653,6 @@ public final class Vogar {
 
         @Provides @Named("useBootClasspath") boolean provideUseBootClasspath() {
             return useBootClasspath;
-        }
-
-        @Provides @Named("tagDir") File provideTagDir() {
-            return tagDir != null ? tagDir : new File(vogarDir, "results/tags");
-        }
-
-        @Provides @Named("tagName") String provideTagName() {
-            return tagName;
         }
 
         @Provides @Named("targetArgs") List<String> provideTargetArgs() {

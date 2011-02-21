@@ -16,7 +16,6 @@
 
 package vogar;
 
-import com.google.common.collect.Lists;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
@@ -80,7 +79,6 @@ public final class Driver {
     private int failures = 0;
     private int skipped = 0;
 
-    private List<AnnotatedOutcome> annotatedOutcomes = Lists.newArrayList();
     private final Map<String, Action> actions = Collections.synchronizedMap(
             new LinkedHashMap<String, Action>());
     private final Map<String, Outcome> outcomes = Collections.synchronizedMap(
@@ -182,9 +180,14 @@ public final class Driver {
         }
 
         mode.shutdown();
-        final long t1 = System.currentTimeMillis();
+        long t1 = System.currentTimeMillis();
 
-        console.summarizeOutcomes(annotatedOutcomes);
+        Map<String, AnnotatedOutcome> annotatedOutcomes = outcomeStore.read(this.outcomes);
+        if (recordResults) {
+            outcomeStore.write(outcomes);
+        }
+
+        console.summarizeOutcomes(annotatedOutcomes.values());
 
         List<String> jarStringList = jarSuggestions.getStringList();
         if (!jarStringList.isEmpty()) {
@@ -247,13 +250,6 @@ public final class Driver {
         Result result = outcome.getResult();
         console.outcome(outcome.getName());
         console.printResult(outcome.getName(), result, resultValue, expectation);
-
-        AnnotatedOutcome annotatedOutcome = outcomeStore.read(outcome);
-        if (recordResults) {
-            outcomeStore.write(outcome, annotatedOutcome.outcomeChanged());
-        }
-
-        annotatedOutcomes.add(annotatedOutcome);
 
         JarSuggestions singleOutcomeJarSuggestions = new JarSuggestions();
         singleOutcomeJarSuggestions.addSuggestionsFromOutcome(outcome, classFileIndex,

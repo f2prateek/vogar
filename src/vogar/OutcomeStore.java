@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 The Android Open Source Project
+ * Copyright (C) 2011 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,187 +16,153 @@
 
 package vogar;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Splitter;
-import com.google.common.collect.Maps;
+import com.google.caliper.internal.gson.stream.JsonReader;
+import com.google.caliper.internal.gson.stream.JsonWriter;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FilenameFilter;
-import java.io.PrintStream;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.SortedMap;
 import java.util.TimeZone;
 import javax.inject.Inject;
 import javax.inject.Named;
-import javax.inject.Provider;
 import vogar.commands.Mkdir;
 import vogar.commands.Rm;
-import vogar.util.Strings;
 
-/**
- * TODO add description of directory structures for the tag and auto stores
- */
 public final class OutcomeStore {
     private static final String FILE_NAME_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssz";
-    private static final String TAG_FILENAME = "canonical.xml";
-    private static final FilenameFilter XML_FILTER = new FilenameFilter() {
-        public boolean accept(File dir, String fileName) {
-            return fileName.endsWith(".xml");
+    private static final int PRESERVE_TOTAL = 10;
+
+    private static final Comparator<File> ORDER_BY_LAST_MODIFIED = new Comparator<File>() {
+        @Override public int compare(File a, File b) {
+            if (a.lastModified() != b.lastModified()) {
+                return a.lastModified() < b.lastModified() ? -1 : 1;
+            }
+            return 0;
         }
     };
 
     @Inject Log log;
     @Inject Mkdir mkdir;
     @Inject Rm rm;
-    @Inject @Named("tagDir") File tagDir;
-    @Inject @Named("tagName") String tagName;
-    @Inject @Named("compareToTag") String compareToTag;
     @Inject @Named("resultsDir") File resultsDir;
     @Inject @Named("recordResults") boolean recordResults;
-    @Inject Provider<XmlReportPrinter> xmlReportPrinterProvider;
     @Inject ExpectationStore expectationStore;
     @Inject Date date;
 
-    private File tagResultsDir() {
-        return new File(tagDir, "results");
-    }
-
-    private File autoResultsDir() {
-        return new File(resultsDir, "auto");
-    }
-
-    public AnnotatedOutcome read(Outcome outcome) {
-        Expectation expectation = expectationStore.get(outcome);
-
-        // read tag result (if applicable)
-        Outcome tagOutcome = null;
-        XmlReportReader reportReader = new XmlReportReader();
-        if (compareToTag != null) {
-            String tagOutputFileName = TAG_FILENAME;
-            File tagResultsDir = new File(tagResultsDir(), compareToTag);
-            File tagOutcomeResultsDir = new File(tagResultsDir, outcome.getPath());
-            File tagFile = new File(tagOutcomeResultsDir, tagOutputFileName);
-            if (tagFile.exists()) {
-                Collection<Outcome> outcomes =
-                        reportReader.readSuiteReport(tagFile);
-                // get what should be the only outcome in outcomes
-                tagOutcome = outcomes.iterator().next();
-            }
+    public Map<String, AnnotatedOutcome> read(Map<String, Outcome> outcomes) {
+        Map<String, AnnotatedOutcome> result = new LinkedHashMap<String, AnnotatedOutcome>();
+        for (Map.Entry<String, Outcome> entry : outcomes.entrySet()) {
+            Outcome outcome = entry.getValue();
+            Expectation expectation = expectationStore.get(outcome);
+            result.put(entry.getKey(), new AnnotatedOutcome(outcome, expectation));
         }
 
-        // read automatically recorded results (if they exist)
-        File outcomeResultDir = new File(autoResultsDir(), outcome.getPath());
-        SortedMap<Long, Outcome> previousOutcomes = Maps.newTreeMap();
-        boolean hasMetadata = false;
-        if (outcomeResultDir.exists()) {
-            List<File> xmlResultFiles = getXmlFiles(outcomeResultDir);
-            Map<String, Outcome> outcomesByFileName = Maps.newHashMap();
-
-            for (File resultXmlFile : xmlResultFiles) {
-                Collection<Outcome> outcomes = reportReader.readSuiteReport(resultXmlFile);
-                outcomesByFileName.put(resultXmlFile.getName(), outcomes.iterator().next());
-            }
-
-            File metadataFile = new File(outcomeResultDir, ".meta");
-            if (metadataFile.exists()) {
-                try {
-                    List<String> lines = Strings.readFileLines(metadataFile);
-                    for (String line : lines) {
-                        Splitter commas = Splitter.on(",");
-                        Iterator<String> lineParts = commas.split(line).iterator();
-                        long time = Long.valueOf(lineParts.next());
-                        Outcome previousOutcome = outcomesByFileName.get(lineParts.next());
-                        if (previousOutcome != null) {
-                            previousOutcomes.put(time, previousOutcome);
-                        } else {
-                            log.warn("No outcome: " + lineParts.next());
-                        }
-                    }
-                    hasMetadata = true;
-                } catch (Exception e) {
-                    log.info("failed to read outcome metadata", e);
+        try {
+            File[] oldOutcomes = getOutcomeFiles();
+            log.verbose("parsing outcomes from " + oldOutcomes.length + " files");
+            for (File file : oldOutcomes) {
+                if (!file.getName().endsWith(".json")) {
+                    continue;
                 }
-            } else {
-                for (Outcome previousOutcome : outcomesByFileName.values()) {
-                    previousOutcomes.put(previousOutcome.getDate().getTime(), previousOutcome);
-                }
+
+                loadOutcomes(result, file, file.lastModified());
             }
+        } catch (IOException e) {
+            log.info("Failed to read outcomes from " + resultsDir, e);
         }
 
-        return new AnnotatedOutcome(outcome, expectation, previousOutcomes, compareToTag,
-                tagOutcome, hasMetadata);
+        return result;
     }
 
-    private List<File> getXmlFiles(File outcomeResultDir) {
-        return Arrays.asList(outcomeResultDir.listFiles(XML_FILTER));
-    }
-
-    public void write(Outcome outcome, boolean hasChanged) {
-        File outcomeResultDir = new File(autoResultsDir(), outcome.getPath());
-
-        if (recordResults) {
-            mkdir.mkdirs(outcomeResultDir);
-
-            // record the outcome's result (only if the outcome has changed)
-            SimpleDateFormat dateFormat = new SimpleDateFormat(FILE_NAME_DATE_FORMAT);
-            dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
-            dateFormat.setLenient(true);
-            String timestamp = dateFormat.format(date);
-            String outputFileName = timestamp + ".xml";
-            if (hasChanged) {
-                XmlReportPrinter singleReportPrinter = xmlReportPrinterProvider.get();
-                singleReportPrinter.setOutput(outcomeResultDir, true);
-                singleReportPrinter.generateReport(outcome, outputFileName);
+    private void loadOutcomes(Map<String, AnnotatedOutcome> map, File file, long fileDate)
+            throws IOException {
+        JsonReader in = new JsonReader(new FileReader(file));
+        in.beginObject();
+        while (in.hasNext()) {
+            String outcomeName = in.nextName();
+            AnnotatedOutcome annotatedOutcome = map.get(outcomeName);
+            if (annotatedOutcome == null) {
+                in.skipValue();
+                continue;
             }
 
-            try {
-                File metadataFile = new File(outcomeResultDir, ".meta");
-                PrintStream metadataPrintStream =
-                        new PrintStream(new FileOutputStream(metadataFile, true));
-                String fileNameContainingOutcome;
-                if (hasChanged) {
-                    fileNameContainingOutcome = outputFileName;
+            Result result = null;
+            in.beginObject();
+            while (in.hasNext()) {
+                String fieldName = in.nextName();
+                if (fieldName.equals("result")) {
+                    result = Result.valueOf(in.nextString());
                 } else {
-                    List<File> xmlFiles = getXmlFiles(outcomeResultDir);
-                    if (xmlFiles.isEmpty()) {
-                        throw new RuntimeException("expected at least one outcome in "
-                                + outcomeResultDir);
-                    }
-                    Collections.sort(xmlFiles, Collections.reverseOrder());
-                    fileNameContainingOutcome = xmlFiles.get(0).getName();
+                    in.skipValue();
                 }
-                Joiner commaJoiner = Joiner.on(",");
-                metadataPrintStream.println(commaJoiner.join(
-                        String.valueOf(outcome.getDate().getTime()),
-                        fileNameContainingOutcome));
-                metadataPrintStream.close();
-            } catch (Exception e) {
-                log.info("failed to write outcome metadata", e);
             }
+            in.endObject();
+
+            annotatedOutcome.add(fileDate, new Outcome(outcomeName, result,
+                    Collections.<String>emptyList()));
+        }
+        in.endObject();
+        in.close();
+    }
+
+    public void write(Map<String, Outcome> outcomes) {
+        if (!recordResults) {
+            return;
         }
 
-        // record the outcome's result to a tag (if applicable)
-        if (tagName != null) {
-            String tagOutputFileName = TAG_FILENAME;
-            File tagDir = new File(tagResultsDir(), tagName);
-            File tagOutcomeResultDir = new File(tagDir, outcome.getPath());
-            File outcomeTagFile = new File(tagOutcomeResultDir, tagOutputFileName);
-            if (outcomeTagFile.exists()) {
-                rm.file(outcomeTagFile);
+        makeRoom();
+        File outputFile = getOutputFile();
+        try {
+            mkdir.mkdirs(outputFile.getParentFile());
+            JsonWriter out = new JsonWriter(new FileWriter(outputFile));
+            out.setIndent("  ");
+            out.beginObject();
+            for (Map.Entry<String, Outcome> entry : outcomes.entrySet()) {
+                out.name(entry.getKey());
+                out.beginObject();
+                out.name("result");
+                out.value(entry.getValue().getResult().toString());
+                out.endObject();
             }
-            if (!tagOutcomeResultDir.mkdirs() && !tagOutcomeResultDir.exists()) {
-                throw new RuntimeException("Failed to create directory " + tagOutcomeResultDir);
-            }
-            XmlReportPrinter tagSingleReportPrinter = xmlReportPrinterProvider.get();
-            tagSingleReportPrinter.setOutput(tagOutcomeResultDir, true);
-            tagSingleReportPrinter.generateReport(outcome, tagOutputFileName);
+            out.endObject();
+            out.close();
+        } catch (IOException e) {
+            log.info("Failed to write outcomes to " + outputFile, e);
+        }
+    }
+
+    private File[] getOutcomeFiles() {
+        File[] result = resultsDir.listFiles();
+        if (result == null) {
+            return new File[0];
+        }
+        Arrays.sort(result, ORDER_BY_LAST_MODIFIED);
+        return result;
+    }
+
+    private File getOutputFile() {
+        SimpleDateFormat dateFormat = new SimpleDateFormat(FILE_NAME_DATE_FORMAT);
+        dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+        dateFormat.setLenient(true);
+        String timestamp = dateFormat.format(date);
+        return new File(resultsDir, timestamp + ".json");
+    }
+
+    /**
+     * Removes the oldest result files until only (PRESERVE_TOTAL - 1) remain.
+     */
+    private void makeRoom() {
+        File[] outcomeFiles = getOutcomeFiles();
+        for (int i = 0; i <= (outcomeFiles.length - PRESERVE_TOTAL); i++) {
+            rm.file(outcomeFiles[i]);
+            log.verbose("garbage collected results file: " + outcomeFiles[i]);
         }
     }
 }

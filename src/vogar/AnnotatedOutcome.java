@@ -21,6 +21,7 @@ import com.google.common.collect.Ordering;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.SortedMap;
+import java.util.TreeMap;
 
 /**
  * Contains an outcome for a test, along with some metadata pertaining to the history of this test,
@@ -38,24 +39,15 @@ public final class AnnotatedOutcome {
     private final Expectation expectation;
     private final Outcome outcome;
     /** a list of previous outcomes for the same action, sorted in chronological order */
-    private final SortedMap<Long, Outcome> previousOutcomes;
-    /** will be null if not comparing to a tag */
-    private final String tagName;
-    private final Outcome tagOutcome;
-    private final boolean hasMetadata;
+    private final SortedMap<Long, Outcome> previousOutcomes = new TreeMap<Long, Outcome>();
 
-    AnnotatedOutcome(Outcome outcome, Expectation expectation,
-            SortedMap<Long, Outcome> previousOutcomes, String tagName, Outcome tagOutcome,
-            boolean hasMetadata) {
-        if (previousOutcomes == null) {
-            throw new NullPointerException();
-        }
+    AnnotatedOutcome(Outcome outcome, Expectation expectation) {
         this.expectation = expectation;
         this.outcome = outcome;
-        this.previousOutcomes = previousOutcomes;
-        this.tagName = tagName;
-        this.tagOutcome = tagOutcome;
-        this.hasMetadata = hasMetadata;
+    }
+
+    public void add(long date, Outcome outcome) {
+        previousOutcomes.put(date, outcome);
     }
 
     public Outcome getOutcome() {
@@ -88,33 +80,11 @@ public final class AnnotatedOutcome {
                 previousResultValues.get(previousResultValues.size() - 1);
     }
 
-    public boolean hasTag() {
-        return tagOutcome != null;
-    }
-
-    public String getTagName() {
-        return tagName;
-    }
-
-    public ResultValue getTagResultValue() {
-        return tagOutcome == null ? null : tagOutcome.getResultValue(expectation);
-    }
-
     /**
      * Returns true if the outcome is noteworthy given the result value and previous history.
      */
     public boolean isNoteworthy() {
-        return getResultValue() != ResultValue.OK || recentlyChanged() || changedSinceTag();
-    }
-
-    public boolean outcomeChanged() {
-        List<Outcome> previousOutcomesList = getOutcomeList();
-        return previousOutcomesList.isEmpty()
-                || !outcome.equals(previousOutcomesList.get(previousOutcomesList.size() - 1));
-    }
-
-    private ArrayList<Outcome> getOutcomeList() {
-        return new ArrayList<Outcome>(previousOutcomes.values());
+        return getResultValue() != ResultValue.OK || recentlyChanged();
     }
 
     /**
@@ -128,19 +98,11 @@ public final class AnnotatedOutcome {
         return previousResultValues.get(previousResultValues.size() - 1) != getResultValue();
     }
 
-    private boolean changedSinceTag() {
-        ResultValue tagResultValue = getTagResultValue();
-        return tagResultValue != null && tagResultValue != getResultValue();
-    }
-
     /**
      * Returns a Long representing the time the outcome was last run. Returns {@code defaultValue}
      * if the outcome is not known to have run before.
      */
     public Long lastRun(Long defaultValue) {
-        if (!hasMetadata) {
-            return defaultValue;
-        }
         List<Long> runTimes = Lists.newArrayList(previousOutcomes.keySet());
         return runTimes.isEmpty() ? defaultValue : runTimes.get(runTimes.size() - 1);
     }
