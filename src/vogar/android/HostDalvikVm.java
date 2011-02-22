@@ -77,7 +77,7 @@ public class HostDalvikVm extends Vm {
 
         VmCommandBuilder builder = new VmCommandBuilder()
                 .env("ANDROID_PRINTF_LOG", "tag")
-                .env("ANDROID_LOG_TAGS", "*:w")
+                .env("ANDROID_LOG_TAGS", "*:i")
                 .env("ANDROID_DATA", dalvikCache().getParent());
 
         List<String> vmCommand = new ArrayList<String>();
