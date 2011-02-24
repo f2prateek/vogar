@@ -51,13 +51,14 @@ public final class MainRunner implements Runner {
                 profiler.start();
             }
             main.invoke(null, new Object[] { args });
-            if (profiler != null) {
-                profiler.stop();
-            }
             monitor.outcomeFinished(Result.SUCCESS);
         } catch (Throwable ex) {
             ex.printStackTrace();
             monitor.outcomeFinished(Result.EXEC_FAILED);
+        } finally {
+            if (profiler != null) {
+                profiler.stop();
+            }
         }
         return true;
     }

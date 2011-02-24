@@ -172,12 +172,13 @@ public final class JUnitRunner implements Runner {
                             profiler.start();
                         }
                         p.protect();
-                        if (profiler != null) {
-                            profiler.stop();
-                        }
                         return null;
                     } catch (Throwable throwable) {
                         return throwable;
+                    } finally {
+                        if (profiler != null) {
+                            profiler.stop();
+                        }
                     }
                 }
             });
