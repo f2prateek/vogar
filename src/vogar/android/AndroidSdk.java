@@ -35,6 +35,7 @@ import vogar.Classpath;
 import vogar.HostFileCache;
 import vogar.Log;
 import vogar.Md5Cache;
+import vogar.ModeId;
 import vogar.commands.Command;
 import vogar.commands.CommandFailedException;
 import vogar.commands.Mkdir;
@@ -95,7 +96,7 @@ public class AndroidSdk {
         return (files != null) ? Arrays.asList(files) : Collections.<File>emptyList();
     }
 
-    public AndroidSdk(Log log, Mkdir mkdir) {
+    public AndroidSdk(Log log, Mkdir mkdir, ModeId mode) {
         this.log = log;
         this.mkdir = mkdir;
 
@@ -140,12 +141,15 @@ public class AndroidSdk {
                     .getParentFile().getParentFile().getParentFile();
             log.verbose("using android build tree: " + sourceRoot);
 
+            String pattern = "out/target/common/obj/JAVA_LIBRARIES/%s_intermediates/classes.jar";
+            if (mode == ModeId.HOST) {
+                pattern = "out/host/common/obj/JAVA_LIBRARIES/%s-hostdex_intermediates/classes.jar";
+            }
+
             androidClasses = new File[BOOTCLASSPATH.length];
             for (int i = 0; i < BOOTCLASSPATH.length; i++) {
                 String jar = BOOTCLASSPATH[i];
-                androidClasses[i] = new File(sourceRoot,
-                                             "out/target/common/obj/JAVA_LIBRARIES/"
-                                             + jar + "_intermediates/classes.jar");
+                androidClasses[i] = new File(sourceRoot, String.format(pattern, jar));
             }
         } else {
             throw new RuntimeException("Couldn't derive Android home from " + dx);

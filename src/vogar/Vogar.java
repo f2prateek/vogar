@@ -498,7 +498,7 @@ public final class Vogar {
 
         @Provides @Singleton AndroidSdk provideAndroidSdk(
                 Log log, Mkdir mkdir, HostFileCache hostFileCache) {
-            AndroidSdk androidSdk = new AndroidSdk(log, mkdir);
+            AndroidSdk androidSdk = new AndroidSdk(log, mkdir, mode);
             // resolve the circular dependency between device file cache & android SDK manually
             androidSdk.setCaches(hostFileCache, new DeviceFileCache(log, deviceDir, androidSdk));
             return androidSdk;
