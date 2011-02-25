@@ -79,8 +79,6 @@ public class AndroidSdk {
     private final Log log;
     private final Mkdir mkdir;
     private final File[] androidClasses;
-    private final String dx;
-    private final String aapt;
 
     private Md5Cache dexCache;
     private Md5Cache pushCache;
@@ -101,58 +99,44 @@ public class AndroidSdk {
         this.log = log;
         this.mkdir = mkdir;
 
-        List<String> path = new Command(log, "which", "adb").execute();
+        List<String> path = new Command(log, "which", "dx").execute();
         if (path.isEmpty()) {
-            throw new RuntimeException("Adb not found");
+            throw new RuntimeException("dx not found");
         }
-        File adb = new File(path.get(0)).getAbsoluteFile();
-        String parentFileName = adb.getParentFile().getName();
+        File dx = new File(path.get(0)).getAbsoluteFile();
+        String parentFileName = dx.getParentFile().getName();
 
         /*
-         * We probably get adb from either a copy of the Android SDK or a copy
-         * of the Android source code.
-         *
-         * Android SDK < v9 (gingerbread):
-         *  <sdk>/tools/adb
-         *  <sdk>/platforms/android-?/tools/dx
-         *  <sdk>/platforms/android-?/tools/aapt
-         *  <sdk>/platforms/android-?/android.jar
+         * We probably get aapt/adb/dx from either a copy of the Android SDK or a copy
+         * of the Android source code. In either case, all three tools are in the same
+         * directory as each other.
          *
          * Android SDK >= v9 (gingerbread):
+         *  <sdk>/platform-tools/aapt
          *  <sdk>/platform-tools/adb
          *  <sdk>/platform-tools/dx
-         *  <sdk>/platform-tools/aapt
          *  <sdk>/platforms/android-?/android.jar
          *
          * Android build tree:
+         *  <source>/out/host/linux-x86/bin/aapt
          *  <source>/out/host/linux-x86/bin/adb
+         *  <source>/out/host/linux-x86/bin/dx
          *  <source>/out/target/common/obj/JAVA_LIBRARIES/core_intermediates/classes.jar
          */
 
-        if ("tools".equals(parentFileName) || "platform-tools".equals(parentFileName)) {
-            File sdkRoot = adb.getParentFile().getParentFile();
+        if ("platform-tools".equals(parentFileName)) {
+            File sdkRoot = dx.getParentFile().getParentFile();
             List<File> platforms = Arrays.asList(new File(sdkRoot, "platforms").listFiles());
             Collections.sort(platforms, ORDER_BY_NAME);
             File newestPlatform = platforms.get(platforms.size() - 1);
             log.verbose("using android platform: " + newestPlatform);
 
-            // don't assume dx and aapt are on the $PATH
-            if ("tools".equals(parentFileName)) {
-                dx = newestPlatform.getPath() + "/tools/dx";
-                aapt = newestPlatform.getPath() + "/tools/aapt";
-            } else {
-                dx = "dx";
-                aapt = "aapt";
-            }
-
             androidClasses = new File[] { new File(newestPlatform, "android.jar") };
             log.verbose("using android sdk: " + sdkRoot);
 
         } else if ("bin".equals(parentFileName)) {
-            dx = "dx";
-            aapt = "aapt";
 
-            File sourceRoot = adb.getParentFile().getParentFile()
+            File sourceRoot = dx.getParentFile().getParentFile()
                     .getParentFile().getParentFile().getParentFile();
             log.verbose("using android build tree: " + sourceRoot);
 
@@ -164,7 +148,7 @@ public class AndroidSdk {
                                              + jar + "_intermediates/classes.jar");
             }
         } else {
-            throw new RuntimeException("Couldn't derive Android home from " + adb);
+            throw new RuntimeException("Couldn't derive Android home from " + dx);
         }
     }
 
@@ -226,7 +210,7 @@ public class AndroidSdk {
          * handle large dx input when building dex for APK.
          */
         new Command.Builder(log)
-                .args(dx)
+                .args("dx")
                 .args("-JXms16M")
                 .args("-JXmx1536M")
                 .args("--dex")
@@ -237,7 +221,7 @@ public class AndroidSdk {
     }
 
     public void packageApk(File apk, File manifest) {
-        List<String> aapt = new ArrayList<String>(Arrays.asList(this.aapt,
+        List<String> aapt = new ArrayList<String>(Arrays.asList("aapt",
                                                                 "package",
                                                                 "-F", apk.getPath(),
                                                                 "-M", manifest.getPath()));
@@ -249,7 +233,7 @@ public class AndroidSdk {
     }
 
     public void addToApk(File apk, File dex) {
-        new Command(log, this.aapt, "add", "-k", apk.getPath(), dex.getPath()).execute();
+        new Command(log, "aapt", "add", "-k", apk.getPath(), dex.getPath()).execute();
     }
 
     public void mkdir(File name) {
