@@ -12,7 +12,6 @@
     <property name="caliper" value="lib/caliper.jar"/>
     <property name="guava" value="lib/guava.jar"/>
     <property name="jsr305" value="lib/jsr305.jar"/>
-    <property name="junit" value="lib/junit.jar"/>
     <property name="kxml2" value="lib/kxml2-2.3.0.jar"/>
     <property name="android" value="${android.platform.dir}/android.jar"/>
     <property name="miniguice" value="lib/miniguice.jar"/>
@@ -22,7 +21,6 @@
         <pathelement location="${caliper}"/>
         <pathelement location="${guava}"/>
         <pathelement location="${jsr305}"/>
-        <pathelement location="${junit}"/>
         <pathelement location="${kxml2}"/>
         <pathelement location="${android}"/>
         <pathelement location="${miniguice}"/>
@@ -34,7 +32,7 @@
                message="No android.platform.dir. Create local.properties or put Android tools on your $PATH."/>
         <mkdir dir="build/classes"/>
         <javac srcdir="src"
-               includes="vogar/**"
+               includes="**"
                destdir="build/classes"
                debug="on"
                source="1.5"
@@ -53,7 +51,6 @@
             <zipfileset src="${caliper}"/>
             <zipfileset src="${guava}"/>
             <zipfileset src="${jsr305}"/>
-            <zipfileset src="${junit}"/>
             <zipfileset src="${kxml2}"/>
             <zipfileset src="${miniguice}"/>
             <fileset dir="src">
@@ -83,19 +80,6 @@
                 <pathelement location="${mockito}"/>
             </classpath>
         </javac>
-    </target>
-
-    <target name="runtests" 
-            depends="compiletests"
-            description="Run all tests">
-        <java fork="yes" classname="org.junit.runner.JUnitCore" taskname="junit" failonerror="true">
-            <arg value="vogar.AllTests"/>
-            <classpath>
-                <pathelement location="build/vogar.jar" />
-                <pathelement location="build/test-classes" />
-                <pathelement location="${mockito}"/>
-            </classpath>
-        </java>
     </target>
 
     <target name="clean"

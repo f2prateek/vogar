@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import vogar.Result;
 import vogar.TestProperties;
 import vogar.monitor.TargetMonitor;
+import vogar.target.junit.JUnitRunner;
 
 /**
  * Runs an action, in process on the target.
@@ -63,7 +64,6 @@ public final class TestRunner {
         qualifiedClassOrPackageName = properties.getProperty(TestProperties.TEST_CLASS_OR_PACKAGE);
         timeoutSeconds = Integer.parseInt(properties.getProperty(TestProperties.TIMEOUT));
         runners = Arrays.asList(new JUnitRunner(),
-                                new JUnit4Runner(),
                                 new CaliperRunner(),
                                 new MainRunner());
 
@@ -154,95 +154,28 @@ public final class TestRunner {
     }
 
     public void run() throws IOException {
-        TargetMonitor monitor = useSocketMonitor
+        final TargetMonitor monitor = useSocketMonitor
                 ? TargetMonitor.await(monitorPort)
                 : TargetMonitor.forPrintStream(System.out);
+
+        PrintStream monitorPrintStream = new PrintStreamDecorator(System.out) {
+            @Override public void print(String str) {
+                monitor.output(str != null ? str : "null");
+            }
+        };
+        System.setOut(monitorPrintStream);
+        System.setErr(monitorPrintStream);
+
         try {
             run(monitor);
+        } catch (Throwable internalError) {
+            internalError.printStackTrace(monitorPrintStream);
         } finally {
             monitor.close();
         }
     }
 
     public void run(final TargetMonitor monitor) {
-        PrintStream monitorPrintStream = new PrintStream(System.out) {
-            @Override public void print(long l) {
-                print(String.valueOf(l));
-            }
-
-            @Override public void print(int i) {
-                print(String.valueOf(i));
-            }
-
-            @Override public void print(float f) {
-                print(String.valueOf(f));
-            }
-
-            @Override public void print(double d) {
-                print(String.valueOf(d));
-            }
-
-            @Override public void print(char[] s) {
-                print(String.valueOf(s));
-            }
-
-            @Override public void print(char c) {
-                print(String.valueOf(c));
-            }
-
-            @Override public void print(Object obj) {
-                print(obj != null ? obj.toString() : "null");
-            }
-
-            @Override public void print(String str) {
-                monitor.output(str != null ? str : "null");
-            }
-
-            @Override public void println() {
-                print("\n");
-            }
-
-            /**
-             * Although println() is documented to be equivalent to print()
-             * followed by println(), this isn't the behavior on HotSpot
-             * and we must manually override println(String) to ensure that
-             * newlines aren't dropped.
-             */
-            @Override public void println(String s) {
-                print(s + "\n");
-            }
-
-            @Override public void println(long l) {
-                println(String.valueOf(l));
-            }
-
-            @Override public void println(int i) {
-                println(String.valueOf(i));
-            }
-
-            @Override public void println(float f) {
-                println(String.valueOf(f));
-            }
-
-            @Override public void println(double d) {
-                println(String.valueOf(d));
-            }
-
-            @Override public void println(char[] s) {
-                println(String.valueOf(s));
-            }
-
-            @Override public void println(char c) {
-                println(String.valueOf(c));
-            }
-
-            @Override public void println(Object obj) {
-                println(obj != null ? obj.toString() : "null");
-            }
-        };
-        System.setOut(monitorPrintStream);
-        System.setErr(monitorPrintStream);
-
         TestEnvironment testEnvironment = new TestEnvironment();
         testEnvironment.reset();
 
@@ -316,4 +249,5 @@ public final class TestRunner {
         new TestRunner(new ArrayList<String>(Arrays.asList(args))).run();
         System.exit(0);
     }
+
 }

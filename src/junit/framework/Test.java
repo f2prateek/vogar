@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 The Android Open Source Project
+ * Copyright (C) 2011 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,8 @@
  * limitations under the License.
  */
 
-package vogar.target.junit4;
+package junit.framework;
 
-import org.junit.runners.Suite.SuiteClasses;
+// Note: this class was written without inspecting the junit.framework code
 
-@SuiteClasses({ SimpleTest.class, SimpleTest2.class })
-public class WrongSuiteTest {
-}
+public interface Test {}

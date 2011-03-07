@@ -25,6 +25,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import vogar.Result;
 import vogar.monitor.TargetMonitor;
+import vogar.target.junit.JUnitRunner;
 import vogar.target.junit3.FailTest;
 import vogar.target.junit3.LongTest;
 import vogar.target.junit3.LongTest2;

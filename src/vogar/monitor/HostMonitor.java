@@ -102,7 +102,7 @@ public final class HostMonitor {
      *
      * {"outcome"="java.util.FormatterMain"}
      * {"result"="SUCCESS"}
-     * {"outcome"="java.util.FormatterTest#testBar" runner="vogar.target.JUnitRunner"}
+     * {"outcome"="java.util.FormatterTest#testBar" runner="vogar.target.junit.JUnitRunner"}
      * {"result"="SUCCESS"}
      * {"completedNormally"=true}
      */

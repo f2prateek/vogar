@@ -39,6 +39,5 @@ public interface Runner {
      *     process should kill this process and attempt to resume after the last
      *     known outcome.
      */
-    boolean run(String actionName, Profiler profiler,
-            String[] args);
+    boolean run(String actionName, Profiler profiler, String[] args);
 }

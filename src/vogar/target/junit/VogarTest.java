@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 The Android Open Source Project
+ * Copyright (C) 2011 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,8 @@
  * limitations under the License.
  */
 
-package vogar;
+package vogar.target.junit;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
-import org.junit.runners.Suite.SuiteClasses;
-
-import vogar.target.JUnitRunnerTest;
-import vogar.target.JUnit4RunnerTest;
-
-@RunWith(Suite.class)
-@SuiteClasses( { JUnitRunnerTest.class, JUnit4RunnerTest.class })
-public class AllTests {
+public interface VogarTest {
+    void run() throws Throwable;
 }

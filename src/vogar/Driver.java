@@ -276,7 +276,8 @@ public final class Driver {
         private final AtomicBoolean prematurelyExhaustedInput;
         private final int count;
         private final BlockingQueue<Action> readyToRun;
-        private volatile Date killTime;
+        private Command currentCommand;
+        private Date killTime;
         private String actionName;
         private String lastStartedOutcome;
         private String lastFinishedOutcome;
@@ -330,7 +331,7 @@ public final class Driver {
         /**
          * Executes a single action and then prints the result.
          */
-        private void execute(final Action action) {
+        private void execute(Action action) {
             console.action(actionName);
             Expectation expectation = expectationStore.get(actionName);
             int timeoutSeconds = expectation.getTags().contains("large")
@@ -352,68 +353,89 @@ public final class Driver {
                 String skipPast = lastStartedOutcome;
                 lastStartedOutcome = null;
 
-                Command command = mode.createActionCommand(action, skipPast, monitorPort(-1));
+                currentCommand = mode.createActionCommand(action, skipPast, monitorPort(-1));
                 try {
-                    command.start();
+                    currentCommand.start();
 
-                    if (timeoutSeconds != 0) {
-                        resetKillTime(timeoutSeconds);
-                        scheduleTaskKiller(command, action, timeoutSeconds);
-                    }
+                    resetKillTime(timeoutSeconds);
+                    scheduleTaskKiller(currentCommand, action, timeoutSeconds);
 
                     HostMonitor hostMonitor = new HostMonitor(console, this);
                     boolean completedNormally = mode.useSocketMonitor()
                             ? hostMonitor.attach(monitorPort(firstMonitorPort))
-                            : hostMonitor.followStream(command.getInputStream());
+                            : hostMonitor.followStream(currentCommand.getInputStream());
 
                     if (completedNormally) {
                         return;
                     }
 
+                    String earlyResultOutcome;
+                    boolean giveUp;
+                    
                     if (lastStartedOutcome == null || lastStartedOutcome.equals(actionName)) {
-                        addEarlyResult(new Outcome(actionName, Result.ERROR,
-                                "Action " + action + " did not complete normally.\n"
-                                + "lastStartedOutcome=" + lastStartedOutcome + "\n"
-                                + "lastFinishedOutcome=" + lastFinishedOutcome + "\n"
-                                + "command=" + command));
-                        break;
+                        earlyResultOutcome = actionName;
+                        giveUp = true;
+                    } else if (!lastStartedOutcome.equals(lastFinishedOutcome)) {
+                        earlyResultOutcome = lastStartedOutcome;
+                        giveUp = false;
+                    } else {
+                        continue;
                     }
 
-                    if (!lastStartedOutcome.equals(lastFinishedOutcome)) {
-                        addEarlyResult(new Outcome(lastStartedOutcome, Result.ERROR, "Outcome "
-                                + lastStartedOutcome + " did not complete normally: " + command));
+                    addEarlyResult(new Outcome(earlyResultOutcome, Result.ERROR,
+                            "Action " + action + " did not complete normally.\n"
+                            + "timedOut=" + timedOut() + "\n"
+                            + "lastStartedOutcome=" + lastStartedOutcome + "\n"
+                            + "lastFinishedOutcome=" + lastFinishedOutcome + "\n"
+                            + "command=" + currentCommand));
+                    
+                    if (giveUp) {
+                        break;
                     }
                 } catch (IOException e) {
                     // if the monitor breaks, assume the worst and don't retry
                     addEarlyResult(new Outcome(actionName, Result.ERROR, e));
                     break;
                 } finally {
-                    command.destroy();
+                    currentCommand.destroy();
+                    currentCommand = null;
                 }
             }
         }
 
-        private void scheduleTaskKiller(final Command command, final Action action,
-                final int timeoutSeconds) {
+        private synchronized void scheduleTaskKiller(
+                final Command command, final Action action, final int timeoutSeconds) {
+            if (timeoutSeconds == 0) {
+                return;
+            }
+
             actionTimeoutTimer.schedule(new TimerTask() {
                 @Override public void run() {
+                    // don't destroy commands that return normally
+                    if (command != currentCommand) {
+                        return;
+                    }
                     // if the kill time has been pushed back, reschedule
-                    if (System.currentTimeMillis() < killTime.getTime()) {
+                    if (!timedOut()) {
                         scheduleTaskKiller(command, action, timeoutSeconds);
                         return;
                     }
                     console.verbose("killing " + action + " because it timed out "
-                            + "after " + timeoutSeconds + " seconds. Last started outcome is "
-                            + lastStartedOutcome);
+                            + "after " + timeoutSeconds + " seconds.\n"
+                            + "lastStartedOutcome=" + lastStartedOutcome);
                     command.destroy();
                 }
             }, killTime);
         }
 
+        private synchronized boolean timedOut() {
+            return System.currentTimeMillis() >= killTime.getTime();
+        }
+
         /**
          * Sets the time at which we'll kill a task that starts right now.
          */
-        private void resetKillTime(int timeoutForTest) {
+        private synchronized void resetKillTime(int timeoutForTest) {
             /*
              * Give the target process an extra full timeout to self-timeout and
              * report the error. This way, when a JUnit test has one slow
@@ -464,7 +486,8 @@ public final class Driver {
             lastFinishedOutcome = toQualifiedOutcomeName(outcome.getName());
             // TODO: support flexible timeouts for JUnit tests
             resetKillTime(smallTimeoutSeconds);
-            recordOutcome(new Outcome(lastFinishedOutcome, outcome.getResult(), outcome.getOutputLines()));
+            recordOutcome(new Outcome(lastFinishedOutcome, outcome.getResult(),
+                    outcome.getOutputLines()));
         }
 
         @Override public void print(String string) {
