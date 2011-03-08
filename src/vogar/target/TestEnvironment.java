@@ -38,33 +38,17 @@ import javax.net.ssl.SSLSocketFactory;
  */
 public final class TestEnvironment {
 
-    private final Properties systemProperties;
-
     private final HostnameVerifier defaultHostnameVerifier;
     private final SSLSocketFactory defaultSSLSocketFactory;
 
     public TestEnvironment() {
-        systemProperties = new Properties();
-        systemProperties.putAll(System.getProperties());
-
-        String tmpDir = systemProperties.getProperty("java.io.tmpdir");
-        String userHome = systemProperties.getProperty("user.home");
-        String userDir = systemProperties.getProperty("user.dir");
+        System.setProperties(null); // Reset.
+        String tmpDir = System.getProperty("java.io.tmpdir");
+        String userHome = System.getProperty("user.home");
+        String userDir = System.getProperty("user.dir");
         if (tmpDir == null || userHome == null || userDir == null) {
             throw new NullPointerException("java.io.tmpdir=" + tmpDir + ", user.home="
                     + userHome + "user.dir=" + userDir);
-        }
-
-        // Require writable java.home and user.dir directories for preferences
-        if ("Dalvik".equals(System.getProperty("java.vm.name"))) {
-            String javaHome = tmpDir + "/java.home";
-            makeDirectory(new File(javaHome));
-            systemProperties.put("java.home", javaHome);
-        }
-        if (userHome.length() == 0) {
-            userHome = tmpDir + "/user.home";
-            makeDirectory(new File(userHome));
-            systemProperties.put("user.home", userHome);
         }
 
         defaultHostnameVerifier = HttpsURLConnection.getDefaultHostnameVerifier();
@@ -87,10 +71,22 @@ public final class TestEnvironment {
     }
 
     public void reset() {
-        // System Properties
-        Properties propertiesCopy = new Properties();
-        propertiesCopy.putAll(systemProperties);
-        System.setProperties(propertiesCopy);
+        // Reset system properties.
+        System.setProperties(null);
+
+        // Require writable java.home and user.dir directories for preferences
+        String tmpDir = System.getProperty("java.io.tmpdir");
+        if ("Dalvik".equals(System.getProperty("java.vm.name"))) {
+            String javaHome = tmpDir + "/java.home";
+            makeDirectory(new File(javaHome));
+            System.setProperty("java.home", javaHome);
+        }
+        String userHome = System.getProperty("user.home");
+        if (userHome.length() == 0) {
+            userHome = tmpDir + "/user.home";
+            makeDirectory(new File(userHome));
+            System.setProperty("user.home", userHome);
+        }
 
         // Localization
         Locale.setDefault(Locale.US);
