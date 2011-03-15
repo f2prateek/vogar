@@ -21,7 +21,7 @@ package junit.framework;
 import java.lang.reflect.Method;
 
 public class TestCase extends Assert implements Test {
-    
+
     private static final Method runTest;
     static {
         try {
@@ -34,11 +34,11 @@ public class TestCase extends Assert implements Test {
 
     private String name;
     private Method method;
-    
+
     public TestCase() {
         this("test");
     }
-    
+
     public TestCase(String name) {
         this.name = name;
     }
@@ -61,7 +61,7 @@ public class TestCase extends Assert implements Test {
             return method;
         }
         try {
-            /* 
+            /*
              * Be careful to use the name field, which may differ from the
              * result of getName() if that method is overridden.
              */
@@ -71,11 +71,11 @@ public class TestCase extends Assert implements Test {
         }
     }
 
-    public void setUp() throws Exception {}
-    
+    protected void setUp() throws Exception {}
+
     protected void runTest() throws Throwable {
         fail("Expected runTest() to be overridden in " + getClass().getName());
     }
-    
-    public void tearDown() throws Exception {}
+
+    protected void tearDown() throws Exception {}
 }
