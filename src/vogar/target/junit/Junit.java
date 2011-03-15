@@ -16,6 +16,7 @@
 
 package vogar.target.junit;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -78,14 +79,14 @@ public final class Junit {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        
+
         throw new IllegalArgumentException("Unknown test class: " + testClass);
     }
 
     /**
      * Creates lazy vogar test instances from the given test case or test
      * suite.
-     * 
+     *
      * @param args if non-empty, this is the list of test method names.
      */
     public static List<VogarTest> classToVogarTests(Class<?> testClass, String... args) {
@@ -108,7 +109,7 @@ public final class Junit {
                         continue;
                     }
                     if (m.getParameterTypes().length == 0) {
-                        out.add(new TestMethod(testCaseClass, m));
+                        out.add(TestMethod.create(testCaseClass, m));
                     } else {
                         out.add(new ConfigurationError(testClass.getName() + "#" + m.getName(),
                                 new IllegalStateException("Tests may not have parameters!")));
@@ -117,16 +118,16 @@ public final class Junit {
             } else {
                 for (String arg : args) {
                     try {
-                        out.add(new TestMethod(testCaseClass, testClass.getMethod(arg)));
+                        out.add(TestMethod.create(testCaseClass, testClass.getMethod(arg)));
                     } catch (final NoSuchMethodException e) {
                         out.add(new ConfigurationError(testClass.getName() + "#" + arg, e));
                     }
                 }
             }
-            
+
             return;
         }
-        
+
         /*
          * Handle classes that define suite()
          */
@@ -145,7 +146,7 @@ public final class Junit {
             } else if (test instanceof TestSuite) {
                 getTestSuiteTests(out, (TestSuite) test);
             } else {
-                out.add(new ConfigurationError(testClass.getName() + "#suite", 
+                out.add(new ConfigurationError(testClass.getName() + "#suite",
                         new IllegalStateException("Unknown suite() result: " + test)));
             }
             return;
@@ -192,11 +193,11 @@ public final class Junit {
             return name;
         }
     }
-    
+
     private abstract static class VogarJUnitTest implements VogarTest {
         protected final Class<? extends TestCase> testClass;
         protected final Method method;
-        
+
         protected VogarJUnitTest(Class<? extends TestCase> testClass, Method method) {
             this.testClass = testClass;
             this.method = method;
@@ -223,25 +224,45 @@ public final class Junit {
                     failure = t;
                 }
             }
-            
+
             if (failure != null) {
                 throw failure;
             }
         }
-        
+
         protected abstract TestCase getTestCase() throws Exception;
     }
-    
+
     /**
      * A JUnit TestCase constructed on demand and then released.
      */
     private static class TestMethod extends VogarJUnitTest {
-        private TestMethod(Class<? extends TestCase> testClass, Method method) {
+        private final Constructor<? extends TestCase> constructor;
+        private final Object[] constructorArgs;
+
+        private TestMethod(Class<? extends TestCase> testClass, Method method,
+                Constructor<? extends TestCase> constructor, Object[] constructorArgs) {
             super(testClass, method);
+            this.constructor = constructor;
+            this.constructorArgs = constructorArgs;
+        }
+
+        public static VogarTest create(Class<? extends TestCase> testClass, Method method) {
+            try {
+                return new TestMethod(testClass, method, testClass.getConstructor(), new Object[0]);
+            } catch (NoSuchMethodException ignored) {
+            }
+            try {
+                return new TestMethod(testClass, method, testClass.getConstructor(String.class),
+                        new Object[] { method.getName() });
+            } catch (NoSuchMethodException ignored) {
+            }
+            return new ConfigurationError(testClass.getName() + "#" + method.getName(),
+                    new Exception("Test cases must have a no-arg or string constructor."));
         }
 
         @Override protected TestCase getTestCase() throws Exception {
-            return testClass.newInstance();
+            return constructor.newInstance(constructorArgs);
         }
 
         @Override public String toString() {
@@ -254,7 +275,7 @@ public final class Junit {
      */
     private static class TestCaseInstance extends VogarJUnitTest {
         private final TestCase testCase;
-        
+
         private TestCaseInstance(TestCase testCase, Method method) {
             super(testCase.getClass(), method);
             this.testCase = testCase;
