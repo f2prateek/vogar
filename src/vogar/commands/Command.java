@@ -204,14 +204,14 @@ public final class Command {
         new TimeoutTask() {
             @Override protected void onTimeout(Process process) {
                 // send a quit signal immediately
-                log.verbose("Sending quit signal to command " + Command.this);
+                log.verbose("sending quit signal to command " + Command.this);
                 sendQuitSignal(process);
 
                 // hard kill in 2 seconds
                 timeoutNanoTime = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
                 new TimeoutTask() {
                     @Override protected void onTimeout(Process process) {
-                        log.verbose("Killing timed out command " + Command.this);
+                        log.verbose("killing timed out command " + Command.this);
                         destroy();
                     }
                 }.schedule();
@@ -220,6 +220,7 @@ public final class Command {
     }
 
     private void sendQuitSignal(Process process) {
+        // TODO: 'adb shell kill' to kill on processes running on Androids
         new Command(log, "kill", "-3", Integer.toString(getPid(process))).execute();
     }
 
