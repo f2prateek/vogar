@@ -20,12 +20,9 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -57,8 +54,6 @@ public final class Driver {
             return next++;
         }
     };
-
-    private final Timer actionTimeoutTimer = new Timer("action timeout", true);
 
     @Inject Console console;
     @Inject Mkdir mkdir;
@@ -277,7 +272,6 @@ public final class Driver {
         private final int count;
         private final BlockingQueue<Action> readyToRun;
         private Command currentCommand;
-        private Date killTime;
         private String actionName;
         private String lastStartedOutcome;
         private String lastFinishedOutcome;
@@ -356,9 +350,9 @@ public final class Driver {
                 currentCommand = mode.createActionCommand(action, skipPast, monitorPort(-1));
                 try {
                     currentCommand.start();
-
-                    resetKillTime(timeoutSeconds);
-                    scheduleTaskKiller(currentCommand, action, timeoutSeconds);
+                    if (timeoutSeconds != 0) {
+                        currentCommand.scheduleTimeout(timeoutSeconds);
+                    }
 
                     HostMonitor hostMonitor = new HostMonitor(console, this);
                     boolean completedNormally = mode.useSocketMonitor()
@@ -371,7 +365,7 @@ public final class Driver {
 
                     String earlyResultOutcome;
                     boolean giveUp;
-                    
+
                     if (lastStartedOutcome == null || lastStartedOutcome.equals(actionName)) {
                         earlyResultOutcome = actionName;
                         giveUp = true;
@@ -384,11 +378,11 @@ public final class Driver {
 
                     addEarlyResult(new Outcome(earlyResultOutcome, Result.ERROR,
                             "Action " + action + " did not complete normally.\n"
-                            + "timedOut=" + timedOut() + "\n"
+                            + "timedOut=" + currentCommand.timedOut() + "\n"
                             + "lastStartedOutcome=" + lastStartedOutcome + "\n"
                             + "lastFinishedOutcome=" + lastFinishedOutcome + "\n"
                             + "command=" + currentCommand));
-                    
+
                     if (giveUp) {
                         break;
                     }
@@ -401,48 +395,6 @@ public final class Driver {
                     currentCommand = null;
                 }
             }
-        }
-
-        private synchronized void scheduleTaskKiller(
-                final Command command, final Action action, final int timeoutSeconds) {
-            if (timeoutSeconds == 0) {
-                return;
-            }
-
-            actionTimeoutTimer.schedule(new TimerTask() {
-                @Override public void run() {
-                    // don't destroy commands that return normally
-                    if (command != currentCommand) {
-                        return;
-                    }
-                    // if the kill time has been pushed back, reschedule
-                    if (!timedOut()) {
-                        scheduleTaskKiller(command, action, timeoutSeconds);
-                        return;
-                    }
-                    console.verbose("killing " + action + " because it timed out "
-                            + "after " + timeoutSeconds + " seconds.\n"
-                            + "lastStartedOutcome=" + lastStartedOutcome);
-                    command.destroy();
-                }
-            }, killTime);
-        }
-
-        private synchronized boolean timedOut() {
-            return System.currentTimeMillis() >= killTime.getTime();
-        }
-
-        /**
-         * Sets the time at which we'll kill a task that starts right now.
-         */
-        private synchronized void resetKillTime(int timeoutForTest) {
-            /*
-             * Give the target process an extra full timeout to self-timeout and
-             * report the error. This way, when a JUnit test has one slow
-             * method, we still get to see the offending stack trace.
-             */
-            long delay = TimeUnit.SECONDS.toMillis(timeoutForTest * 2);
-            this.killTime = new Date(System.currentTimeMillis() + delay);
         }
 
         /**
@@ -469,7 +421,10 @@ public final class Driver {
                             + "benchmarks.");
                 }
                 console.verbose("running " + outcomeName + " with unlimited timeout");
-                resetKillTime(FOREVER);
+                Command command = currentCommand;
+                if (command != null && smallTimeoutSeconds != 0) {
+                    command.scheduleTimeout(smallTimeoutSeconds);
+                }
                 recordResults = false;
             } else {
                 recordResults = true;
@@ -483,9 +438,12 @@ public final class Driver {
         }
 
         @Override public void finish(Outcome outcome) {
+            Command command = currentCommand;
+            if (command != null && smallTimeoutSeconds != 0) {
+                command.scheduleTimeout(smallTimeoutSeconds);
+            }
             lastFinishedOutcome = toQualifiedOutcomeName(outcome.getName());
             // TODO: support flexible timeouts for JUnit tests
-            resetKillTime(smallTimeoutSeconds);
             recordOutcome(new Outcome(lastFinishedOutcome, outcome.getResult(),
                     outcome.getOutputLines()));
         }

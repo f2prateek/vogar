@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -29,20 +30,20 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import vogar.Log;
 import vogar.util.Strings;
-import vogar.util.Threads;
 
 /**
  * An out of process executable.
  */
 public final class Command {
+    private static final ScheduledExecutorService timer
+            = Executors.newSingleThreadScheduledExecutor();
+
     private final Log log;
     private final List<String> args;
     private final Map<String, String> env;
@@ -50,6 +51,7 @@ public final class Command {
     private final boolean permitNonZeroExitStatus;
     private final PrintStream tee;
     private volatile Process process;
+    private volatile long timeoutNanoTime;
 
     public Command(Log log, String... args) {
         this(log, Arrays.asList(args));
@@ -157,45 +159,20 @@ public final class Command {
      * @param timeoutSeconds how long to wait, or 0 to wait indefinitely
      * @return the command's output, or null if the command timed out
      */
-    public List<String> executeWithTimeout(int timeoutSeconds)
-            throws TimeoutException {
+    public List<String> executeWithTimeout(int timeoutSeconds) throws TimeoutException {
         if (timeoutSeconds == 0) {
             return execute();
         }
 
-        try {
-            return executeLater().get(timeoutSeconds, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            throw new RuntimeException("Interrupted while executing process: " + args, e);
-        } catch (ExecutionException e) {
-            throw new RuntimeException(e);
-        } finally {
-            destroy();
-        }
-    }
-
-    /**
-     * Executes the command on a new background thread. This method returns
-     * immediately.
-     *
-     * @return a future to retrieve the command's output.
-     */
-    public Future<List<String>> executeLater() {
-        ExecutorService executor = Threads.fixedThreadsExecutor(log, "command", 1);
-        Future<List<String>> result = executor.submit(new Callable<List<String>>() {
-            public List<String> call() throws Exception {
-                start();
-                return gatherOutput();
-            }
-        });
-        executor.shutdown();
-        return result;
+        scheduleTimeout(timeoutSeconds);
+        return execute();
     }
 
     /**
      * Destroys the underlying process and closes its associated streams.
      */
     public void destroy() {
+        Process process = this.process;
         if (process == null) {
             return;
         }
@@ -215,6 +192,53 @@ public final class Command {
     @Override public String toString() {
         String envString = !env.isEmpty() ? (Strings.join(env.entrySet(), " ") + " ") : "";
         return envString + Strings.join(args, " ");
+    }
+
+    /**
+     * Sets the time at which this process will be killed. If a timeout has
+     * already been scheduled, it will be rescheduled.
+     */
+    public void scheduleTimeout(int timeoutSeconds) {
+        timeoutNanoTime = System.nanoTime() + TimeUnit.SECONDS.toNanos(timeoutSeconds);
+
+        new TimeoutTask() {
+            @Override protected void onTimeout(Process process) {
+                // send a quit signal immediately
+                log.verbose("Sending quit signal to command " + Command.this);
+                sendQuitSignal(process);
+
+                // hard kill in 2 seconds
+                timeoutNanoTime = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+                new TimeoutTask() {
+                    @Override protected void onTimeout(Process process) {
+                        log.verbose("Killing timed out command " + Command.this);
+                        destroy();
+                    }
+                }.schedule();
+            }
+        }.schedule();
+    }
+
+    private void sendQuitSignal(Process process) {
+        new Command(log, "kill", "-3", Integer.toString(getPid(process))).execute();
+    }
+
+    /**
+     * Return the PID of this command's process.
+     */
+    private int getPid(Process process) {
+        try {
+            // See org.openqa.selenium.ProcessUtils.getProcessId()
+            Field field = process.getClass().getDeclaredField("pid");
+            field.setAccessible(true);
+            return (Integer) field.get(process);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public boolean timedOut() {
+        return System.nanoTime() >= timeoutNanoTime;
     }
 
     public static class Builder {
@@ -273,6 +297,32 @@ public final class Command {
 
         public List<String> execute() {
             return build().execute();
+        }
+    }
+
+    /**
+     * Runs some code when the command times out.
+     */
+    private abstract class TimeoutTask implements Runnable {
+        public final void schedule() {
+            timer.schedule(this, System.nanoTime() - timeoutNanoTime, TimeUnit.NANOSECONDS);
+        }
+
+        protected abstract void onTimeout(Process process);
+
+        @Override public final void run() {
+            // don't destroy commands that return normally
+            Process process = Command.this.process;
+            if (process == null) {
+                return;
+            }
+
+            if (timedOut()) {
+                onTimeout(process);
+            } else {
+                // if the kill time has been pushed back, reschedule
+                timer.schedule(this, System.nanoTime() - timeoutNanoTime, TimeUnit.NANOSECONDS);
+            }
         }
     }
 }
