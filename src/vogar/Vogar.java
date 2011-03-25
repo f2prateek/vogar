@@ -406,8 +406,8 @@ public final class Vogar {
         // Post-processing arguments
         //
 
-        // disable timeout when debugging
-        if (debugPort != null) {
+        // disable timeout when benchmarking or debugging
+        if (benchmark || debugPort != null) {
             timeoutSeconds = 0;
         }
 
