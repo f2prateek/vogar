@@ -17,10 +17,26 @@
 package vogar.util;
 
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
 
 public final class IoUtils {
+
+    public static void safeMkdirs(File path) {
+        boolean success;
+        if (!path.exists()) {
+            success = path.mkdirs();
+        } else if (!path.isDirectory()) {
+            success = path.delete() && path.mkdirs();
+        } else {
+            success = true;
+        }
+
+        if (!success) {
+            throw new RuntimeException("Failed to make directory " + path);
+        }
+    }
 
     public static void closeQuietly(Closeable c) {
         if (c != null) {

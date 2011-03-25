@@ -31,6 +31,7 @@ import vogar.Log;
 import vogar.Mode;
 import vogar.TestProperties;
 import vogar.commands.Command;
+import vogar.util.IoUtils;
 
 /**
  * Runs an action in the context of an android.app.Activity on a device
@@ -54,7 +55,7 @@ public final class ActivityMode extends Mode {
     private void extractKeystoreToFile() {
         try {
             keystore = environment.file("activity", "vogar.keystore");
-            keystore.getParentFile().mkdirs();
+            IoUtils.safeMkdirs(keystore.getParentFile());
             log.verbose("extracting keystore to " + keystore);
             InputStream in = new BufferedInputStream(
                     getClass().getResourceAsStream("/vogar/vogar.keystore"));

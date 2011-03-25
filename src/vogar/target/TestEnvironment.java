@@ -31,6 +31,7 @@ import java.util.prefs.Preferences;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
+import vogar.util.IoUtils;
 
 /**
  * This class resets the VM to a relatively pristine state. Useful to defend
@@ -55,21 +56,6 @@ public final class TestEnvironment {
         defaultSSLSocketFactory = HttpsURLConnection.getDefaultSSLSocketFactory();
     }
 
-    private void makeDirectory(File path) {
-        boolean success;
-        if (!path.exists()) {
-            success = path.mkdirs();
-        } else if (!path.isDirectory()) {
-            success = path.delete() && path.mkdirs();
-        } else {
-            success = true;
-        }
-
-        if (!success) {
-            throw new RuntimeException("Failed to make directory " + path);
-        }
-    }
-
     public void reset() {
         // Reset system properties.
         System.setProperties(null);
@@ -78,13 +64,13 @@ public final class TestEnvironment {
         String tmpDir = System.getProperty("java.io.tmpdir");
         if ("Dalvik".equals(System.getProperty("java.vm.name"))) {
             String javaHome = tmpDir + "/java.home";
-            makeDirectory(new File(javaHome));
+            IoUtils.safeMkdirs(new File(javaHome));
             System.setProperty("java.home", javaHome);
         }
         String userHome = System.getProperty("user.home");
         if (userHome.length() == 0) {
             userHome = tmpDir + "/user.home";
-            makeDirectory(new File(userHome));
+            IoUtils.safeMkdirs(new File(userHome));
             System.setProperty("user.home", userHome);
         }
 
