@@ -215,8 +215,6 @@ public final class Vogar {
         System.out.println();
         System.out.println("  --stream: stream output as it is emitted.");
         System.out.println();
-        System.out.println("  --native-output: print out native output (prefixed with \"[native]\").");
-        System.out.println();
         System.out.println("  --benchmark: for use with dalvikvm, this dexes all files together,");
         System.out.println("      and is mandatory for running Caliper benchmarks, and a good idea");
         System.out.println("      other performance sensitive code.");
