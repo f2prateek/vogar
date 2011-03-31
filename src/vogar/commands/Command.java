@@ -51,6 +51,7 @@ public final class Command {
     private final boolean permitNonZeroExitStatus;
     private final PrintStream tee;
     private volatile Process process;
+    private volatile boolean destroyed;
     private volatile long timeoutNanoTime;
 
     public Command(Log log, String... args) {
@@ -130,7 +131,9 @@ public final class Command {
             outputLines.add(outputLine);
         }
 
-        if (process.waitFor() != 0 && !permitNonZeroExitStatus) {
+        int exitValue = process.waitFor();
+        destroyed = true;
+        if (exitValue != 0 && !permitNonZeroExitStatus) {
             StringBuilder message = new StringBuilder();
             for (String line : outputLines) {
                 message.append("\n").append(line);
@@ -174,9 +177,13 @@ public final class Command {
     public void destroy() {
         Process process = this.process;
         if (process == null) {
+            throw new IllegalStateException();
+        }
+        if (destroyed) {
             return;
         }
 
+        destroyed = true;
         process.destroy();
         try {
             process.waitFor();
@@ -312,9 +319,9 @@ public final class Command {
         protected abstract void onTimeout(Process process);
 
         @Override public final void run() {
-            // don't destroy commands that return normally
+            // don't destroy commands that have already been destroyed
             Process process = Command.this.process;
-            if (process == null) {
+            if (destroyed) {
                 return;
             }
 
