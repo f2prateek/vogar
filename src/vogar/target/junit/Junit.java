@@ -218,7 +218,9 @@ public final class Junit {
             try {
                 tearDown.invoke(testCase);
             } catch (InvocationTargetException t) {
-                failure = t.getCause();
+                if (failure != null) {
+                    failure = t.getCause();
+                }
             } catch (Throwable t) {
                 if (failure != null) {
                     failure = t;
