@@ -17,7 +17,6 @@
 package vogar.target.junit;
 
 import java.lang.reflect.Modifier;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -64,7 +63,7 @@ public final class JUnitRunner implements Runner {
         this.testEnvironment = testEnvironment;
         this.timeoutSeconds = timeoutSeconds;
     }
-    
+
     public boolean run(String actionName, Profiler profiler, String[] args) {
         List<VogarTest> tests = qualification != null
                 ? Junit.classToVogarTests(testClass, qualification)
@@ -151,7 +150,7 @@ public final class JUnitRunner implements Runner {
      * Strip vogar's lines from the stack trace. For example, we'd strip the
      * first two Assert lines and everything after the testFoo() line in this
      * stack trace:
-     * 
+     *
    	 *   at junit.framework.Assert.fail(Assert.java:198)
    	 *   at junit.framework.Assert.assertEquals(Assert.java:56)
    	 *   at junit.framework.Assert.assertEquals(Assert.java:61)
@@ -170,7 +169,7 @@ public final class JUnitRunner implements Runner {
     public void prepareForDisplay(Throwable t) {
         StackTraceElement[] stackTraceElements = t.getStackTrace();
         boolean foundVogar = false;
-        
+
         int last = stackTraceElements.length - 1;
         for (; last >= 0; last--) {
             String className = stackTraceElements[last].getClassName();
@@ -186,8 +185,8 @@ public final class JUnitRunner implements Runner {
                 break;
             }
         }
-        
-        int first = 0; 
+
+        int first = 0;
         for (; first < last; first++) {
             String className = stackTraceElements[first].getClassName();
             if (!className.startsWith("junit.framework")) {
@@ -198,9 +197,12 @@ public final class JUnitRunner implements Runner {
         if (first > 0) {
             first--; // retain one assertSomething() line in the trace
         }
-        
+
         if (first < last) {
-            t.setStackTrace(Arrays.copyOfRange(stackTraceElements, first, last));
+            // Arrays.copyOfRange() didn't exist on Froyo
+            StackTraceElement[] copyOfRange = new StackTraceElement[last - first];
+            System.arraycopy(stackTraceElements, first, copyOfRange, 0, last - first);
+            t.setStackTrace(copyOfRange);
         }
     }
 
