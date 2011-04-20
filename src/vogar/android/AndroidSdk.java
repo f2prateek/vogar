@@ -127,16 +127,11 @@ public class AndroidSdk {
 
         if ("platform-tools".equals(parentFileName)) {
             File sdkRoot = dx.getParentFile().getParentFile();
-            List<File> platforms = Arrays.asList(new File(sdkRoot, "platforms").listFiles());
-            Collections.sort(platforms, ORDER_BY_NAME);
-            File newestPlatform = platforms.get(platforms.size() - 1);
+            File newestPlatform = getNewestPlatform(sdkRoot);
             log.verbose("using android platform: " + newestPlatform);
-
             androidClasses = new File[] { new File(newestPlatform, "android.jar") };
             log.verbose("using android sdk: " + sdkRoot);
-
         } else if ("bin".equals(parentFileName)) {
-
             File sourceRoot = dx.getParentFile().getParentFile()
                     .getParentFile().getParentFile().getParentFile();
             log.verbose("using android build tree: " + sourceRoot);
@@ -154,6 +149,23 @@ public class AndroidSdk {
         } else {
             throw new RuntimeException("Couldn't derive Android home from " + dx);
         }
+    }
+
+    /**
+     * Returns the platform directory that has the highest API version. API
+     * platform directories are named like "android-9" or "android-11".
+     */
+    private File getNewestPlatform(File sdkRoot) {
+        File newestPlatform = null;
+        int newestPlatformVersion = 0;
+        for (File platform : new File(sdkRoot, "platforms").listFiles()) {
+            int version = Integer.parseInt(platform.getName().substring("android-".length()));
+            if (version > newestPlatformVersion) {
+                newestPlatform = platform;
+                newestPlatformVersion = version;
+            }
+        }
+        return newestPlatform;
     }
 
     public static Collection<File> defaultSourcePath() {
