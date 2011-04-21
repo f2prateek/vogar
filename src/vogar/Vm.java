@@ -56,7 +56,8 @@ public abstract class Vm extends Mode {
      */
     @Override protected Command createActionCommand(
             Action action, String skipPast, int monitorPort) {
-        VmCommandBuilder vmCommandBuilder = newVmCommandBuilder(action);
+        File workingDirectory = action.getUserDir();
+        VmCommandBuilder vmCommandBuilder = newVmCommandBuilder(action, workingDirectory);
         if (useBootClasspath) {
             vmCommandBuilder.bootClasspath(getRuntimeClasspath(action));
         } else {
@@ -70,10 +71,8 @@ public abstract class Vm extends Mode {
             vmCommandBuilder.args("--skipPast", skipPast);
         }
 
-        File workingDirectory = action.getUserDir();
         return vmCommandBuilder
                 .temp(workingDirectory)
-                .userDir(workingDirectory)
                 .debugPort(environment.debugPort)
                 .vmArgs(additionalVmArgs)
                 .mainClass(TestRunner.class.getName())
@@ -83,8 +82,12 @@ public abstract class Vm extends Mode {
 
     /**
      * Returns a VM for action execution.
+     *
+     * @param workingDirectory the working directory of the target process. If
+     *     the process runs on another device, this is the working directory of
+     *     the device.
      */
-    protected abstract VmCommandBuilder newVmCommandBuilder(Action action);
+    protected abstract VmCommandBuilder newVmCommandBuilder(Action action, File workingDirectory);
 
     /**
      * Returns the classpath containing JUnit and the dalvik annotations
@@ -205,7 +208,9 @@ public abstract class Vm extends Mode {
             if (!bootClasspath.isEmpty()) {
                 builder.args("-Xbootclasspath/a:" + bootClasspath);
             }
-            builder.args("-Duser.dir=" + userDir);
+            if (userDir != null) {
+                builder.args("-Duser.dir=" + userDir);
+            }
 
             if (temp != null) {
                 builder.args("-Djava.io.tmpdir=" + temp);

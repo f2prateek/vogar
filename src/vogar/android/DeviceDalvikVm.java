@@ -19,7 +19,6 @@ package vogar.android;
 import com.google.common.collect.Iterables;
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -42,7 +41,7 @@ public class DeviceDalvikVm extends Vm {
         return (EnvironmentDevice) environment;
     }
 
-    private AndroidSdk getSdk() {
+    protected AndroidSdk getSdk() {
         return getEnvironmentDevice().androidSdk;
     }
 
@@ -87,9 +86,10 @@ public class DeviceDalvikVm extends Vm {
         return new File(getEnvironmentDevice().runnerDir, name + ".jar");
     }
 
-    @Override protected VmCommandBuilder newVmCommandBuilder(Action action) {
+    @Override protected VmCommandBuilder newVmCommandBuilder(Action action, File workingDirectory) {
         List<String> vmCommand = new ArrayList<String>();
-        Collections.addAll(vmCommand, "adb", "shell", getEnvironmentDevice().getAndroidData());
+        vmCommand.addAll(getSdk().deviceProcessPrefix(workingDirectory));
+        vmCommand.add(getEnvironmentDevice().getAndroidData());
         Iterables.addAll(vmCommand, invokeWith());
         vmCommand.add("dalvikvm");
 

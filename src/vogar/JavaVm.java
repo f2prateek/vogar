@@ -36,7 +36,7 @@ final class JavaVm extends Vm {
     @Inject @Named("profileDepth") int profileDepth;
     @Inject @Named("profileInterval") int profileInterval;
 
-    @Override protected VmCommandBuilder newVmCommandBuilder(Action action) {
+    @Override protected VmCommandBuilder newVmCommandBuilder(Action action, File workingDirectory) {
         List<String> vmCommand = new ArrayList<String>();
         Iterables.addAll(vmCommand, invokeWith());
         vmCommand.add(javaPath("java"));
@@ -50,7 +50,9 @@ final class JavaVm extends Vm {
                           + "thread=y,"
                           + "verbose=n");
         }
-        return new VmCommandBuilder().vmCommand(vmCommand);
+        return new VmCommandBuilder()
+                .userDir(workingDirectory)
+                .vmCommand(vmCommand);
     }
 
     @Override protected Classpath getRuntimeClasspath(Action action) {

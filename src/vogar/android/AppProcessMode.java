@@ -19,32 +19,25 @@ package vogar.android;
 import com.google.common.collect.Iterables;
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import javax.inject.Inject;
-import javax.inject.Named;
 import vogar.Action;
-import vogar.Classpath;
-import vogar.Log;
-import vogar.Vm;
-import vogar.Vogar;
 
 /**
  * Execute actions using the app_process command on using an Android device or emulator.
  */
 public final class AppProcessMode extends DeviceDalvikVm {
 
-    @Override protected VmCommandBuilder newVmCommandBuilder(Action action) {
+    @Override protected VmCommandBuilder newVmCommandBuilder(Action action, File workingDirectory) {
         List<String> vmCommand = new ArrayList<String>();
-        Collections.addAll(vmCommand, "adb", "shell", getEnvironmentDevice().getAndroidData());
+        vmCommand.addAll(getSdk().deviceProcessPrefix(workingDirectory));
+        vmCommand.add(getEnvironmentDevice().getAndroidData());
         Iterables.addAll(vmCommand, invokeWith());
         vmCommand.add("app_process");
-        VmCommandBuilder vmCommandBuilder = new VmCommandBuilder()
+
+        return new VmCommandBuilder()
                 .vmCommand(vmCommand)
                 .vmArgs(action.getUserDir().getPath())
                 .classpathViaProperty(true)
                 .maxLength(1024);
-
-        return vmCommandBuilder;
     }
 }

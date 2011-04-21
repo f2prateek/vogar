@@ -16,6 +16,7 @@
 
 package vogar.android;
 
+import com.google.common.collect.ImmutableList;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
@@ -363,6 +364,10 @@ public class AndroidSdk {
 
     public void waitForDevice() {
         new Command(log, "adb", "wait-for-device").execute();
+    }
+
+    public List<String> deviceProcessPrefix(File workingDirectory) {
+        return ImmutableList.of("adb", "shell", "cd", workingDirectory.getAbsolutePath(), "&&");
     }
 
     /**
