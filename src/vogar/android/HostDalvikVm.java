@@ -90,22 +90,19 @@ public class HostDalvikVm extends Vm {
             builder.env("ANDROID_ROOT", buildRoot + "/out/host/linux-x86")
                     .env("LD_LIBRARY_PATH", buildRoot + "/out/host/linux-x86/lib")
                     .env("DYLD_LIBRARY_PATH", buildRoot + "/out/host/linux-x86/lib");
-            trustStore = buildRoot + "/out/host/linux-x86/etc/security/cacerts.bks";
         } else {
             String base = System.getenv("OUT");
             vmCommand.add(base + "/system/bin/dalvikvm");
             builder.env("ANDROID_ROOT", base + "/system")
                     .env("LD_LIBRARY_PATH", base + "/system/lib")
                     .env("DYLD_LIBRARY_PATH", base + "/system/lib");
-            trustStore = base + "/system/etc/security/cacerts.bks";
         }
 
         // If you edit this, see also DeviceDalvikVm...
         builder.vmCommand(vmCommand)
                 .vmArgs("-Xbootclasspath:" + bootClasspath.toString())
                 .vmArgs("-Duser.language=en")
-                .vmArgs("-Duser.region=US")
-                .vmArgs("-Djavax.net.ssl.trustStore=" + trustStore);
+                .vmArgs("-Duser.region=US");
         if (!fastMode) {
             builder.vmArgs("-Xverify:none");
             builder.vmArgs("-Xdexopt:none");
