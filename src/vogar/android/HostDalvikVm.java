@@ -84,7 +84,6 @@ public class HostDalvikVm extends Vm {
         List<String> vmCommand = new ArrayList<String>();
         Iterables.addAll(vmCommand, invokeWith());
 
-        String trustStore;
         if (hostBuild) {
             vmCommand.add(buildRoot + "/out/host/linux-x86/bin/dalvikvm");
             builder.env("ANDROID_ROOT", buildRoot + "/out/host/linux-x86")
