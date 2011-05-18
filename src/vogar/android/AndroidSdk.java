@@ -160,10 +160,14 @@ public class AndroidSdk {
         File newestPlatform = null;
         int newestPlatformVersion = 0;
         for (File platform : new File(sdkRoot, "platforms").listFiles()) {
-            int version = Integer.parseInt(platform.getName().substring("android-".length()));
-            if (version > newestPlatformVersion) {
-                newestPlatform = platform;
-                newestPlatformVersion = version;
+            try {
+                int version = Integer.parseInt(platform.getName().substring("android-".length()));
+                if (version > newestPlatformVersion) {
+                    newestPlatform = platform;
+                    newestPlatformVersion = version;
+                }
+            } catch (NumberFormatException ignore) {
+                // Ignore non-numeric preview versions like android-Honeycomb
             }
         }
         return newestPlatform;
