@@ -65,7 +65,7 @@ final class ClassPathScanner {
         findClasses(packageName, classNames, subpackageNames);
         for (String className : classNames) {
             try {
-                topLevelClasses.add(Class.forName(className));
+                topLevelClasses.add(Class.forName(className, false, getClass().getClassLoader()));
             } catch (ClassNotFoundException e) {
                 throw new RuntimeException(e);
             }
