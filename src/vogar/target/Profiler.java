@@ -20,14 +20,8 @@ import java.io.File;
 import vogar.android.AndroidProfiler;
 
 public abstract class Profiler {
-    public static Profiler getInstance() {
-        try {
-            return new AndroidProfiler();
-        } catch (Exception e) {
-            // will fail if AndroidProfiler is unsupported such as in
-            // mode jvm
-            return null;
-        }
+    public static Profiler getInstance() throws Exception {
+        return new AndroidProfiler();
     }
     public abstract void setup(boolean profileThreadGroup, int depth, int interval);
     public abstract void start();

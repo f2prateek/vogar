@@ -208,7 +208,15 @@ public final class TestRunner {
             classes.removeAll(toRemove);
         }
 
-        Profiler profiler = profile ? Profiler.getInstance() : null;
+
+        Profiler profiler = null;
+        if (profile) {
+            try {
+                profiler = Profiler.getInstance();
+            } catch (Exception e) {
+                System.out.println("Profiling is disabled: " + e);
+            }
+        }
         if (profiler != null) {
             profiler.setup(profileThreadGroup, profileDepth, profileInterval);
         }

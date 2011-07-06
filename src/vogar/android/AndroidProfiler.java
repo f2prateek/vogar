@@ -31,15 +31,15 @@ public class AndroidProfiler extends Profiler {
     private final Method start;
     private final Method stop;
     private final Method shutdown;
-    private final Constructor<?> newAsciiHprofWriter;
-    private final Method getHprofData;
     private final Method write;
+    private final Method getHprofData;
 
     public AndroidProfiler() throws Exception {
-        Class<?> ThreadSet = Class.forName("dalvik.system.SamplingProfiler$ThreadSet");
-        Class<?> SamplingProfiler = Class.forName("dalvik.system.SamplingProfiler");
-        Class<?> HprofData = Class.forName("dalvik.system.SamplingProfiler$HprofData");
-        Class<?> Writer = Class.forName("dalvik.system.SamplingProfiler$AsciiHprofWriter");
+        String packageName = "dalvik.system.profiler";
+        Class<?> ThreadSet = Class.forName(packageName + ".SamplingProfiler$ThreadSet");
+        Class<?> SamplingProfiler = Class.forName(packageName + ".SamplingProfiler");
+        Class<?> HprofData = Class.forName(packageName + ".HprofData");
+        Class<?> Writer = Class.forName(packageName + ".AsciiHprofWriter");
         newArrayThreadSet = SamplingProfiler.getMethod("newArrayThreadSet", Thread[].class);
         newThreadGroupTheadSet = SamplingProfiler.getMethod("newThreadGroupTheadSet",
                                                             ThreadGroup.class);
@@ -48,8 +48,7 @@ public class AndroidProfiler extends Profiler {
         stop = SamplingProfiler.getMethod("stop");
         shutdown = SamplingProfiler.getMethod("shutdown");
         getHprofData = SamplingProfiler.getMethod("getHprofData");
-        newAsciiHprofWriter = Writer.getConstructor(HprofData, OutputStream.class);
-        write = Writer.getMethod("write");
+        write = Writer.getMethod("write", HprofData, OutputStream.class);
     }
 
     private Thread[] thread = new Thread[1];
@@ -78,7 +77,7 @@ public class AndroidProfiler extends Profiler {
         try {
             // If using the array thread set, switch to the current
             // thread.  Sometimes for timeout reasons Runners use
-            // seperate threads for test execution.
+            // separate threads for test execution.
             this.thread[0] = Thread.currentThread();
             start.invoke(profiler, interval);
         } catch (Exception e) {
@@ -99,8 +98,7 @@ public class AndroidProfiler extends Profiler {
             shutdown.invoke(profiler);
 
             FileOutputStream out = new FileOutputStream(file);
-            Object writer = newAsciiHprofWriter.newInstance(getHprofData.invoke(profiler), out);
-            write.invoke(writer);
+            write.invoke(null, getHprofData.invoke(profiler), out);
             out.close();
         } catch (Exception e) {
             throw new AssertionError(e);
