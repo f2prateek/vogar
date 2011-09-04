@@ -202,10 +202,9 @@ public final class Vogar {
         System.out.println();
         System.out.println("GENERAL OPTIONS");
         System.out.println();
-        System.out.println("  --mode <activity|device|sim|host|jvm>: specify which environment to run in.");
+        System.out.println("  --mode <activity|device|host|jvm>: specify which environment to run in.");
         System.out.println("      activity: runs in an Android application on a device or emulator");
         System.out.println("      device: runs in a Dalvik VM on a device or emulator");
-        System.out.println("      sim: runs in a Dalvik VM on the local desktop built with sim-eng lunch combo");
         System.out.println("      host: runs in a Dalvik VM on the local desktop built with any lunch combo.");
         System.out.println("      jvm: runs in a Java VM on the local desktop");
         System.out.println("      Default is: " + mode);
@@ -616,7 +615,6 @@ public final class Vogar {
                 case JVM:
                     return javaVmProvider.get();
                 case HOST:
-                case SIM:
                     return hostDalvikVmProvider.get();
                 case DEVICE:
                     return deviceDalvikVmProvider.get();

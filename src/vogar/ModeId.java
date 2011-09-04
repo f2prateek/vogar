@@ -17,18 +17,17 @@
 package vogar;
 
 public enum ModeId {
-    DEVICE, JVM, ACTIVITY, SIM, HOST, APP_PROCESS;
+    DEVICE, JVM, ACTIVITY, HOST, APP_PROCESS;
 
     public boolean acceptsVmArgs() {
         return this != ACTIVITY;
     }
 
     public boolean isHost() {
-        return this == JVM || this == SIM || this == HOST;
+        return this == JVM || this == HOST;
     }
 
     public boolean requiresAndroidSdk() {
-        return this == DEVICE || this == ACTIVITY || this == SIM || this == HOST
-                || this == APP_PROCESS;
+        return this == DEVICE || this == ACTIVITY || this == HOST || this == APP_PROCESS;
     }
 }
