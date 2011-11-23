@@ -12,7 +12,7 @@
     <property name="caliper" value="lib/caliper.jar"/>
     <property name="guava" value="lib/guava.jar"/>
     <property name="jsr305" value="lib/jsr305.jar"/>
-    <property name="kxml2" value="lib/kxml2-2.3.0.jar"/>
+    <property name="kxml2" value="lib/kxml-libcore-20110123.jar"/>
     <property name="android" value="${android.platform.dir}/android.jar"/>
     <property name="miniguice" value="lib/miniguice.jar"/>
     <property name="mockito" value="lib/mockito-all-1.8.5.jar"/>
