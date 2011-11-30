@@ -17,24 +17,19 @@
 package vogar;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import javax.inject.Inject;
 import javax.inject.Named;
-import vogar.commands.Command;
 import vogar.commands.Mkdir;
-import vogar.monitor.HostMonitor;
-import vogar.target.CaliperRunner;
-import vogar.util.Threads;
+import vogar.tasks.BuildActionTask;
+import vogar.tasks.CleanupActionTask;
+import vogar.tasks.RunActionTask;
+import vogar.tasks.Task;
+import vogar.tasks.TaskQueue;
 import vogar.util.TimeUtilities;
 
 /**
@@ -42,34 +37,25 @@ import vogar.util.TimeUtilities;
  */
 public final class Driver {
 
-    private static final int FOREVER = 60 * 60 * 24 * 28; // four weeks
-
-    /**
-     * Assign each runner thread a unique ID. Necessary so threads don't
-     * conflict when selecting a monitor port.
-     */
-    private final ThreadLocal<Integer> runnerThreadId = new ThreadLocal<Integer>() {
-        private int next = 0;
-        @Override protected synchronized Integer initialValue() {
-            return next++;
-        }
-    };
-
     @Inject Console console;
     @Inject Mkdir mkdir;
     @Inject @Named("localTemp") File localTemp;
     @Inject ExpectationStore expectationStore;
     @Inject Mode mode;
     @Inject XmlReportPrinter reportPrinter;
-    @Inject @Named("firstMonitorPort") int firstMonitorPort;
-    @Inject @Named("smallTimeoutSeconds") int smallTimeoutSeconds;
+    @Inject @Named("firstMonitorPort")
+    public int firstMonitorPort;
+    @Inject @Named("smallTimeoutSeconds")
+    public int smallTimeoutSeconds;
     @Inject @Named("largeTimeoutSeconds") int largeTimeoutSeconds;
     @Inject JarSuggestions jarSuggestions;
     @Inject ClassFileIndex classFileIndex;
-    @Inject @Named("numRunners") int numRunnerThreads;
-    @Inject @Named("benchmark") boolean benchmark;
+    @Inject @Named("numRunners")
+    public int numRunnerThreads;
+    @Inject @Named("benchmark")
+    public boolean benchmark;
     @Inject OutcomeStore outcomeStore;
-
+    @Inject TaskQueue taskQueue;
     private int successes = 0;
     private int failures = 0;
     private int skipped = 0;
@@ -78,7 +64,7 @@ public final class Driver {
             new LinkedHashMap<String, Action>());
     private final Map<String, Outcome> outcomes = Collections.synchronizedMap(
             new LinkedHashMap<String, Outcome>());
-    private boolean recordResults = true;
+    public boolean recordResults = true;
 
     /**
      * Builds and executes the actions in the given files.
@@ -106,66 +92,35 @@ public final class Driver {
         // the action-specific files.
         mode.prepare();
 
-        // build and install actions in a background thread. Using lots of
-        // threads helps for packages that contain many unsupported actions
-        final BlockingQueue<Action> readyToRun = new ArrayBlockingQueue<Action>(4);
+        for (Action action : actions.values()) {
+            Outcome outcome = outcomes.get(action.getName());
+            if (outcome != null) {
+                addEarlyResult(outcome);
+            } else if (expectationStore.get(action.getName()).getResult() == Result.UNSUPPORTED) {
+                addEarlyResult(new Outcome(action.getName(), Result.UNSUPPORTED,
+                    "Unsupported according to expectations file"));
+            } else {
+                BuildActionTask buildActionTask = new BuildActionTask(action, mode, this);
 
-        ExecutorService builders = Threads.threadPerCpuExecutor(console, "builder");
+                String actionName = action.getName();
+                Expectation expectation = expectationStore.get(actionName);
+                int timeoutSeconds = expectation.getTags().contains("large")
+                        ? largeTimeoutSeconds
+                        : smallTimeoutSeconds;
 
-        int totalToRun = 0;
-        for (final Action action : actions.values()) {
-            final String name = action.getName();
-            if (outcomes.containsKey(name)) {
-                addEarlyResult(outcomes.get(name));
-                continue;
-            } else if (expectationStore.get(name).getResult() == Result.UNSUPPORTED) {
-                addEarlyResult(new Outcome(name, Result.UNSUPPORTED,
-                        "Unsupported according to expectations file"));
-                continue;
+                RunActionTask runActionTask = new RunActionTask(
+                        action, console, mode, timeoutSeconds, this, buildActionTask);
+                taskQueue.addTask(buildActionTask);
+                taskQueue.addTask(runActionTask);
+                taskQueue.addTask(new CleanupActionTask(action, mode, runActionTask));
             }
-
-            final int runIndex = totalToRun++;
-            builders.execute(new Runnable() {
-                public void run() {
-                    try {
-                        console.verbose("installing action " + runIndex + "; "
-                                + readyToRun.size() + " are runnable");
-                        Outcome outcome = mode.buildAndInstall(action);
-                        if (outcome != null) {
-                            outcomes.put(name, outcome);
-                        }
-
-                        readyToRun.put(action);
-                        console.verbose("installed action " + runIndex + "; "
-                                + readyToRun.size() + " are runnable");
-                    } catch (Throwable e) {
-                        console.info("unexpected failure!", e);
-                    }
-                }
-            });
-        }
-        builders.shutdown();
-
-        console.verbose(numRunnerThreads > 1
-                ? ("running actions in parallel (" + numRunnerThreads + " threads)")
-                : ("running actions in serial"));
-
-        ExecutorService runners = Threads.fixedThreadsExecutor(console, "runner", numRunnerThreads);
-
-        final AtomicBoolean prematurelyExhaustedInput = new AtomicBoolean();
-        for (int i = 0; i < totalToRun; i++) {
-            runners.execute(new ActionRunner(prematurelyExhaustedInput, i, readyToRun));
-        }
-        runners.shutdown();
-        try {
-            runners.awaitTermination(FOREVER, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            recordOutcome(new Outcome("vogar.Vogar", Result.ERROR, e));
         }
 
-        if (prematurelyExhaustedInput.get()) {
-            recordOutcome(new Outcome("vogar.Vogar", Result.ERROR,
-                    "Expected " + actions.size() + " actions but found fewer."));
+        taskQueue.runTasks();
+
+        List<Task> blockedTasks = taskQueue.blockedTasks();
+        for (Task task : blockedTasks) {
+            console.verbose("Failed to execute " + task);
         }
 
         if (reportPrinter.isReady()) {
@@ -216,7 +171,7 @@ public final class Driver {
         }
     }
 
-    private synchronized void addEarlyResult(Outcome earlyFailure) {
+    public synchronized void addEarlyResult(Outcome earlyFailure) {
         if (earlyFailure.getResult() == Result.UNSUPPORTED) {
             console.verbose("skipped " + earlyFailure.getName());
             skipped++;
@@ -229,7 +184,7 @@ public final class Driver {
         }
     }
 
-    private synchronized void recordOutcome(Outcome outcome) {
+    public synchronized void recordOutcome(Outcome outcome) {
         outcomes.put(outcome.getName(), outcome);
         Expectation expectation = expectationStore.get(outcome);
         ResultValue resultValue = outcome.getResultValue(expectation);
@@ -256,200 +211,5 @@ public final class Driver {
                     jarStringList);
         }
         jarSuggestions.addSuggestions(singleOutcomeJarSuggestions);
-    }
-
-    /**
-     * Runs a single action and reports the result.
-     */
-    private class ActionRunner implements Runnable, HostMonitor.Handler {
-
-        /**
-         * All action runners share this atomic boolean. Whenever any of them
-         * waits for five minutes without retrieving an executable action, we
-         * use this to signal that they should all quit.
-         */
-        private final AtomicBoolean prematurelyExhaustedInput;
-        private final int count;
-        private final BlockingQueue<Action> readyToRun;
-        private Command currentCommand;
-        private String actionName;
-        private String lastStartedOutcome;
-        private String lastFinishedOutcome;
-
-        public ActionRunner(AtomicBoolean prematurelyExhaustedInput, int count,
-                BlockingQueue<Action> readyToRun) {
-            this.prematurelyExhaustedInput = prematurelyExhaustedInput;
-            this.count = count;
-            this.readyToRun = readyToRun;
-        }
-
-        public int monitorPort(int defaultValue) {
-            return numRunnerThreads == 1
-                    ? defaultValue
-                    : firstMonitorPort + (runnerThreadId.get() % numRunnerThreads);
-        }
-
-        public void run() {
-            if (prematurelyExhaustedInput.get()) {
-                return;
-            }
-
-            console.verbose("executing action " + count + "; "
-                    + readyToRun.size() + " are ready to run");
-
-            // if it takes 5 minutes for build and install, something is broken
-            Action action;
-            try {
-                action = readyToRun.poll(5 * 60, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                recordOutcome(new Outcome("vogar.Vogar", Result.ERROR, e));
-                return;
-            }
-
-            if (action == null) {
-                prematurelyExhaustedInput.set(true); // short-circuit subsequent runners
-                return;
-            }
-
-            actionName = action.getName();
-            String threadName = Thread.currentThread().getName();
-            Thread.currentThread().setName("runner-" + actionName);
-            try {
-                execute(action);
-                mode.cleanup(action);
-            } finally {
-                Thread.currentThread().setName(threadName);
-            }
-        }
-
-        /**
-         * Executes a single action and then prints the result.
-         */
-        private void execute(Action action) {
-            console.action(actionName);
-            Expectation expectation = expectationStore.get(actionName);
-            int timeoutSeconds = expectation.getTags().contains("large")
-                    ? largeTimeoutSeconds
-                    : smallTimeoutSeconds;
-
-            Outcome earlyFailure = outcomes.get(actionName);
-            if (earlyFailure != null) {
-                addEarlyResult(earlyFailure);
-                return;
-            }
-
-            while (true) {
-                /*
-                 * If the target process failed midway through a set of
-                 * outcomes, that's okay. We pickup right after the first
-                 * outcome that wasn't completed.
-                 */
-                String skipPast = lastStartedOutcome;
-                lastStartedOutcome = null;
-
-                currentCommand = mode.createActionCommand(action, skipPast, monitorPort(-1));
-                try {
-                    currentCommand.start();
-                    if (timeoutSeconds != 0) {
-                        currentCommand.scheduleTimeout(timeoutSeconds);
-                    }
-
-                    HostMonitor hostMonitor = new HostMonitor(console, this);
-                    boolean completedNormally = mode.useSocketMonitor()
-                            ? hostMonitor.attach(monitorPort(firstMonitorPort))
-                            : hostMonitor.followStream(currentCommand.getInputStream());
-
-                    if (completedNormally) {
-                        return;
-                    }
-
-                    String earlyResultOutcome;
-                    boolean giveUp;
-
-                    if (lastStartedOutcome == null || lastStartedOutcome.equals(actionName)) {
-                        earlyResultOutcome = actionName;
-                        giveUp = true;
-                    } else if (!lastStartedOutcome.equals(lastFinishedOutcome)) {
-                        earlyResultOutcome = lastStartedOutcome;
-                        giveUp = false;
-                    } else {
-                        continue;
-                    }
-
-                    addEarlyResult(new Outcome(earlyResultOutcome, Result.ERROR,
-                            "Action " + action + " did not complete normally.\n"
-                            + "timedOut=" + currentCommand.timedOut() + "\n"
-                            + "lastStartedOutcome=" + lastStartedOutcome + "\n"
-                            + "lastFinishedOutcome=" + lastFinishedOutcome + "\n"
-                            + "command=" + currentCommand));
-
-                    if (giveUp) {
-                        break;
-                    }
-                } catch (IOException e) {
-                    // if the monitor breaks, assume the worst and don't retry
-                    addEarlyResult(new Outcome(actionName, Result.ERROR, e));
-                    break;
-                } finally {
-                    currentCommand.destroy();
-                    currentCommand = null;
-                }
-            }
-        }
-
-        /**
-         * Test suites that use main classes in the default package have lame
-         * outcome names like "Clear" rather than "com.foo.Bar.Clear". In that
-         * case, just replace the outcome name with the action name.
-         */
-        private String toQualifiedOutcomeName(String outcomeName) {
-            if (actionName.endsWith("." + outcomeName)
-                    && !outcomeName.contains(".") && !outcomeName.contains("#")) {
-                return actionName;
-            } else {
-                return outcomeName;
-            }
-        }
-
-        @Override public void start(String outcomeName, String runnerClass) {
-            outcomeName = toQualifiedOutcomeName(outcomeName);
-            lastStartedOutcome = outcomeName;
-            // TODO add to Outcome knowledge about what class was used to run it
-            if (CaliperRunner.class.getName().equals(runnerClass)) {
-                if (!benchmark) {
-                    throw new RuntimeException("you must use --benchmark when running Caliper "
-                            + "benchmarks.");
-                }
-                console.verbose("running " + outcomeName + " with unlimited timeout");
-                Command command = currentCommand;
-                if (command != null && smallTimeoutSeconds != 0) {
-                    command.scheduleTimeout(smallTimeoutSeconds);
-                }
-                recordResults = false;
-            } else {
-                recordResults = true;
-            }
-        }
-
-        @Override public void output(String outcomeName, String output) {
-            outcomeName = toQualifiedOutcomeName(outcomeName);
-            console.outcome(outcomeName);
-            console.streamOutput(outcomeName, output);
-        }
-
-        @Override public void finish(Outcome outcome) {
-            Command command = currentCommand;
-            if (command != null && smallTimeoutSeconds != 0) {
-                command.scheduleTimeout(smallTimeoutSeconds);
-            }
-            lastFinishedOutcome = toQualifiedOutcomeName(outcome.getName());
-            // TODO: support flexible timeouts for JUnit tests
-            recordOutcome(new Outcome(lastFinishedOutcome, outcome.getResult(),
-                    outcome.getOutputLines()));
-        }
-
-        @Override public void print(String string) {
-            console.streamOutput(string);
-        }
     }
 }

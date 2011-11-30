@@ -220,7 +220,7 @@ public abstract class Mode {
      * @param skipPast the last outcome to skip, or null to run all outcomes.
      * @param monitorPort the port to accept connections on, or -1 for the
      */
-    protected abstract Command createActionCommand(Action action, String skipPast, int monitorPort);
+    public abstract Command createActionCommand(Action action, String skipPast, int monitorPort);
 
     /**
      * Deletes files and releases any resources required for the execution of

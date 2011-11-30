@@ -168,7 +168,7 @@ public final class ActivityMode extends Mode {
         properties.setProperty(TestProperties.DEVICE_RUNNER_DIR, getEnvironmentDevice().getRunnerDir().getPath());
     }
 
-    @Override protected Command createActionCommand(Action action, String skipPast, int monitorPort) {
+    @Override public Command createActionCommand(Action action, String skipPast, int monitorPort) {
         if (monitorPort != -1) {
             throw new IllegalArgumentException("ActivityMode doesn't support runtime monitor ports!");
         }

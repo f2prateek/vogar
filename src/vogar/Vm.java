@@ -54,7 +54,7 @@ public abstract class Vm extends Mode {
     /**
      * Returns a VM for action execution.
      */
-    @Override protected Command createActionCommand(
+    @Override public Command createActionCommand(
             Action action, String skipPast, int monitorPort) {
         File workingDirectory = action.getUserDir();
         VmCommandBuilder vmCommandBuilder = newVmCommandBuilder(action, workingDirectory);
