@@ -48,13 +48,14 @@ public class RunActionTask extends Task implements HostMonitor.Handler {
     private final Mode mode;
     private final int timeoutSeconds;
     private final Driver driver;
-    private final Task dependOn;
+    private final Task installAction;
+    private final Task installRunner;
     private Command currentCommand;
     private String lastStartedOutcome;
     private String lastFinishedOutcome;
 
     public RunActionTask(Action action, Console console, Mode mode, int timeoutSeconds,
-            Driver driver, Task dependOn) {
+            Driver driver, Task installRunner, Task installAction) {
         super("run " + action.getName());
         this.action = action;
         this.actionName = action.getName();
@@ -62,16 +63,20 @@ public class RunActionTask extends Task implements HostMonitor.Handler {
         this.mode = mode;
         this.timeoutSeconds = timeoutSeconds;
         this.driver = driver;
-        this.dependOn = dependOn;
+        this.installRunner = installRunner;
+        this.installAction = installAction;
     }
 
     @Override public boolean isRunnable() {
-        return dependOn.getResult() != null;
+        return installRunner.getResult() != null && installAction.getResult() != null;
     }
 
     @Override protected Result execute() throws Exception {
-        if (dependOn.getResult() != Result.SUCCESS) {
-            return dependOn.getResult();
+        if (installRunner.getResult() != Result.SUCCESS) {
+            return installRunner.getResult();
+        }
+        if (installAction.getResult() != Result.SUCCESS) {
+            return installAction.getResult();
         }
 
         console.action(actionName);

@@ -26,7 +26,6 @@ import vogar.Action;
  * Execute actions using the app_process command on using an Android device or emulator.
  */
 public final class AppProcessMode extends DeviceDalvikVm {
-
     @Override protected VmCommandBuilder newVmCommandBuilder(Action action, File workingDirectory) {
         List<String> vmCommand = new ArrayList<String>();
         vmCommand.addAll(getSdk().deviceProcessPrefix(workingDirectory));

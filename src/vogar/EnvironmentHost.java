@@ -22,17 +22,13 @@ import javax.inject.Inject;
 import vogar.commands.Command;
 import vogar.commands.Mkdir;
 
-final class EnvironmentHost extends Environment {
-
+public final class EnvironmentHost extends Environment {
     @Inject Log log;
     @Inject Mkdir mkdir;
     @Inject RetrievedFilesFilter retrievedFiles;
-
     @Inject EnvironmentHost() {}
 
-    @Override public void prepare() {}
-
-    @Override public void prepareUserDir(Action action) {
+    public void prepareUserDir(Action action) {
         File actionUserDir = actionUserDir(action);
 
         // if the user dir exists, cp would copy the files to the wrong place

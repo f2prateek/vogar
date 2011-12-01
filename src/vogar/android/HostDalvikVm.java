@@ -24,16 +24,17 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import vogar.Action;
 import vogar.Classpath;
-import vogar.Log;
+import vogar.EnvironmentHost;
+import vogar.Result;
 import vogar.Vm;
 import vogar.commands.Mkdir;
+import vogar.tasks.Task;
+import vogar.tasks.TaskQueue;
 
 /**
  * Executes actions on a Dalvik VM on a Linux desktop.
  */
 public class HostDalvikVm extends Vm {
-
-    @Inject Log log;
     @Inject Mkdir mkdir;
     @Inject AndroidSdk androidSdk;
     @Inject @Named("benchmark") boolean fastMode;
@@ -45,27 +46,43 @@ public class HostDalvikVm extends Vm {
         return environment.file("android-data", "dalvik-cache");
     }
 
-    @Override protected void installRunner() {
-        // dex everything on the classpath
-        for (File classpathElement : classpath.getElements()) {
-            dex(androidSdk.basenameOfJar(classpathElement), classpathElement);
-        }
-
-        mkdir.mkdirs(dalvikCache());
-        buildRoot = System.getenv("ANDROID_BUILD_TOP");
+    @Override protected void installTasks(TaskQueue taskQueue) {
+        taskQueue.enqueue(new Task("install runner") {
+            @Override protected Result execute() throws Exception {
+                // dex everything on the classpath
+                for (File classpathElement : classpath.getElements()) {
+                    androidSdk.dex(nameDexFile(androidSdk.basenameOfJar(classpathElement)),
+                            Classpath.of(classpathElement));
+                }
+                mkdir.mkdirs(dalvikCache());
+                buildRoot = System.getenv("ANDROID_BUILD_TOP");
+                return Result.SUCCESS;
+            }
+            @Override public boolean isRunnable() {
+                return true;
+            }
+        });
     }
 
     private File nameDexFile(String name) {
         return environment.file(name, name + ".dx.jar");
     }
 
-    @Override protected void postCompile(Action action, File jar) {
-        dex(action.getName(), jar);
-    }
-
-    private void dex(String name, File jar) {
-        log.verbose("dex " + name);
-        androidSdk.dex(nameDexFile(name), Classpath.of(jar));
+    @Override public Task installActionTask(TaskQueue taskQueue, final Task compileTask,
+            final Action action, final File jar) {
+        final String name = action.getName();
+        Task task = new Task("dex " + name) {
+            @Override protected Result execute() throws Exception {
+                ((EnvironmentHost) environment).prepareUserDir(action);
+                androidSdk.dex(nameDexFile(name), Classpath.of(jar));
+                return Result.SUCCESS;
+            }
+            @Override public boolean isRunnable() {
+                return compileTask.getResult() == Result.SUCCESS;
+            }
+        };
+        taskQueue.enqueue(task);
+        return task;
     }
 
     @Override protected VmCommandBuilder newVmCommandBuilder(Action action, File workingDirectory) {

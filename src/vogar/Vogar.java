@@ -20,8 +20,8 @@ import com.google.common.collect.Lists;
 import com.google.inject.Provides;
 import com.google.inject.mini.MiniGuice;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedHashSet;
@@ -39,7 +39,6 @@ import vogar.android.DeviceFileCache;
 import vogar.android.EnvironmentDevice;
 import vogar.android.HostDalvikVm;
 import vogar.commands.Mkdir;
-import vogar.util.Strings;
 
 /**
  * Command line interface for running benchmarks and tests on dalvik.
@@ -522,8 +521,10 @@ public final class Vogar {
             return classFileIndex;
         }
 
-        @Provides Classpath provideClasspath() {
-            return Classpath.of(classpath);
+        @Provides Classpath provideClasspath(@Named("vogarJar") File vogarJar) {
+            Classpath result = Classpath.of(classpath);
+            result.addAll(vogarJar);
+            return result;
         }
 
         @Provides @Named("cleanAfter") boolean provideCleanAfter() {
@@ -659,6 +660,10 @@ public final class Vogar {
             return vogarDir;
         }
 
+        @Provides @Named("keystore") File provideKeystore(Environment environment) {
+            return environment.file("activity", "vogar.keystore");
+        }
+
         @Provides @Named("xmlReportsDirectory") File provideXmlReportsDirectory() {
             return xmlReportsDirectory;
         }
@@ -685,6 +690,27 @@ public final class Vogar {
 
         @Provides @Named("profileThreadGroup") boolean profileThreadGroup() {
             return profileThreadGroup;
+        }
+
+        @Provides @Named("vogarJar") File provideVogarJar() {
+            URL jarUrl = Vogar.class.getResource("/vogar/Vogar.class");
+            if (jarUrl == null) {
+                // should we add an option for IDE users, to use a user-specified vogar.jar?
+                throw new IllegalStateException("Vogar cannot find its own .jar");
+            }
+
+            /*
+             * Parse a URI like jar:file:/Users/jessewilson/vogar/vogar.jar!/vogar/Vogar.class
+             * to yield a .jar file like /Users/jessewilson/vogar/vogar.jar.
+             */
+            String url = jarUrl.toString();
+            int bang = url.indexOf("!");
+            String JAR_URI_PREFIX = "jar:file:";
+            if (url.startsWith(JAR_URI_PREFIX) && bang != -1) {
+                return new File(url.substring(JAR_URI_PREFIX.length(), bang));
+            } else {
+                throw new IllegalStateException("Vogar cannot find the .jar file in " + jarUrl);
+            }
         }
     }
 }

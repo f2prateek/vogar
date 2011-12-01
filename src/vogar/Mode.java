@@ -20,7 +20,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.URL;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -32,6 +31,8 @@ import javax.inject.Named;
 import vogar.commands.Command;
 import vogar.commands.CommandFailedException;
 import vogar.commands.Mkdir;
+import vogar.tasks.Task;
+import vogar.tasks.TaskQueue;
 
 /**
  * A Mode for running actions. Examples including running in a virtual machine
@@ -39,10 +40,9 @@ import vogar.commands.Mkdir;
  * Activity.
  */
 public abstract class Mode {
-
     private static final Pattern JAVA_SOURCE_PATTERN = Pattern.compile("\\/(\\w)+\\.java$");
 
-    @Inject protected Environment environment;
+    @Inject public Environment environment;
     @Inject Log log;
     @Inject Mkdir mkdir;
     @Inject @Named("buildClasspath") Classpath buildClasspath;
@@ -81,56 +81,7 @@ public abstract class Mode {
      * Initializes the temporary directories and harness necessary to run
      * actions.
      */
-    protected void prepare() {
-        environment.prepare();
-        classpath.addAll(vogarJar());
-        installRunner();
-    }
-
-    /**
-     * Returns the .jar file containing Vogar.
-     */
-    private File vogarJar() {
-        URL jarUrl = Vogar.class.getResource("/vogar/Vogar.class");
-        if (jarUrl == null) {
-            // should we add an option for IDE users, to use a user-specified vogar.jar?
-            throw new IllegalStateException("Vogar cannot find its own .jar");
-        }
-
-        /*
-         * Parse a URI like jar:file:/Users/jessewilson/vogar/vogar.jar!/vogar/Vogar.class
-         * to yield a .jar file like /Users/jessewilson/vogar/vogar.jar.
-         */
-        String url = jarUrl.toString();
-        int bang = url.indexOf("!");
-        String JAR_URI_PREFIX = "jar:file:";
-        if (url.startsWith(JAR_URI_PREFIX) && bang != -1) {
-            return new File(url.substring(JAR_URI_PREFIX.length(), bang));
-        } else {
-            throw new IllegalStateException("Vogar cannot find the .jar file in " + jarUrl);
-        }
-    }
-
-    /**
-     * Compiles classes for the given action and makes them ready for execution.
-     *
-     * @return null if the compilation succeeded, or an outcome describing the
-     *      failure otherwise.
-     */
-    public Outcome buildAndInstall(Action action) {
-        log.verbose("build " + action.getName());
-        environment.prepareUserDir(action);
-
-        try {
-            File jar = compile(action);
-            postCompile(action, jar);
-        } catch (CommandFailedException e) {
-            return new Outcome(action.getName(),
-                    Result.COMPILE_FAILED, e.getOutputLines());
-        } catch (IOException e) {
-            return new Outcome(action.getName(), Result.ERROR, e);
-        }
-        return null;
+    protected void installTasks(TaskQueue taskQueue) {
     }
 
     /**
@@ -138,7 +89,7 @@ public abstract class Mode {
      *
      * @throws CommandFailedException if javac fails
      */
-    private File compile(Action action) throws IOException {
+    public void compile(Action action, File jar) throws IOException {
         File classesDir = environment.file(action, "classes");
         mkdir.mkdirs(classesDir);
         createJarMetadataFiles(action, classesDir);
@@ -169,10 +120,8 @@ public abstract class Mode {
                     .compile(sourceFiles);
         }
 
-        File jar = environment.hostJar(action);
         new Command(log, javaPath("jar"), "cvfM", jar.getPath(),
                 "-C", classesDir.getPath(), "./").execute();
-        return jar;
     }
 
     /**
@@ -205,14 +154,10 @@ public abstract class Mode {
     }
 
     /**
-     * Hook method called after runner compilation.
-     */
-    protected void installRunner() {}
-
-    /**
      * Hook method called after action compilation.
      */
-    protected void postCompile(Action action, File jar) {}
+    public abstract Task installActionTask(TaskQueue taskQueue, Task compileTask,
+            final Action action, File jar);
 
     /**
      * Create the command that executes the action.

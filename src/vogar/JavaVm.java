@@ -22,14 +22,15 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.inject.Inject;
 import javax.inject.Named;
+import vogar.commands.Mkdir;
+import vogar.tasks.Task;
+import vogar.tasks.TaskQueue;
 
 /**
  * A local Java virtual machine like Harmony or the RI.
  */
 final class JavaVm extends Vm {
-
     @Inject JavaVm() {}
-
     @Inject @Named("profile") boolean profile;
     @Inject @Named("profileBinary") boolean profileBinary;
     @Inject @Named("profileFile") File profileFile;
@@ -53,6 +54,21 @@ final class JavaVm extends Vm {
         return new VmCommandBuilder()
                 .userDir(workingDirectory)
                 .vmCommand(vmCommand);
+    }
+
+    @Override public Task installActionTask(final TaskQueue taskQueue, final Task compileTask,
+            final Action action, File jar) {
+        Task install = new Task("install " + compileTask) {
+            @Override protected Result execute() throws Exception {
+                ((EnvironmentHost) environment).prepareUserDir(action);
+                return Result.SUCCESS;
+            }
+            @Override public boolean isRunnable() {
+                return compileTask.getResult() != null;
+            }
+        };
+        taskQueue.enqueue(install);
+        return install;
     }
 
     @Override protected Classpath getRuntimeClasspath(Action action) {

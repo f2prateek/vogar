@@ -9,9 +9,7 @@ import javax.inject.Named;
  * Selects files to be kept from a test run.
  */
 public final class RetrievedFilesFilter implements FileFilter {
-
     @Inject RetrievedFilesFilter() {}
-
     @Inject @Named("profile") boolean profile;
     @Inject @Named("profileFile") File profileFile;
 

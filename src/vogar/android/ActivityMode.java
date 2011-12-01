@@ -25,12 +25,16 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Properties;
 import javax.inject.Inject;
+import javax.inject.Named;
 import vogar.Action;
 import vogar.Classpath;
 import vogar.Log;
 import vogar.Mode;
+import vogar.Result;
 import vogar.TestProperties;
 import vogar.commands.Command;
+import vogar.tasks.Task;
+import vogar.tasks.TaskQueue;
 import vogar.util.IoUtils;
 
 /**
@@ -40,23 +44,11 @@ public final class ActivityMode extends Mode {
     private static final String TEST_ACTIVITY_CLASS = "vogar.target.TestActivity";
 
     @Inject Log log;
+    @Inject @Named("keystore") File keystore;
 
-    private File keystore;
-
-    private EnvironmentDevice getEnvironmentDevice() {
-        return (EnvironmentDevice) environment;
-    }
-
-    @Override protected void prepare() {
-        super.prepare();
-        extractKeystoreToFile();
-    }
-
-    private void extractKeystoreToFile() {
-        try {
-            keystore = environment.file("activity", "vogar.keystore");
+    private final Task extractKeystore = new Task("extract keystore to " + keystore) {
+        @Override protected Result execute() throws Exception {
             IoUtils.safeMkdirs(keystore.getParentFile());
-            log.verbose("extracting keystore to " + keystore);
             InputStream in = new BufferedInputStream(
                     getClass().getResourceAsStream("/vogar/vogar.keystore"));
             OutputStream out = new BufferedOutputStream(new FileOutputStream(keystore));
@@ -67,26 +59,47 @@ public final class ActivityMode extends Mode {
             }
             out.close();
             in.close();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            return Result.SUCCESS;
         }
+        @Override public boolean isRunnable() {
+            return true;
+        }
+    };
+
+    private EnvironmentDevice getEnvironmentDevice() {
+        return (EnvironmentDevice) environment;
     }
 
-    @Override protected void postCompile(Action action, File jar) {
-        log.verbose("aapt and push " + action.getName());
+    @Override protected void installTasks(TaskQueue taskQueue) {
+        taskQueue.enqueue(extractKeystore);
+    }
 
-        // We can't put multiple dex files in one apk.
-        // We can't just give dex multiple jars with conflicting class names
+    @Override public Task installActionTask(TaskQueue taskQueue, final Task compileTask,
+            final Action action, final File jar) {
+        Task result = new Task("aapt and push " + action.getName()) {
+            @Override protected Result execute() throws Exception {
+                // We can't put multiple dex files in one apk.
+                // We can't just give dex multiple jars with conflicting class names
 
-        // With that in mind, the APK packaging strategy is as follows:
-        // 1. dx to create a dex
-        // 2. aapt the dex to create apk
-        // 3. sign the apk
-        // 4. install the apk
-        File dex = createDex(action, jar);
-        File apk = createApk(action, dex);
-        signApk(apk);
-        installApk(action, apk);
+                // With that in mind, the APK packaging strategy is as follows:
+                // 1. dx to create a dex
+                // 2. aapt the dex to create apk
+                // 3. sign the apk
+                // 4. install the apk
+                File dex = createDex(action, jar);
+                File apk = createApk(action, dex);
+                signApk(apk);
+                installApk(action, apk);
+                return Result.SUCCESS;
+            }
+
+            @Override
+            public boolean isRunnable() {
+                return compileTask.getResult() != null;
+            }
+        };
+        taskQueue.enqueue(result);
+        return result;
     }
 
     /**

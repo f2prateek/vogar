@@ -36,7 +36,7 @@ public final class TaskQueue {
     /**
      * Adds a task to the queue.
      */
-    public synchronized void addTask(Task task) {
+    public synchronized void enqueue(Task task) {
         if (task.isRunnable()) {
             runnableTasks.add(task);
         } else {
@@ -63,12 +63,21 @@ public final class TaskQueue {
         }
     }
 
-
     /**
      * Returns the tasks that cannot be executed.
      */
-    public synchronized List<Task> blockedTasks() {
+    public synchronized List<Task> getBlockedTasks() {
         return new ArrayList<Task>(blockedTasks);
+    }
+
+    /**
+     * Returns all tasks currently enqueued.
+     */
+    public synchronized List<Task> getTasks() {
+        ArrayList<Task> result = new ArrayList<Task>();
+        result.addAll(runnableTasks);
+        result.addAll(blockedTasks);
+        return result;
     }
 
     private boolean runOneTask() {

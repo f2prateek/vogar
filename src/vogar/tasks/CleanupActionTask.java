@@ -29,7 +29,7 @@ public final class CleanupActionTask extends Task {
     private final Task dependOn;
 
     public CleanupActionTask(Action action, Mode mode, Task dependOn) {
-        super("cleanup " + action.getName());
+        super("clean " + action.getName());
         this.action = action;
         this.mode = mode;
         this.dependOn = dependOn;

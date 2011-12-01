@@ -27,8 +27,12 @@ import javax.inject.Named;
 import vogar.Action;
 import vogar.Environment;
 import vogar.Log;
+import vogar.Result;
 import vogar.RetrievedFilesFilter;
+import vogar.Vogar;
 import vogar.commands.Mkdir;
+import vogar.tasks.Task;
+import vogar.tasks.TaskQueue;
 
 public final class EnvironmentDevice extends Environment {
     @Inject Log log;
@@ -38,6 +42,41 @@ public final class EnvironmentDevice extends Environment {
     @Inject @Named("runnerDir") File runnerDir;
     @Inject @Named("firstMonitorPort") int firstMonitorPort;
     @Inject @Named("numRunners") int numRunners;
+    @Inject @Named("deviceUserHome") File deviceUserHome;
+
+    /** Prepares the device (but doesn't install vogar */
+    public final Task prepareDeviceTask = new Task("prepare device") {
+        @Override protected Result execute() throws Exception {
+            androidSdk.waitForDevice();
+            // Even if runner dir is /vogar/run, the grandparent will be / (and non-null)
+            androidSdk.waitForNonEmptyDirectory(runnerDir.getParentFile().getParentFile(), 5 * 60);
+            androidSdk.remount();
+            if (cleanBefore()) {
+                androidSdk.rm(runnerDir);
+            }
+            androidSdk.mkdirs(runnerDir);
+            androidSdk.mkdir(vogarTemp());
+            androidSdk.mkdir(dalvikCache());
+            for (int i = 0; i < numRunners; i++) {
+                androidSdk.forwardTcp(firstMonitorPort + i, firstMonitorPort + i);
+            }
+            if (getDebugPort() != null) {
+                androidSdk.forwardTcp(getDebugPort(), getDebugPort());
+            }
+            androidSdk.mkdirs(deviceUserHome);
+
+            // push ~/.caliperrc to device if found
+            File hostCaliperRc = Vogar.dotFile(".caliperrc");
+            if (hostCaliperRc.exists()) {
+                androidSdk.push(hostCaliperRc, new File(deviceUserHome, ".caliperrc"));
+            }
+            return Result.SUCCESS;
+        }
+
+        @Override public boolean isRunnable() {
+            return true;
+        }
+    };
 
     File vogarTemp() {
         return new File(runnerDir, "tmp");
@@ -65,36 +104,11 @@ public final class EnvironmentDevice extends Environment {
         return "ANDROID_DATA=" + dalvikCache().getParentFile();
     }
 
-    @Override public void prepare() {
-        androidSdk.waitForDevice();
-        // Even if runner dir is /vogar/run, the grandparent will be / (and non-null)
-        androidSdk.waitForNonEmptyDirectory(runnerDir.getParentFile().getParentFile(), 5 * 60);
-        androidSdk.remount();
-        if (cleanBefore()) {
-            androidSdk.rm(runnerDir);
-        }
-        androidSdk.mkdirs(runnerDir);
-        androidSdk.mkdir(vogarTemp());
-        androidSdk.mkdir(dalvikCache());
-        for (int i = 0; i < numRunners; i++) {
-            androidSdk.forwardTcp(firstMonitorPort + i, firstMonitorPort + i);
-        }
-        if (getDebugPort() != null) {
-            androidSdk.forwardTcp(getDebugPort(), getDebugPort());
-        }
+    @Override public void installTasks(TaskQueue taskQueue) {
+        taskQueue.enqueue(prepareDeviceTask);
     }
 
-    @Override public void prepareUserDir(Action action) {
-        File actionClassesDirOnDevice = actionClassesDirOnDevice(action);
-        androidSdk.mkdir(actionClassesDirOnDevice);
-        File resourcesDirectory = action.getResourcesDirectory();
-        if (resourcesDirectory != null) {
-            androidSdk.push(resourcesDirectory, actionClassesDirOnDevice);
-        }
-        action.setUserDir(actionClassesDirOnDevice);
-    }
-
-    private File actionClassesDirOnDevice(Action action) {
+    public File actionClassesDirOnDevice(Action action) {
         return new File(runnerDir, action.getName());
     }
 
@@ -143,5 +157,4 @@ public final class EnvironmentDevice extends Environment {
             androidSdk.rm(runnerDir);
         }
     }
-
 }

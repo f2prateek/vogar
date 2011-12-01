@@ -35,7 +35,6 @@ import vogar.target.TestRunner;
  * A Java-like virtual machine for compiling and running tests.
  */
 public abstract class Vm extends Mode {
-
     @Inject @Named("invokeWith") String invokeWith;
     @Inject @Named("additionalVmArgs") List<String> additionalVmArgs;
     @Inject @Named("targetArgs") List<String> targetArgs;

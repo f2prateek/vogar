@@ -20,6 +20,7 @@ import java.io.File;
 import javax.inject.Inject;
 import javax.inject.Named;
 import vogar.commands.Rm;
+import vogar.tasks.TaskQueue;
 import vogar.util.Strings;
 
 /**
@@ -49,14 +50,8 @@ public abstract class Environment {
      * Initializes the temporary directories and harness necessary to run
      * actions.
      */
-    public abstract void prepare();
-
-    /**
-     * Prepares the directory from which the action will be executed. Some
-     * actions expect to read data files from the current working directory;
-     * this step should ensure such files are available.
-     */
-    public abstract void prepareUserDir(Action action);
+    public void installTasks(TaskQueue taskQueue) {
+    }
 
     /**
      * Deletes files and releases any resources required for the execution of
@@ -64,7 +59,6 @@ public abstract class Environment {
      */
     public void cleanup(Action action) {
         if (cleanAfter) {
-            log.verbose("clean " + action.getName());
             rm.directoryTree(file(action));
         }
     }

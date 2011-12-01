@@ -24,16 +24,15 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import vogar.Action;
 import vogar.Classpath;
-import vogar.Log;
+import vogar.Result;
 import vogar.Vm;
-import vogar.Vogar;
+import vogar.tasks.Task;
+import vogar.tasks.TaskQueue;
 
 /**
  * Execute actions on a Dalvik VM using an Android device or emulator.
  */
 public class DeviceDalvikVm extends Vm {
-
-    @Inject Log log;
     @Inject @Named("benchmark") boolean fastMode;
     @Inject @Named("deviceUserHome") File deviceUserHome;
 
@@ -45,41 +44,61 @@ public class DeviceDalvikVm extends Vm {
         return getEnvironmentDevice().androidSdk;
     }
 
-    @Override protected void prepare() {
-        super.prepare();
-        getSdk().mkdirs(deviceUserHome);
-
-        // push ~/.caliperrc to device if found
-        File hostCaliperRc = Vogar.dotFile(".caliperrc");
-        if (hostCaliperRc.exists()) {
-            getSdk().push(hostCaliperRc, new File(deviceUserHome, ".caliperrc"));
-        }
-    }
-
-    @Override protected void installRunner() {
+    @Override protected void installTasks(TaskQueue taskQueue) {
         // dex everything on the classpath and push it to the device.
         for (File classpathElement : classpath.getElements()) {
-            dexAndPush(getSdk().basenameOfJar(classpathElement), classpathElement, false);
+            dexAndPush(taskQueue, null, getSdk().basenameOfJar(classpathElement),
+                    classpathElement, null);
         }
     }
 
-    @Override protected void postCompile(Action action, File jar) {
-        dexAndPush(action.getName(), jar, true);
+    @Override public Task installActionTask(TaskQueue taskQueue, Task compileTask,
+            Action action, File jar) {
+        return dexAndPush(taskQueue, compileTask, action.getName(), jar, action);
     }
 
-    private void dexAndPush(String name, File jar, boolean forAction) {
-        log.verbose("dex and push " + name);
-
-        // make the local dex (inside a jar)
-        File localDex = environment.file(name, name + ".dx.jar");
-        Classpath cp = Classpath.of(jar);
-        if (fastMode && forAction) {
-            cp.addAll(this.classpath);
-        }
-        getSdk().dex(localDex, cp);
-
-        // post the local dex to the device
-        getSdk().push(localDex, deviceDexFile(name));
+    private Task dexAndPush(TaskQueue taskQueue, final Task compileTask, final String name,
+            final File jar, final Action action) {
+        final File localDex = environment.file(name, name + ".dx.jar");
+        final Task dex = new Task("dex " + name) {
+            @Override protected Result execute() throws Exception {
+                // make the local dex (inside a jar)
+                Classpath cp = Classpath.of(jar);
+                if (fastMode && action != null) {
+                    cp.addAll(classpath);
+                }
+                getSdk().dex(localDex, cp);
+                return Result.SUCCESS;
+            }
+            @Override public boolean isRunnable() {
+                return compileTask == null || compileTask.getResult() != null;
+            }
+        };
+        final Task push = new Task("push " + name) {
+            @Override protected Result execute() throws Exception {
+                if (action != null) {
+                    prepareUserDir(action);
+                }
+                getSdk().push(localDex, deviceDexFile(name));
+                return Result.SUCCESS;
+            }
+            @Override public boolean isRunnable() {
+                return getEnvironmentDevice().prepareDeviceTask.getResult() == Result.SUCCESS
+                        && dex.getResult() == Result.SUCCESS;
+            }
+            private void prepareUserDir(Action action) {
+                File actionClassesDir = getEnvironmentDevice().actionClassesDirOnDevice(action);
+                getSdk().mkdir(actionClassesDir);
+                File resourcesDirectory = action.getResourcesDirectory();
+                if (resourcesDirectory != null) {
+                    getSdk().push(resourcesDirectory, actionClassesDir);
+                }
+                action.setUserDir(actionClassesDir);
+            }
+        };
+        taskQueue.enqueue(dex);
+        taskQueue.enqueue(push);
+        return push;
     }
 
     private File deviceDexFile(String name) {

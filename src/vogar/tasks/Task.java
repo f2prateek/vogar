@@ -16,6 +16,7 @@
 
 package vogar.tasks;
 
+import java.util.Collection;
 import vogar.Console;
 import vogar.Result;
 
@@ -26,7 +27,7 @@ import vogar.Result;
  */
 public abstract class Task {
     private final String name;
-    private Result result;
+    volatile Result result;
 
     protected Task(String name) {
         this.name = name;
@@ -51,7 +52,7 @@ public abstract class Task {
             console.verbose("running " + this);
             result = execute();
         } catch (Exception e) {
-            // TODO: print stack trace?
+            e.printStackTrace(); // TODO: capture this properly (for XML etc.)
             result = Result.ERROR;
         }
 
@@ -64,5 +65,30 @@ public abstract class Task {
 
     @Override public final String toString() {
         return name;
+    }
+
+    /**
+     * A task that is complete only when {@code tasks} are complete.
+     * TODO: don't use tasks as predicates
+     */
+    public static Task uponSuccessOf(final Collection<Task> tasks) {
+        return new Task("completion of " + tasks) {
+            @Override protected Result execute() throws Exception {
+                for (Task task : tasks) {
+                    if (task.getResult() != Result.SUCCESS) {
+                        return task.getResult();
+                    }
+                }
+                return Result.SUCCESS;
+            }
+            @Override public boolean isRunnable() {
+                for (Task task : tasks) {
+                    if (task.getResult() == null) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        };
     }
 }

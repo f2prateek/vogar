@@ -87,10 +87,13 @@ public final class Driver {
         console.info("Actions: " + actions.size());
         final long t0 = System.currentTimeMillis();
 
-        // mode.prepare before mode.buildAndInstall to ensure the runner is
-        // built. packaging of activity APK files needs the runner along with
-        // the action-specific files.
-        mode.prepare();
+        // install vogar and do other preparation for the target
+        mode.environment.installTasks(taskQueue);
+        mode.installTasks(taskQueue);
+
+        // TODO: this is a hack because we're using tasks as predicates
+        Task installedRunner = Task.uponSuccessOf(taskQueue.getTasks());
+        taskQueue.enqueue(installedRunner);
 
         for (Action action : actions.values()) {
             Outcome outcome = outcomes.get(action.getName());
@@ -100,27 +103,29 @@ public final class Driver {
                 addEarlyResult(new Outcome(action.getName(), Result.UNSUPPORTED,
                     "Unsupported according to expectations file"));
             } else {
-                BuildActionTask buildActionTask = new BuildActionTask(action, mode, this);
-
                 String actionName = action.getName();
                 Expectation expectation = expectationStore.get(actionName);
                 int timeoutSeconds = expectation.getTags().contains("large")
                         ? largeTimeoutSeconds
                         : smallTimeoutSeconds;
 
-                RunActionTask runActionTask = new RunActionTask(
-                        action, console, mode, timeoutSeconds, this, buildActionTask);
-                taskQueue.addTask(buildActionTask);
-                taskQueue.addTask(runActionTask);
-                taskQueue.addTask(new CleanupActionTask(action, mode, runActionTask));
+                File jar = mode.environment.hostJar(action);
+                Task buildActionTask = new BuildActionTask(action, mode, this, jar);
+                Task installActionTask = mode.installActionTask(
+                        taskQueue, buildActionTask, action, jar);
+                RunActionTask runActionTask = new RunActionTask(action, console, mode,
+                        timeoutSeconds, this, installedRunner, installActionTask);
+                taskQueue.enqueue(buildActionTask);
+                taskQueue.enqueue(runActionTask);
+                taskQueue.enqueue(new CleanupActionTask(action, mode, runActionTask));
             }
         }
 
         taskQueue.runTasks();
 
-        List<Task> blockedTasks = taskQueue.blockedTasks();
+        List<Task> blockedTasks = taskQueue.getBlockedTasks();
         for (Task task : blockedTasks) {
-            console.verbose("Failed to execute " + task);
+            console.info("Failed to execute " + task);
         }
 
         if (reportPrinter.isReady()) {
