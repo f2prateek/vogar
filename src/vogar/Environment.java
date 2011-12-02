@@ -17,9 +17,8 @@
 package vogar;
 
 import java.io.File;
-import vogar.tasks.DeleteDirectoryTask;
+import java.util.Set;
 import vogar.tasks.Task;
-import vogar.tasks.TaskQueue;
 
 /**
  * A target runtime environment such as a remote device or the local host
@@ -31,33 +30,9 @@ public abstract class Environment {
         this.run = run;
     }
 
-    /**
-     * Initializes the temporary directories and harness necessary to run
-     * actions.
-     */
-    public void installTasks(TaskQueue taskQueue) {
-    }
-
-    /**
-     * Deletes files and releases any resources required for the execution of
-     * the given action.
-     */
-    public void cleanup(TaskQueue taskQueue, Action action, Task runActionTask) {
-        if (run.cleanAfter) {
-            taskQueue.enqueue(new DeleteDirectoryTask(run.rm, run.localFile(action))
-                    .after(runActionTask));
-        }
-    }
-
-    public final File hostJar(Object nameOrAction) {
-        return run.localFile(nameOrAction, nameOrAction + ".jar");
-    }
+    public abstract Set<Task> prepareTargetTasks();
 
     public abstract File actionUserDir(Action action);
 
-    public void shutdown() {
-        if (run.cleanAfter) {
-            run.rm.directoryTree(run.localTemp);
-        }
-    }
+    public abstract Set<Task> shutdownTasks();
 }

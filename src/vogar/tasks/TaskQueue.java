@@ -53,6 +53,10 @@ public final class TaskQueue {
         this.tasks.addAll(tasks);
     }
 
+    public synchronized List<Task> getTasks() {
+        return new ArrayList<Task>(tasks);
+    }
+
     public void runTasks() {
         promoteBlockedTasks();
 

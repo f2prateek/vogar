@@ -17,6 +17,8 @@
 package vogar.android;
 
 import java.io.File;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
 import vogar.Action;
@@ -25,7 +27,6 @@ import vogar.Run;
 import vogar.TestProperties;
 import vogar.tasks.ExtractJarResourceTask;
 import vogar.tasks.Task;
-import vogar.tasks.TaskQueue;
 
 /**
  * Runs an action in the context of an android.app.Activity on a device
@@ -35,20 +36,20 @@ public final class ActivityMode extends Mode {
         super(run);
     }
 
-    @Override protected void installTasks(Set<Task> tasks) {
-        tasks.add(new ExtractJarResourceTask("/vogar/vogar.keystore", run.keystore));
+    @Override protected Set<Task> installTasks() {
+        return Collections.<Task>singleton(
+                new ExtractJarResourceTask("/vogar/vogar.keystore", run.keystore));
     }
 
-    @Override public void installActionTask(Set<Task> tasks, Task compileTask,
-            Action action, File jar) {
-        tasks.add(new PrepareUserDirTask(run.androidSdk, action)
-                .afterSuccess(run.environmentDevice.prepareDeviceTask));
-        tasks.add(new InstallApkTask(run, action, jar)
-                .afterSuccess(compileTask)
-                .afterSuccess(run.environmentDevice.prepareDeviceTask));
+    @Override public Task prepareUserDirTask(Action action) {
+        return new PrepareUserDirTask(run.androidSdk, action);
     }
 
-    @Override public Task createRunActionTask(Action action, boolean useLargeTimeout) {
+    @Override public Set<Task> installActionTasks(Action action, File jar) {
+        return Collections.<Task>singleton(new InstallApkTask(run, action, jar));
+    }
+
+    @Override public Task executeActionTask(Action action, boolean useLargeTimeout) {
         return new RunActivityTask(run, action, useLargeTimeout);
     }
 
@@ -57,11 +58,14 @@ public final class ActivityMode extends Mode {
         properties.setProperty(TestProperties.DEVICE_RUNNER_DIR, run.runnerDir.getPath());
     }
 
-    @Override public void cleanup(TaskQueue taskQueue, Action action, Task runActionTask) {
-        super.cleanup(taskQueue, action, runActionTask);
-        if (run.cleanAfter) {
-            taskQueue.enqueue(new UninstallApkTask(run.androidSdk, action.getName())
-                    .after(runActionTask));
-        }
+    @Override public Task retrieveFilesTask(Action action) {
+        return run.environmentDevice.retrieveFilesTask(action);
+    }
+
+    @Override public Set<Task> cleanupTasks(Action action) {
+        Set<Task> result = new HashSet<Task>();
+        result.add(run.environmentDevice.cleanupTask(action));
+        result.add(new UninstallApkTask(run.androidSdk, action.getName()));
+        return result;
     }
 }

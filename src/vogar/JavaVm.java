@@ -19,9 +19,12 @@ package vogar;
 import com.google.common.collect.Iterables;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import vogar.commands.VmCommandBuilder;
+import vogar.tasks.PrepareUserDirTask;
+import vogar.tasks.RetrieveFilesTask;
 import vogar.tasks.Task;
 
 /**
@@ -30,6 +33,10 @@ import vogar.tasks.Task;
 final class JavaVm extends Mode {
     JavaVm(Run run) {
         super(run);
+    }
+
+    @Override protected Set<Task> installTasks() {
+        return Collections.emptySet();
     }
 
     @Override public VmCommandBuilder newVmCommandBuilder(Action action, File workingDirectory) {
@@ -51,21 +58,18 @@ final class JavaVm extends Mode {
                 .vmCommand(vmCommand);
     }
 
-    @Override public void installActionTask(Set<Task> tasks, final Task compileTask,
-            final Action action, File jar) {
-        tasks.add(new Task("install " + compileTask) {
-            @Override
-            protected Result execute() throws Exception {
-                ((EnvironmentHost) run.environment).prepareUserDir(action);
-                return Result.SUCCESS;
-            }
-        }.afterSuccess(compileTask));
+    @Override public Task prepareUserDirTask(Action action) {
+        return new PrepareUserDirTask(run.log, run.mkdir, action);
+    }
+
+    @Override public Set<Task> installActionTasks(Action action, File jar) {
+        return Collections.emptySet();
     }
 
     @Override public Classpath getRuntimeClasspath(Action action) {
         Classpath result = new Classpath();
         result.addAll(run.classpath);
-        result.addAll(run.environment.hostJar(action));
+        result.addAll(run.hostJar(action));
 
         /*
          * For javax.net.ssl tests dependency on Bouncy Castle for
@@ -77,5 +81,14 @@ final class JavaVm extends Mode {
          */
         result.addAll(new File("/usr/share/java/bcprov.jar"));
         return result;
+    }
+
+    public Task retrieveFilesTask(Action action) {
+        return new RetrieveFilesTask(run, new File("./vogar-results"),
+                action.getUserDir(), run.retrievedFiles);
+    }
+
+    @Override public Set<Task> cleanupTasks(Action action) {
+        return Collections.emptySet();
     }
 }

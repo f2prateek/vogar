@@ -17,59 +17,35 @@
 package vogar.android;
 
 import java.io.File;
+import java.util.Collections;
+import java.util.Set;
 import vogar.Action;
 import vogar.Environment;
 import vogar.Run;
 import vogar.tasks.Task;
-import vogar.tasks.TaskQueue;
 
 public final class EnvironmentDevice extends Environment {
-    /** Prepares the device (but doesn't install vogar */
-    public final Task prepareDeviceTask = new PrepareDeviceTask(run);
-
     public EnvironmentDevice(Run run) {
         super(run);
     }
 
-    /**
-     * Returns an environment variable assignment to configure where the VM will
-     * store its dexopt files. This must be set on production devices and is
-     * optional for development devices.
-     */
-    public String getAndroidData() {
-        // The VM wants the parent directory of a directory named "dalvik-cache"
-        return "ANDROID_DATA=" + run.dalvikCache().getParentFile();
-    }
-
-    @Override public void installTasks(TaskQueue taskQueue) {
-        taskQueue.enqueue(prepareDeviceTask);
+    @Override public Set<Task> prepareTargetTasks() {
+        return Collections.<Task>singleton(new PrepareDeviceTask(run));
     }
 
     @Override public File actionUserDir(Action action) {
         return new File(run.runnerDir, action.getName());
     }
 
-    @Override public void cleanup(TaskQueue taskQueue, Action action, Task runActionTask) {
-        super.cleanup(taskQueue, action, runActionTask);
-
-        File actionUserDir = action.getUserDir();
-        Task retrieveFilesTask = new RetrieveDeviceFilesTask(run, actionUserDir)
-                .after(runActionTask);
-        taskQueue.enqueue(retrieveFilesTask);
-
-        if (run.cleanAfter) {
-            taskQueue.enqueue(new DeleteDeviceFilesTask(run.androidSdk, actionUserDir)
-                    .after(retrieveFilesTask));
-        }
+    public Task retrieveFilesTask(Action action) {
+        return new RetrieveDeviceFilesTask(run, action.getUserDir());
     }
 
-    @Override public void shutdown() {
-        super.shutdown();
-        if (run.cleanAfter) {
-            // TODO: convert shutdown to tasks
-            // taskQueue.enqueue(new DeleteDeviceFilesTask(run, runnerDir)
-            //         .after(retrieveFilesTask));
-            run.androidSdk.rm(run.runnerDir);
-        }
+    public Task cleanupTask(Action action) {
+        return new DeleteDeviceFilesTask(run.androidSdk, action.getUserDir());
+    }
+
+    @Override public Set<Task> shutdownTasks() {
+        return Collections.<Task>singleton(new DeleteDeviceFilesTask(run.androidSdk, run.runnerDir));
     }
 }

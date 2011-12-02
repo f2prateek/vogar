@@ -19,15 +19,17 @@ package vogar.android;
 import com.google.common.collect.Iterables;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import vogar.Action;
 import vogar.Classpath;
-import vogar.EnvironmentHost;
 import vogar.Mode;
 import vogar.Result;
 import vogar.Run;
 import vogar.commands.VmCommandBuilder;
+import vogar.tasks.PrepareUserDirTask;
+import vogar.tasks.RetrieveFilesTask;
 import vogar.tasks.Task;
 
 /**
@@ -44,8 +46,8 @@ public class HostDalvikVm extends Mode {
         return run.localFile("android-data", "dalvik-cache");
     }
 
-    @Override protected void installTasks(Set<Task> tasks) {
-        tasks.add(new Task("install runner") {
+    @Override protected Set<Task> installTasks() {
+        return Collections.<Task>singleton(new Task("install runner") {
             @Override protected Result execute() throws Exception {
                 // dex everything on the classpath
                 for (File classpathElement : run.classpath.getElements()) {
@@ -59,20 +61,26 @@ public class HostDalvikVm extends Mode {
         });
     }
 
+    @Override public Task retrieveFilesTask(Action action) {
+        return new RetrieveFilesTask(run, new File("./vogar-results"),
+                action.getUserDir(), run.retrievedFiles);
+    }
+
+    @Override public Set<Task> cleanupTasks(Action action) {
+        return Collections.emptySet();
+    }
+
     private File nameDexFile(String name) {
         return run.localFile(name, name + ".dx.jar");
     }
 
-    @Override public void installActionTask(Set<Task> tasks, final Task compileTask,
-            final Action action, final File jar) {
-        final String name = action.getName();
-        tasks.add(new Task("dex " + name) {
-            @Override protected Result execute() throws Exception {
-                ((EnvironmentHost) run.environment).prepareUserDir(action);
-                run.androidSdk.dex(nameDexFile(name), Classpath.of(jar));
-                return Result.SUCCESS;
-            }
-        }.afterSuccess(compileTask));
+    @Override public Task prepareUserDirTask(Action action) {
+        return new PrepareUserDirTask(run.log, run.mkdir, action);
+    }
+
+    @Override public Set<Task> installActionTasks(Action action, File jar) {
+        return Collections.<Task>singleton(new DexTask(run.androidSdk, Classpath.of(jar),
+                run.benchmark, action.getName(), jar, action, nameDexFile(action.getName())));
     }
 
     @Override public VmCommandBuilder newVmCommandBuilder(Action action, File workingDirectory) {

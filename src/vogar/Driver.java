@@ -19,12 +19,13 @@ package vogar;
 import java.io.File;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import vogar.tasks.BuildActionTask;
+import vogar.tasks.DeleteDirectoryTask;
 import vogar.tasks.Task;
 import vogar.util.TimeUtilities;
 
@@ -41,6 +42,9 @@ public final class Driver {
     private int successes = 0;
     private int failures = 0;
     private int skipped = 0;
+
+    private Set<Task> prepareTargetTasks;
+    private Set<Task> installVogarTasks;
 
     private final Map<String, Action> actions = Collections.synchronizedMap(
             new LinkedHashMap<String, Action>());
@@ -69,12 +73,12 @@ public final class Driver {
         run.console.info("Actions: " + actions.size());
         final long t0 = System.currentTimeMillis();
 
-        // install vogar and do other preparation for the target
-        run.environment.installTasks(run.taskQueue);
+        prepareTargetTasks = run.environment.prepareTargetTasks();
+        run.taskQueue.enqueueAll(prepareTargetTasks);
 
-        Set<Task> installTasks = new LinkedHashSet<Task>();
-        run.mode.installTasks(installTasks);
-        run.taskQueue.enqueueAll(installTasks);
+        installVogarTasks = run.mode.installTasks();
+        run.taskQueue.enqueueAll(installVogarTasks);
+        registerPrerequisites(prepareTargetTasks, installVogarTasks);
 
         for (Action action : actions.values()) {
             action.setUserDir(run.environment.actionUserDir(action));
@@ -85,23 +89,18 @@ public final class Driver {
                 addEarlyResult(new Outcome(action.getName(), Result.UNSUPPORTED,
                     "Unsupported according to expectations file"));
             } else {
-                String actionName = action.getName();
-                Expectation expectation = run.expectationStore.get(actionName);
-                boolean useLargeTimeout = expectation.getTags().contains("large");
-                File jar = run.environment.hostJar(action);
-                Task buildActionTask = new BuildActionTask(run, action, this, jar);
-
-                Set<Task> installActionTasks = new LinkedHashSet<Task>();
-                run.mode.installActionTask(installActionTasks, buildActionTask, action, jar);
-                run.taskQueue.enqueueAll(installActionTasks);
-                Task runActionTask = run.mode.createRunActionTask(action, useLargeTimeout)
-                        .afterSuccess(installTasks)
-                        .afterSuccess(installActionTasks);
-
-                run.taskQueue.enqueue(buildActionTask);
-                run.taskQueue.enqueue(runActionTask);
-                run.mode.cleanup(run.taskQueue, action, runActionTask);
+                enqueueActionTasks(action);
             }
+        }
+
+        if (run.cleanAfter) {
+            Set<Task> shutdownTasks = new HashSet<Task>();
+            shutdownTasks.add(new DeleteDirectoryTask(run.rm, run.localTemp));
+            shutdownTasks.addAll(run.environment.shutdownTasks());
+            for (Task task : shutdownTasks) {
+                task.after(run.taskQueue.getTasks());
+            }
+            run.taskQueue.enqueueAll(shutdownTasks);
         }
 
         run.taskQueue.printTasks();
@@ -114,7 +113,6 @@ public final class Driver {
             run.console.info(numFiles + " XML files written.");
         }
 
-        run.mode.shutdown();
         long t1 = System.currentTimeMillis();
 
         Map<String, AnnotatedOutcome> annotatedOutcomes = run.outcomeStore.read(this.outcomes);
@@ -141,6 +139,51 @@ public final class Driver {
                     successes, TimeUtilities.msToString(t1 - t0)));
         }
         return failures == 0;
+    }
+
+    private void enqueueActionTasks(Action action) {
+        Expectation expectation = run.expectationStore.get(action.getName());
+        boolean useLargeTimeout = expectation.getTags().contains("large");
+        File jar = run.hostJar(action);
+
+        Task build = new BuildActionTask(run, action, this, jar);
+        run.taskQueue.enqueue(build);
+
+        Task prepareUserDir = run.mode.prepareUserDirTask(action);
+        prepareUserDir.after(installVogarTasks);
+        run.taskQueue.enqueue(prepareUserDir);
+
+        Set<Task> install = run.mode.installActionTasks(action, jar);
+        registerPrerequisites(Collections.singleton(build), install);
+        registerPrerequisites(installVogarTasks, install);
+        registerPrerequisites(prepareTargetTasks, install);
+        run.taskQueue.enqueueAll(install);
+
+        Task execute = run.mode.executeActionTask(action, useLargeTimeout)
+                .afterSuccess(installVogarTasks)
+                .afterSuccess(build)
+                .afterSuccess(prepareUserDir)
+                .afterSuccess(install);
+        run.taskQueue.enqueue(execute);
+
+        Task retrieveFiles = run.mode.retrieveFilesTask(action).after(execute);
+        run.taskQueue.enqueue(retrieveFiles);
+
+        if (run.cleanAfter) {
+            run.taskQueue.enqueue(new DeleteDirectoryTask(run.rm, run.localFile(action))
+                    .after(execute).after(retrieveFiles));
+            Set<Task> cleanupTasks = run.mode.cleanupTasks(action);
+            for (Task task : cleanupTasks) {
+                task.after(execute).after(retrieveFiles);
+            }
+            run.taskQueue.enqueueAll(cleanupTasks);
+        }
+    }
+
+    private void registerPrerequisites(Set<Task> allBefore, Set<Task> allAfter) {
+        for (Task task : allAfter) {
+            task.afterSuccess(allBefore);
+        }
     }
 
     private void classesToActions(Collection<String> classNames) {

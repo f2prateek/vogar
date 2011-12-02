@@ -17,43 +17,24 @@
 package vogar;
 
 import java.io.File;
-import vogar.commands.Command;
-import vogar.tasks.RetrieveFilesTask;
+import java.util.Collections;
+import java.util.Set;
 import vogar.tasks.Task;
-import vogar.tasks.TaskQueue;
 
 public final class EnvironmentHost extends Environment {
     public EnvironmentHost(Run run) {
         super(run);
     }
 
-    public void prepareUserDir(Action action) {
-        File actionUserDir = action.getUserDir();
-
-        // if the user dir exists, cp would copy the files to the wrong place
-        if (actionUserDir.exists()) {
-            throw new IllegalStateException();
-        }
-
-        File resourcesDirectory = action.getResourcesDirectory();
-        if (resourcesDirectory != null) {
-            run.mkdir.mkdirs(actionUserDir.getParentFile());
-            new Command(run.log, "cp", "-r", resourcesDirectory.toString(),
-                    actionUserDir.toString()).execute();
-        } else {
-            run.mkdir.mkdirs(actionUserDir);
-        }
+    @Override public Set<Task> prepareTargetTasks() {
+        return Collections.emptySet();
     }
 
     public File actionUserDir(Action action) {
-        File testTemp = new File(run.localTemp, "userDir");
-        return new File(testTemp, action.getName());
+        return run.localFile("userDir", action.getName());
     }
 
-    @Override public void cleanup(TaskQueue taskQueue, Action action, Task runActionTask) {
-        Task task = new RetrieveFilesTask(
-                run, new File("./vogar-results"), action.getUserDir(), run.retrievedFiles);
-        taskQueue.enqueue(task.after(runActionTask));
-        super.cleanup(taskQueue, action, runActionTask);
+    @Override public Set<Task> shutdownTasks() {
+        return Collections.emptySet();
     }
 }

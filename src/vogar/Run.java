@@ -210,6 +210,10 @@ public final class Run {
         }
     }
 
+    public final File hostJar(Object nameOrAction) {
+        return localFile(nameOrAction, nameOrAction + ".jar");
+    }
+
     /**
      * Returns a path for a Java tool such as java, javac, jar where
      * the Java home is used if present, otherwise assumes it will
@@ -231,5 +235,15 @@ public final class Run {
 
     public File dalvikCache() {
         return new File(runnerDir.getParentFile(), "dalvik-cache");
+    }
+
+    /**
+     * Returns an environment variable assignment to configure where the VM will
+     * store its dexopt files. This must be set on production devices and is
+     * optional for development devices.
+     */
+    public String getAndroidData() {
+        // The VM wants the parent directory of a directory named "dalvik-cache"
+        return "ANDROID_DATA=" + dalvikCache().getParentFile();
     }
 }

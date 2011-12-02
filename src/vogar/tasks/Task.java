@@ -17,8 +17,8 @@
 package vogar.tasks;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 import vogar.Console;
 import vogar.Result;
 
@@ -43,12 +43,17 @@ public abstract class Task {
         return this;
     }
 
+    public Task after(Collection<Task> prerequisites) {
+        tasksThatMustFinishFirst.addAll(prerequisites);
+        return this;
+    }
+
     public Task afterSuccess(Task prerequisite) {
         tasksThatMustFinishSuccessfullyFirst.add(prerequisite);
         return this;
     }
 
-    public Task afterSuccess(Set<Task> prerequisitess) {
+    public Task afterSuccess(Collection<Task> prerequisitess) {
         tasksThatMustFinishSuccessfullyFirst.addAll(prerequisitess);
         return this;
     }

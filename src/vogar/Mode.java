@@ -24,7 +24,6 @@ import java.util.Set;
 import vogar.commands.VmCommandBuilder;
 import vogar.tasks.RunActionTask;
 import vogar.tasks.Task;
-import vogar.tasks.TaskQueue;
 
 /**
  * A Mode for running actions. Examples including running in a virtual machine
@@ -53,31 +52,28 @@ public abstract class Mode {
      * Initializes the temporary directories and harness necessary to run
      * actions.
      */
-    protected void installTasks(Set<Task> tasks) {
+    protected abstract Set<Task> installTasks();
+
+    public abstract Task prepareUserDirTask(Action action);
+
+    public Task executeActionTask(Action action, boolean useLargeTimeout) {
+        return new RunActionTask(run, action, useLargeTimeout);
     }
 
     /**
      * Hook method called after action compilation.
      */
-    public abstract void installActionTask(Set<Task> tasks, Task compileTask,
-            final Action action, File jar);
+    public abstract Set<Task> installActionTasks(Action action, File jar);
 
-    public void fillInProperties(Properties properties, Action action) {
-    }
+    public abstract Task retrieveFilesTask(Action action);
 
     /**
      * Deletes files and releases any resources required for the execution of
      * the given action.
      */
-    public void cleanup(TaskQueue taskQueue, Action action, Task runActionTask) {
-        run.environment.cleanup(taskQueue, action, runActionTask);
-    }
+    public abstract Set<Task> cleanupTasks(Action action);
 
-    /**
-     * Cleans up after all actions have completed.
-     */
-    void shutdown() {
-        run.environment.shutdown();
+    public void fillInProperties(Properties properties, Action action) {
     }
 
     public Classpath getClasspath() {
@@ -101,9 +97,5 @@ public abstract class Mode {
      */
     public Classpath getRuntimeClasspath(Action action) {
         throw new UnsupportedOperationException();
-    }
-
-    public Task createRunActionTask(Action action, boolean useLargeTimeout) {
-        return new RunActionTask(run, action, useLargeTimeout);
     }
 }
