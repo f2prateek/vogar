@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 The Android Open Source Project
+ * Copyright (C) 2011 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,26 +14,23 @@
  * limitations under the License.
  */
 
-package vogar.commands;
+package vogar.android;
 
-import java.io.File;
-import vogar.Log;
+import vogar.Result;
+import vogar.tasks.Task;
 
-/**
- * A rm command.
- */
-public final class Rm {
-    private final Log log;
+public final class UninstallApkTask extends Task {
+    private final AndroidSdk androidSdk;
+    private final String name;
 
-    public Rm(Log log) {
-        this.log = log;
+    public UninstallApkTask(AndroidSdk androidSdk, String name) {
+        super("uninstall " + name);
+        this.androidSdk = androidSdk;
+        this.name = name;
     }
 
-    public void file(File file) {
-        new Command(log, "rm", "-f", file.getPath()).execute();
-    }
-
-    public void directoryTree(File directory) {
-        new Command(log, "rm", "-rf", directory.getPath()).execute();
+    @Override protected Result execute() throws Exception {
+        androidSdk.uninstall(name);
+        return Result.SUCCESS;
     }
 }

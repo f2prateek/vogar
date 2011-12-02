@@ -18,15 +18,19 @@ package vogar;
 
 import java.io.File;
 import java.util.List;
-import javax.inject.Inject;
 import vogar.commands.Command;
 import vogar.commands.Mkdir;
 
 public class HostFileCache implements FileCache {
     private final File CACHE_ROOT = new File("/tmp/vogar-md5-cache");
 
-    @Inject Log log;
-    @Inject Mkdir mkdir;
+    private final Log log;
+    private final Mkdir mkdir;
+
+    public HostFileCache(Log log, Mkdir mkdir) {
+        this.log = log;
+        this.mkdir = mkdir;
+    }
 
     private void cp(File source, File destination) {
         List<String> rawResult = new Command.Builder(log).args("cp", source, destination).execute();

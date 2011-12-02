@@ -36,7 +36,6 @@ import vogar.util.MarkResetConsole;
  * </ul>
  */
 public abstract class Console implements Log {
-
     static final long DAY_MILLIS = 1000 * 60 * 60 * 24;
     static final long HOUR_MILLIS = 1000 * 60 * 60;
     static final long WARNING_HOURS = 12;
@@ -71,6 +70,10 @@ public abstract class Console implements Log {
 
     public void setVerbose(boolean verbose) {
         this.verbose = verbose;
+    }
+
+    public boolean isVerbose() {
+        return verbose;
     }
 
     public synchronized void verbose(String s) {

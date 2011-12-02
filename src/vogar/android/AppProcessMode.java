@@ -21,19 +21,25 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import vogar.Action;
+import vogar.Run;
+import vogar.commands.VmCommandBuilder;
 
 /**
  * Execute actions using the app_process command on using an Android device or emulator.
  */
 public final class AppProcessMode extends DeviceDalvikVm {
-    @Override protected VmCommandBuilder newVmCommandBuilder(Action action, File workingDirectory) {
+    public AppProcessMode(Run run) {
+        super(run);
+    }
+
+    @Override public VmCommandBuilder newVmCommandBuilder(Action action, File workingDirectory) {
         List<String> vmCommand = new ArrayList<String>();
-        vmCommand.addAll(getSdk().deviceProcessPrefix(workingDirectory));
-        vmCommand.add(getEnvironmentDevice().getAndroidData());
+        vmCommand.addAll(run.androidSdk.deviceProcessPrefix(workingDirectory));
+        vmCommand.add(run.environmentDevice.getAndroidData());
         Iterables.addAll(vmCommand, invokeWith());
         vmCommand.add("app_process");
 
-        return new VmCommandBuilder()
+        return new VmCommandBuilder(run.log)
                 .vmCommand(vmCommand)
                 .vmArgs(action.getUserDir().getPath())
                 .classpathViaProperty(true)

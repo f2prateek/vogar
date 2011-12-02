@@ -30,8 +30,6 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.TimeZone;
-import javax.inject.Inject;
-import javax.inject.Named;
 import vogar.commands.Mkdir;
 import vogar.commands.Rm;
 
@@ -48,13 +46,24 @@ public final class OutcomeStore {
         }
     };
 
-    @Inject Log log;
-    @Inject Mkdir mkdir;
-    @Inject Rm rm;
-    @Inject @Named("resultsDir") File resultsDir;
-    @Inject @Named("recordResults") boolean recordResults;
-    @Inject ExpectationStore expectationStore;
-    @Inject Date date;
+    private final Log log;
+    private final Mkdir mkdir;
+    private final Rm rm;
+    private final File resultsDir;
+    private final boolean recordResults;
+    private final ExpectationStore expectationStore;
+    private final Date date;
+
+    public OutcomeStore(Log log, Mkdir mkdir, Rm rm, File resultsDir, boolean recordResults,
+            ExpectationStore expectationStore, Date date) {
+        this.log = log;
+        this.mkdir = mkdir;
+        this.rm = rm;
+        this.resultsDir = resultsDir;
+        this.recordResults = recordResults;
+        this.expectationStore = expectationStore;
+        this.date = date;
+    }
 
     public Map<String, AnnotatedOutcome> read(Map<String, Outcome> outcomes) {
         Map<String, AnnotatedOutcome> result = new LinkedHashMap<String, AnnotatedOutcome>();

@@ -17,34 +17,45 @@
 package vogar.tasks;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
-import javax.inject.Inject;
 import vogar.Console;
+import vogar.Result;
 import vogar.util.Threads;
 
+/**
+ * A set of tasks to execute.
+ */
 public final class TaskQueue {
     private static final int FOREVER = 60 * 60 * 24 * 28; // four weeks
-    @Inject Console console;
+    private final Console console;
     private int runningTasks;
+    private final LinkedList<Task> tasks = new LinkedList<Task>();
     private final LinkedList<Task> runnableTasks = new LinkedList<Task>();
-    private final LinkedList<Task> blockedTasks = new LinkedList<Task>();
+    private final List<Task> failedTasks = new ArrayList<Task>();
+
+    public TaskQueue(Console console) {
+        this.console = console;
+    }
 
     /**
      * Adds a task to the queue.
      */
     public synchronized void enqueue(Task task) {
-        if (task.isRunnable()) {
-            runnableTasks.add(task);
-        } else {
-            blockedTasks.add(task);
-        }
+        tasks.add(task);
+    }
+
+    public void enqueueAll(Collection<Task> tasks) {
+        this.tasks.addAll(tasks);
     }
 
     public void runTasks() {
+        promoteBlockedTasks();
+
         ExecutorService runners = Threads.threadPerCpuExecutor(console, "TaskQueue");
         for (int i = 0; i < Runtime.getRuntime().availableProcessors(); i++) {
             runners.execute(new Runnable() {
@@ -63,21 +74,54 @@ public final class TaskQueue {
         }
     }
 
-    /**
-     * Returns the tasks that cannot be executed.
-     */
-    public synchronized List<Task> getBlockedTasks() {
-        return new ArrayList<Task>(blockedTasks);
+    public void printTasks() {
+        if (!console.isVerbose()) {
+            return;
+        }
+
+        int i = 0;
+        for (Task task : tasks) {
+            StringBuilder message = new StringBuilder()
+                    .append("Task ").append(i++).append(": ").append(task);
+            for (Task blocker : task.tasksThatMustFinishFirst) {
+                message.append("\n  depends on completed task: ").append(blocker);
+            }
+            for (Task blocker : task.tasksThatMustFinishSuccessfullyFirst) {
+                message.append("\n  depends on successful task: ").append(blocker);
+            }
+            console.verbose(message.toString());
+        }
     }
 
-    /**
-     * Returns all tasks currently enqueued.
-     */
-    public synchronized List<Task> getTasks() {
-        ArrayList<Task> result = new ArrayList<Task>();
-        result.addAll(runnableTasks);
-        result.addAll(blockedTasks);
-        return result;
+    public void printProblemTasks() {
+        for (Task task : failedTasks) {
+            String message = "Failed task: " + task + " " + task.result;
+            if (task.thrown != null) {
+                console.info(message, task.thrown);
+            } else {
+                console.info(message);
+            }
+        }
+        if (!console.isVerbose()) {
+            return;
+        }
+        for (Task task : tasks) {
+            StringBuilder message = new StringBuilder()
+                    .append("Failed to execute task: ").append(task);
+            for (Task blocker : task.tasksThatMustFinishFirst) {
+                if (blocker.result == null) {
+                    message.append("\n  blocked by unexecuted task: ").append(blocker);
+                }
+            }
+            for (Task blocker : task.tasksThatMustFinishSuccessfullyFirst) {
+                if (blocker.result == null) {
+                    message.append("\n  blocked by unexecuted task: ").append(blocker);
+                } else if (blocker.result != Result.SUCCESS) {
+                    message.append("\n  blocked by unsuccessful task: ").append(blocker);
+                }
+            }
+            console.verbose(message.toString());
+        }
     }
 
     private boolean runOneTask() {
@@ -90,7 +134,7 @@ public final class TaskQueue {
         try {
             task.run(console);
         } finally {
-            doneTask();
+            doneTask(task);
             Thread.currentThread().setName(threadName);
         }
         return true;
@@ -116,20 +160,25 @@ public final class TaskQueue {
         }
     }
 
-    private synchronized void doneTask() {
+    private synchronized void doneTask(Task task) {
+        if (task.result != Result.SUCCESS) {
+            failedTasks.add(task);
+        }
         runningTasks--;
+        promoteBlockedTasks();
+        if (isExhausted()) {
+            notifyAll();
+        }
+    }
 
-        for (Iterator<Task> it = blockedTasks.iterator(); it.hasNext(); ) {
+    private synchronized void promoteBlockedTasks() {
+        for (Iterator<Task> it = tasks.iterator(); it.hasNext(); ) {
             Task potentiallyUnblocked = it.next();
             if (potentiallyUnblocked.isRunnable()) {
                 it.remove();
                 runnableTasks.add(potentiallyUnblocked);
                 notifyAll();
             }
-        }
-
-        if (isExhausted()) {
-            notifyAll();
         }
     }
 

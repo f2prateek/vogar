@@ -16,21 +16,13 @@
 
 package vogar;
 
+import com.google.common.base.Splitter;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
 import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Properties;
 import java.util.Set;
-import java.util.regex.Pattern;
-import javax.inject.Inject;
-import javax.inject.Named;
-import vogar.commands.Command;
-import vogar.commands.CommandFailedException;
-import vogar.commands.Mkdir;
+import vogar.commands.VmCommandBuilder;
+import vogar.tasks.RunActionTask;
 import vogar.tasks.Task;
 import vogar.tasks.TaskQueue;
 
@@ -40,158 +32,78 @@ import vogar.tasks.TaskQueue;
  * Activity.
  */
 public abstract class Mode {
-    private static final Pattern JAVA_SOURCE_PATTERN = Pattern.compile("\\/(\\w)+\\.java$");
+    protected final Run run;
 
-    @Inject public Environment environment;
-    @Inject Log log;
-    @Inject Mkdir mkdir;
-    @Inject @Named("buildClasspath") Classpath buildClasspath;
-    @Inject @Named("sourcepath") List<File> sourcepath;
-    @Inject @Named("debugPort") Integer debugPort;
-    @Inject @Named("javacArgs") List<String> javacArgs;
-    @Inject @Named("javaHome") File javaHome;
-    @Inject @Named("firstMonitorPort") int firstMonitorPort;
-    @Inject @Named("smallTimeoutSeconds") int timeoutSeconds;
-    @Inject @Named("useBootClasspath") boolean useBootClasspath;
-    @Inject @Named("profile") boolean profile;
-    @Inject @Named("profileDepth") int profileDepth;
-    @Inject @Named("profileInterval") int profileInterval;
-    @Inject @Named("profileFile") File profileFile;
-    @Inject @Named("profileThreadGroup") boolean profileThreadGroup;
+    protected Mode(Run run) {
+        this.run = run;
+    }
 
     /**
-     * User classes that need to be included in the classpath for both
-     * compilation and execution. Also includes dependencies of all active
-     * runners.
+     * Returns a parsed list of the --invoke-with command and its
+     * arguments, or an empty list if no --invoke-with was provided.
      */
-    @Inject protected Classpath classpath = new Classpath();
-
-    /**
-     * Returns a path for a Java tool such as java, javac, jar where
-     * the Java home is used if present, otherwise assumes it will
-     * come from the path.
-     */
-    String javaPath (String tool) {
-        return (javaHome == null)
-            ? tool
-            : new File(new File(javaHome, "bin"), tool).getPath();
+    protected Iterable<String> invokeWith() {
+        if (run.invokeWith == null) {
+            return Collections.emptyList();
+        }
+        return Splitter.onPattern("\\s+").omitEmptyStrings().split(run.invokeWith);
     }
 
     /**
      * Initializes the temporary directories and harness necessary to run
      * actions.
      */
-    protected void installTasks(TaskQueue taskQueue) {
-    }
-
-    /**
-     * Returns the .jar file containing the action's compiled classes.
-     *
-     * @throws CommandFailedException if javac fails
-     */
-    public void compile(Action action, File jar) throws IOException {
-        File classesDir = environment.file(action, "classes");
-        mkdir.mkdirs(classesDir);
-        createJarMetadataFiles(action, classesDir);
-
-        Set<File> sourceFiles = new HashSet<File>();
-        File javaFile = action.getJavaFile();
-        Javac javac = new Javac(log, javaPath("javac"));
-        if (debugPort != null) {
-            javac.debug();
-        }
-        if (javaFile != null) {
-            if (!JAVA_SOURCE_PATTERN.matcher(javaFile.toString()).find()) {
-                throw new CommandFailedException(Collections.<String>emptyList(),
-                        Collections.singletonList("Cannot compile: " + javaFile));
-            }
-            sourceFiles.add(javaFile);
-            Classpath sourceDirs = Classpath.of(action.getSourcePath());
-            sourceDirs.addAll(sourcepath);
-            javac.sourcepath(sourceDirs.getElements());
-        }
-        if (!sourceFiles.isEmpty()) {
-            if (!buildClasspath.isEmpty()) {
-                javac.bootClasspath(buildClasspath);
-            }
-            javac.classpath(classpath)
-                    .destination(classesDir)
-                    .extra(javacArgs)
-                    .compile(sourceFiles);
-        }
-
-        new Command(log, javaPath("jar"), "cvfM", jar.getPath(),
-                "-C", classesDir.getPath(), "./").execute();
-    }
-
-    /**
-     * Writes files to {@code classesDir} to be included in the .jar file for
-     * {@code action}.
-     */
-    protected void createJarMetadataFiles(Action action, File classesDir) throws IOException {
-        OutputStream propertiesOut
-                = new FileOutputStream(new File(classesDir, TestProperties.FILE));
-        Properties properties = new Properties();
-        fillInProperties(properties, action);
-        properties.store(propertiesOut, "generated by " + Mode.class.getName());
-        propertiesOut.close();
-    }
-
-    /**
-     * Fill in properties for running in this mode
-     */
-    protected void fillInProperties(Properties properties, Action action) {
-        properties.setProperty(TestProperties.TEST_CLASS_OR_PACKAGE, action.getTargetClass());
-        properties.setProperty(TestProperties.QUALIFIED_NAME, action.getName());
-        properties.setProperty(TestProperties.MONITOR_PORT, Integer.toString(firstMonitorPort));
-        properties.setProperty(TestProperties.TIMEOUT, Integer.toString(timeoutSeconds));
-        properties.setProperty(TestProperties.PROFILE, Boolean.toString(profile));
-        properties.setProperty(TestProperties.PROFILE_DEPTH, Integer.toString(profileDepth));
-        properties.setProperty(TestProperties.PROFILE_INTERVAL, Integer.toString(profileInterval));
-        properties.setProperty(TestProperties.PROFILE_FILE, profileFile.getName());
-        properties.setProperty(TestProperties.PROFILE_THREAD_GROUP,
-                               Boolean.toString(profileThreadGroup));
+    protected void installTasks(Set<Task> tasks) {
     }
 
     /**
      * Hook method called after action compilation.
      */
-    public abstract Task installActionTask(TaskQueue taskQueue, Task compileTask,
+    public abstract void installActionTask(Set<Task> tasks, Task compileTask,
             final Action action, File jar);
 
-    /**
-     * Create the command that executes the action.
-     *
-     * @param skipPast the last outcome to skip, or null to run all outcomes.
-     * @param monitorPort the port to accept connections on, or -1 for the
-     */
-    public abstract Command createActionCommand(Action action, String skipPast, int monitorPort);
+    public void fillInProperties(Properties properties, Action action) {
+    }
 
     /**
      * Deletes files and releases any resources required for the execution of
      * the given action.
      */
-    public void cleanup(Action action) {
-        environment.cleanup(action);
+    public void cleanup(TaskQueue taskQueue, Action action, Task runActionTask) {
+        run.environment.cleanup(taskQueue, action, runActionTask);
     }
 
     /**
      * Cleans up after all actions have completed.
      */
     void shutdown() {
-        environment.shutdown();
+        run.environment.shutdown();
     }
 
     public Classpath getClasspath() {
-        return classpath;
+        return run.classpath;
     }
 
     /**
-     * Returns true if this mode requires a socket connection for reading test
-     * results. Otherwise all communication happens over the output stream of
-     * the forked process.
+     * Returns a VM for action execution.
+     *
+     * @param workingDirectory the working directory of the target process. If
+     *     the process runs on another device, this is the working directory of
+     *     the device.
      */
-    public boolean useSocketMonitor() {
-        return false;
+    public VmCommandBuilder newVmCommandBuilder(Action action, File workingDirectory) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Returns the classpath containing JUnit and the dalvik annotations
+     * required for action execution.
+     */
+    public Classpath getRuntimeClasspath(Action action) {
+        throw new UnsupportedOperationException();
+    }
+
+    public Task createRunActionTask(Action action, boolean useLargeTimeout) {
+        return new RunActionTask(run, action, useLargeTimeout);
     }
 }

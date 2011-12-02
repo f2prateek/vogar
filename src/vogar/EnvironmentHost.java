@@ -17,19 +17,18 @@
 package vogar;
 
 import java.io.File;
-import java.io.FileFilter;
-import javax.inject.Inject;
 import vogar.commands.Command;
-import vogar.commands.Mkdir;
+import vogar.tasks.RetrieveFilesTask;
+import vogar.tasks.Task;
+import vogar.tasks.TaskQueue;
 
 public final class EnvironmentHost extends Environment {
-    @Inject Log log;
-    @Inject Mkdir mkdir;
-    @Inject RetrievedFilesFilter retrievedFiles;
-    @Inject EnvironmentHost() {}
+    public EnvironmentHost(Run run) {
+        super(run);
+    }
 
     public void prepareUserDir(Action action) {
-        File actionUserDir = actionUserDir(action);
+        File actionUserDir = action.getUserDir();
 
         // if the user dir exists, cp would copy the files to the wrong place
         if (actionUserDir.exists()) {
@@ -38,39 +37,23 @@ public final class EnvironmentHost extends Environment {
 
         File resourcesDirectory = action.getResourcesDirectory();
         if (resourcesDirectory != null) {
-            mkdir.mkdirs(actionUserDir.getParentFile());
-            new Command(log, "cp", "-r", resourcesDirectory.toString(),
+            run.mkdir.mkdirs(actionUserDir.getParentFile());
+            new Command(run.log, "cp", "-r", resourcesDirectory.toString(),
                     actionUserDir.toString()).execute();
         } else {
-            mkdir.mkdirs(actionUserDir);
-        }
-
-        action.setUserDir(actionUserDir);
-    }
-
-    /**
-     * Recursively scans {@code dir} for files to grab.
-     */
-    private void retrieveFiles(File destination, File source, FileFilter filenameFilter) {
-        for (File file : source.listFiles(filenameFilter)) {
-            log.info("Moving " + file + " to " + destination);
-            mkdir.mkdirs(destination);
-            new Command(log, "cp", file.getPath(), destination.getPath()).execute();
-        }
-
-        FileFilter directoryFilter = new FileFilter() {
-            public boolean accept(File file) {
-                return file.isDirectory();
-            }
-        };
-
-        for (File subDir : source.listFiles(directoryFilter)) {
-            retrieveFiles(new File(destination, subDir.getName()), subDir, filenameFilter);
+            run.mkdir.mkdirs(actionUserDir);
         }
     }
 
-    @Override public void cleanup(Action action) {
-        retrieveFiles(new File("./vogar-results"), action.getUserDir(), retrievedFiles);
-        super.cleanup(action);
+    public File actionUserDir(Action action) {
+        File testTemp = new File(run.localTemp, "userDir");
+        return new File(testTemp, action.getName());
+    }
+
+    @Override public void cleanup(TaskQueue taskQueue, Action action, Task runActionTask) {
+        Task task = new RetrieveFilesTask(
+                run, new File("./vogar-results"), action.getUserDir(), run.retrievedFiles);
+        taskQueue.enqueue(task.after(runActionTask));
+        super.cleanup(taskQueue, action, runActionTask);
     }
 }

@@ -17,40 +17,24 @@
 package vogar;
 
 import com.google.common.collect.Lists;
-import com.google.inject.Provides;
-import com.google.inject.mini.MiniGuice;
 import java.io.File;
 import java.io.IOException;
-import java.net.URL;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
-import javax.inject.Named;
-import javax.inject.Provider;
-import javax.inject.Singleton;
-import vogar.android.ActivityMode;
 import vogar.android.AndroidSdk;
-import vogar.android.AppProcessMode;
-import vogar.android.DeviceDalvikVm;
-import vogar.android.DeviceFileCache;
-import vogar.android.EnvironmentDevice;
-import vogar.android.HostDalvikVm;
-import vogar.commands.Mkdir;
 
 /**
  * Command line interface for running benchmarks and tests on dalvik.
  */
 public final class Vogar {
-
-    private static final int LARGE_TIMEOUT_MULTIPLIER = 10;
-    private static final int NUM_PROCESSORS = Runtime.getRuntime().availableProcessors();
+    static final int LARGE_TIMEOUT_MULTIPLIER = 10;
+    static final int NUM_PROCESSORS = Runtime.getRuntime().availableProcessors();
 
     private final List<File> actionFiles = new ArrayList<File>();
     private final List<String> actionClassesAndPackages = new ArrayList<String>();
-    private final List<String> targetArgs = new ArrayList<String>();
+    final List<String> targetArgs = new ArrayList<String>();
     private final OptionParser optionParser = new OptionParser(this);
     private File configFile = Vogar.dotFile(".vogarconfig");
 
@@ -59,127 +43,127 @@ public final class Vogar {
     }
 
     @Option(names = { "--expectations" })
-    private Set<File> expectationFiles = new LinkedHashSet<File>();
+    Set<File> expectationFiles = new LinkedHashSet<File>();
     {
         expectationFiles.addAll(AndroidSdk.defaultExpectations());
     }
 
     @Option(names = { "--mode" })
-    private ModeId mode = ModeId.DEVICE;
+    ModeId mode = ModeId.DEVICE;
 
     @Option(names = { "--timeout" })
-    private int timeoutSeconds = 1 * 60; // default is one minute;
+    int timeoutSeconds = 1 * 60; // default is one minute;
 
     @Option(names = { "--first-monitor-port" })
-    private int firstMonitorPort = -1;
+    int firstMonitorPort = -1;
 
     @Option(names = { "--clean-before" })
-    private boolean cleanBefore = true;
+    boolean cleanBefore = true;
 
     @Option(names = { "--clean-after" })
-    private boolean cleanAfter = true;
+    boolean cleanAfter = true;
 
     @Option(names = { "--clean" })
     private boolean clean = true;
 
     @Option(names = { "--xml-reports-directory" })
-    private File xmlReportsDirectory;
+    File xmlReportsDirectory;
 
     @Option(names = { "--indent" })
-    private String indent = "  ";
+    String indent = "  ";
 
     @Option(names = { "--verbose" })
-    private boolean verbose;
+    boolean verbose;
 
     @Option(names = { "--stream" })
-    private boolean stream = true;
+    boolean stream = true;
 
     @Option(names = { "--color" })
-    private boolean color = true;
+    boolean color = true;
 
     @Option(names = { "--pass-color" })
-    private int passColor = 32; // green
+    int passColor = 32; // green
 
     @Option(names = { "--warn-color" })
-    private int warnColor = 33; // yellow
+    int warnColor = 33; // yellow
 
     @Option(names = { "--fail-color" })
-    private int failColor = 31; // red
+    int failColor = 31; // red
 
     @Option(names = { "--ansi" })
-    private boolean ansi = !"dumb".equals(System.getenv("TERM"));
+    boolean ansi = !"dumb".equals(System.getenv("TERM"));
 
     @Option(names = { "--debug" })
-    private Integer debugPort;
+    Integer debugPort;
 
     @Option(names = { "--device-dir" })
-    private File deviceDir = new File("/sdcard/vogar");
+    File deviceDir = new File("/sdcard/vogar");
 
     @Option(names = { "--vm-arg" })
-    private List<String> vmArgs = new ArrayList<String>();
+    List<String> vmArgs = new ArrayList<String>();
 
     @Option(names = { "--java-home" })
-    private File javaHome;
+    File javaHome;
 
     @Option(names = { "--javac-arg" })
-    private List<String> javacArgs = new ArrayList<String>();
+    List<String> javacArgs = new ArrayList<String>();
 
     @Option(names = { "--use-bootclasspath" })
-    private boolean useBootClasspath = false;
+    boolean useBootClasspath = false;
 
     @Option(names = { "--build-classpath" })
-    private List<File> buildClasspath = new ArrayList<File>();
+    List<File> buildClasspath = new ArrayList<File>();
 
     @Option(names = { "--classpath", "-cp" })
-    private List<File> classpath = new ArrayList<File>();
+    List<File> classpath = new ArrayList<File>();
 
     @Option(names = { "--sourcepath" })
-    private List<File> sourcepath = new ArrayList<File>();
+    List<File> sourcepath = new ArrayList<File>();
     {
         sourcepath.addAll(AndroidSdk.defaultSourcePath());
     }
 
     @Option(names = { "--jar-search-dir" })
-    private List<File> jarSearchDirs = Lists.newArrayList();
+    List<File> jarSearchDirs = Lists.newArrayList();
 
     @Option(names = { "--vogar-dir" })
-    private File vogarDir = Vogar.dotFile(".vogar");
+    File vogarDir = Vogar.dotFile(".vogar");
 
     @Option(names = { "--record-results" })
-    private boolean recordResults = false;
+    boolean recordResults = false;
 
     @Option(names = { "--results-dir" })
-    private File resultsDir = null;
+    File resultsDir = null;
 
     @Option(names = { "--suggest-classpaths" })
-    private boolean suggestClasspaths = false;
+    boolean suggestClasspaths = false;
 
     @Option(names = { "--invoke-with" })
-    private String invokeWith = null;
+    String invokeWith = null;
 
     @Option(names = { "--benchmark" })
-    private boolean benchmark = false;
+    boolean benchmark = false;
 
     @Option(names = { "--open-bugs-command" })
-    private String openBugsCommand;
+    String openBugsCommand;
 
     @Option(names = { "--profile" })
-    private boolean profile = false;
+    boolean profile = false;
 
     @Option(names = { "--profile-binary" })
-    private boolean profileBinary = false;
+    boolean profileBinary = false;
 
     @Option(names = { "--profile-file" })
-    private File profileFile;
+    File profileFile;
 
     @Option(names = { "--profile-depth" })
-    private int profileDepth = 4;
+    int profileDepth = 4;
 
     @Option(names = { "--profile-interval" })
-    private int profileInterval = 10;
+    int profileInterval = 10;
 
     @Option(names = { "--profile-thread-group" })
-    private boolean profileThreadGroup = false;
+    boolean profileThreadGroup = false;
 
     private Vogar() {}
 
@@ -453,12 +437,12 @@ public final class Vogar {
         return true;
     }
 
-    private boolean run() {
-        Driver driver = MiniGuice.inject(Driver.class, new Module());
-        return driver.buildAndRun(actionFiles, actionClassesAndPackages);
+    private boolean run() throws IOException {
+        Run run = new Run(this);
+        return run.driver.buildAndRun(actionFiles, actionClassesAndPackages);
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         Vogar vogar = new Vogar();
         if (!vogar.parseArgs(args)) {
             vogar.printUsage();
@@ -466,251 +450,5 @@ public final class Vogar {
         }
         boolean allSuccess = vogar.run();
         System.exit(allSuccess ? 0 : 1);
-    }
-
-    private class Module {
-        @Provides @Singleton Console provideConsole() {
-            Console console = stream
-                    ? new Console.StreamingConsole()
-                    : new Console.MultiplexingConsole();
-            console.setUseColor(color, passColor, warnColor, failColor);
-            console.setAnsi(ansi);
-            console.setIndent(indent);
-            console.setVerbose(verbose);
-            return console;
-        }
-
-        @Provides Log provideLog(Console console) {
-            return console;
-        }
-
-        @Provides @Named("additionalVmArgs") List<String> provideAdditionalVmArgs() {
-            return vmArgs;
-        }
-
-        @Provides @Named("deviceDir") File provideDeviceDir() {
-            return deviceDir;
-        }
-
-        @Provides @Singleton AndroidSdk provideAndroidSdk(
-                Log log, Mkdir mkdir, HostFileCache hostFileCache) {
-            AndroidSdk androidSdk = new AndroidSdk(log, mkdir, mode);
-            // resolve the circular dependency between device file cache & android SDK manually
-            androidSdk.setCaches(hostFileCache, new DeviceFileCache(log, deviceDir, androidSdk));
-            return androidSdk;
-        }
-
-        @Provides @Named("benchmark") boolean provideBenchmark() {
-            return benchmark;
-        }
-
-        @Provides @Named("buildClasspath") Classpath provideBuildClasspath(
-                Provider<AndroidSdk> androidSdkProvider) {
-            Classpath result = Classpath.of(buildClasspath);
-            if (mode.requiresAndroidSdk()) {
-                result.addAll(androidSdkProvider.get().getAndroidClasses());
-            }
-            return result;
-        }
-
-        @Provides ClassFileIndex provideClassFileIndex(Log log, Mkdir mkdir) {
-            ClassFileIndex classFileIndex = new ClassFileIndex(log, mkdir, jarSearchDirs);
-            if (suggestClasspaths) {
-                classFileIndex.createIndex();
-            }
-            return classFileIndex;
-        }
-
-        @Provides Classpath provideClasspath(@Named("vogarJar") File vogarJar) {
-            Classpath result = Classpath.of(classpath);
-            result.addAll(vogarJar);
-            return result;
-        }
-
-        @Provides @Named("cleanAfter") boolean provideCleanAfter() {
-            return cleanAfter;
-        }
-
-        @Provides @Named("cleanBefore") boolean provideCleanBefore() {
-            return cleanBefore;
-        }
-
-        @Provides Date provideDate() {
-            return new Date();
-        }
-
-        @Provides @Named("debugPort") Integer provideDebugPort() {
-            return debugPort;
-        }
-
-        @Provides @Named("deviceUserHome") File deviceUserHome() {
-            return new File(deviceDir, "user.home");
-        }
-
-        @Provides Environment provideEnvironment(Provider<EnvironmentHost> environmentHostProvider,
-                Provider<EnvironmentDevice> environmentDeviceProvider) {
-            return mode.isHost()
-                    ? environmentHostProvider.get()
-                    : environmentDeviceProvider.get();
-        }
-
-        @Provides @Singleton ExpectationStore provideExpectationStore(
-                Console console, ExpectationStore.BugDatabase bugDatabase) throws IOException {
-            ExpectationStore result = ExpectationStore.parse(console, expectationFiles, mode);
-            if (bugDatabase != null) {
-                result.loadBugStatuses(bugDatabase);
-            }
-            return result;
-        }
-
-        @Provides @Named("fastMode") boolean provideFastMode() {
-            return benchmark;
-        }
-
-        @Provides @Singleton ExpectationStore.BugDatabase provideBugDatabase(Log log) {
-            return openBugsCommand != null
-                    ? new CommandBugDatabase(log, openBugsCommand)
-                    : null;
-        }
-
-        @Provides @Named("firstMonitorPort") int provideFirstMonitorPort() {
-            return firstMonitorPort;
-        }
-
-        @Provides @Named("hostBuild") boolean provideHostBuild() {
-            return (Vogar.this.mode == ModeId.HOST);
-        }
-
-        @Provides @Named("invokeWith") String provideInvokeWith() {
-            return invokeWith;
-        }
-
-        @Provides @Named("javacArgs") List<String> provideJavacArgs() {
-            return javacArgs;
-        }
-
-        @Provides @Named("javaHome") File provideJavaHome() {
-            return javaHome;
-        }
-
-        @Provides @Named("largeTimeoutSeconds") int provideLargeTimeoutSeconds() {
-            return timeoutSeconds * LARGE_TIMEOUT_MULTIPLIER;
-        }
-
-        @Provides @Singleton @Named("localTemp") File provideLocalTemp() {
-            return new File("/tmp/vogar/" + UUID.randomUUID());
-        }
-
-        @Provides @Named("numRunners") int provideNumRunners() {
-            return (stream || Vogar.this.mode == ModeId.ACTIVITY)
-                    ? 1
-                    : NUM_PROCESSORS;
-        }
-
-        @Provides Mode provideMode(Provider<JavaVm> javaVmProvider,
-                Provider<HostDalvikVm> hostDalvikVmProvider,
-                Provider<DeviceDalvikVm> deviceDalvikVmProvider,
-                Provider<ActivityMode> activityModeProvider,
-                Provider<AppProcessMode> appProcessModeProvider) {
-            switch (Vogar.this.mode) {
-                case JVM:
-                    return javaVmProvider.get();
-                case HOST:
-                    return hostDalvikVmProvider.get();
-                case DEVICE:
-                    return deviceDalvikVmProvider.get();
-                case ACTIVITY:
-                    return activityModeProvider.get();
-                case APP_PROCESS:
-                    return appProcessModeProvider.get();
-                default:
-                    throw new AssertionError("Unknown mode " + Vogar.this.mode);
-            }
-        }
-
-        @Provides @Named("recordResults") boolean provideRecordResults() {
-            return recordResults;
-        }
-
-        @Provides @Named("resultsDir") File provideResultsDir() {
-            return resultsDir == null ? new File(vogarDir, "results") : resultsDir;
-        }
-
-        @Provides @Named("runnerDir") File provideRunnerDir() {
-            return new File(deviceDir, "run");
-        }
-
-        @Provides @Named("smallTimeoutSeconds") int provideSmallTimeoutSeconds() {
-            return timeoutSeconds;
-        }
-
-        @Provides @Named("sourcepath") List<File> provideSourcepath() {
-            return sourcepath;
-        }
-
-        @Provides @Named("useBootClasspath") boolean provideUseBootClasspath() {
-            return useBootClasspath;
-        }
-
-        @Provides @Named("targetArgs") List<String> provideTargetArgs() {
-            return targetArgs;
-        }
-
-        @Provides @Named("vogarTemp") File provideVogarTemp() {
-            return vogarDir;
-        }
-
-        @Provides @Named("keystore") File provideKeystore(Environment environment) {
-            return environment.file("activity", "vogar.keystore");
-        }
-
-        @Provides @Named("xmlReportsDirectory") File provideXmlReportsDirectory() {
-            return xmlReportsDirectory;
-        }
-
-        @Provides @Named("profile") boolean provideProfile() {
-            return profile;
-        }
-
-        @Provides @Named("profileBinary") boolean provideProfileBinary() {
-            return profileBinary;
-        }
-
-        @Provides @Named("profileFile") File provideProfileFile() {
-            return profileFile;
-        }
-
-        @Provides @Named("profileDepth") int provideProfileDepth() {
-            return profileDepth;
-        }
-
-        @Provides @Named("profileInterval") int profileInterval() {
-            return profileInterval;
-        }
-
-        @Provides @Named("profileThreadGroup") boolean profileThreadGroup() {
-            return profileThreadGroup;
-        }
-
-        @Provides @Named("vogarJar") File provideVogarJar() {
-            URL jarUrl = Vogar.class.getResource("/vogar/Vogar.class");
-            if (jarUrl == null) {
-                // should we add an option for IDE users, to use a user-specified vogar.jar?
-                throw new IllegalStateException("Vogar cannot find its own .jar");
-            }
-
-            /*
-             * Parse a URI like jar:file:/Users/jessewilson/vogar/vogar.jar!/vogar/Vogar.class
-             * to yield a .jar file like /Users/jessewilson/vogar/vogar.jar.
-             */
-            String url = jarUrl.toString();
-            int bang = url.indexOf("!");
-            String JAR_URI_PREFIX = "jar:file:";
-            if (url.startsWith(JAR_URI_PREFIX) && bang != -1) {
-                return new File(url.substring(JAR_URI_PREFIX.length(), bang));
-            } else {
-                throw new IllegalStateException("Vogar cannot find the .jar file in " + jarUrl);
-            }
-        }
     }
 }

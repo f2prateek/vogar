@@ -20,61 +20,52 @@ import com.google.common.collect.Iterables;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import javax.inject.Inject;
-import javax.inject.Named;
-import vogar.commands.Mkdir;
+import java.util.Set;
+import vogar.commands.VmCommandBuilder;
 import vogar.tasks.Task;
-import vogar.tasks.TaskQueue;
 
 /**
  * A local Java virtual machine like Harmony or the RI.
  */
-final class JavaVm extends Vm {
-    @Inject JavaVm() {}
-    @Inject @Named("profile") boolean profile;
-    @Inject @Named("profileBinary") boolean profileBinary;
-    @Inject @Named("profileFile") File profileFile;
-    @Inject @Named("profileDepth") int profileDepth;
-    @Inject @Named("profileInterval") int profileInterval;
+final class JavaVm extends Mode {
+    JavaVm(Run run) {
+        super(run);
+    }
 
-    @Override protected VmCommandBuilder newVmCommandBuilder(Action action, File workingDirectory) {
+    @Override public VmCommandBuilder newVmCommandBuilder(Action action, File workingDirectory) {
         List<String> vmCommand = new ArrayList<String>();
         Iterables.addAll(vmCommand, invokeWith());
-        vmCommand.add(javaPath("java"));
-        if (profile) {
+        vmCommand.add(run.javaPath("java"));
+        if (run.profile) {
             vmCommand.add("-agentlib:hprof="
                           + "cpu=samples,"
-                          + "format=" + (profileBinary ? 'b' : 'a') + ","
-                          + "file=" + profileFile + ","
-                          + "depth=" + profileDepth + ","
-                          + "interval=" + profileInterval + ","
+                          + "format=" + (run.profileBinary ? 'b' : 'a') + ","
+                          + "file=" + run.profileFile + ","
+                          + "depth=" + run.profileDepth + ","
+                          + "interval=" + run.profileInterval + ","
                           + "thread=y,"
                           + "verbose=n");
         }
-        return new VmCommandBuilder()
+        return new VmCommandBuilder(run.log)
                 .userDir(workingDirectory)
                 .vmCommand(vmCommand);
     }
 
-    @Override public Task installActionTask(final TaskQueue taskQueue, final Task compileTask,
+    @Override public void installActionTask(Set<Task> tasks, final Task compileTask,
             final Action action, File jar) {
-        Task install = new Task("install " + compileTask) {
-            @Override protected Result execute() throws Exception {
-                ((EnvironmentHost) environment).prepareUserDir(action);
+        tasks.add(new Task("install " + compileTask) {
+            @Override
+            protected Result execute() throws Exception {
+                ((EnvironmentHost) run.environment).prepareUserDir(action);
                 return Result.SUCCESS;
             }
-            @Override public boolean isRunnable() {
-                return compileTask.getResult() != null;
-            }
-        };
-        taskQueue.enqueue(install);
-        return install;
+        }.afterSuccess(compileTask));
     }
 
-    @Override protected Classpath getRuntimeClasspath(Action action) {
+    @Override public Classpath getRuntimeClasspath(Action action) {
         Classpath result = new Classpath();
-        result.addAll(classpath);
-        result.addAll(environment.hostJar(action));
+        result.addAll(run.classpath);
+        result.addAll(run.environment.hostJar(action));
 
         /*
          * For javax.net.ssl tests dependency on Bouncy Castle for

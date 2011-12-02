@@ -27,8 +27,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
-import javax.inject.Inject;
-import javax.inject.Named;
 import org.kxml2.io.KXmlSerializer;
 
 
@@ -46,33 +44,21 @@ public class XmlReportPrinter {
     /** the XML namespace */
     private static final String ns = null;
 
-    @Inject @Named("xmlReportsDirectory") File directory;
-    @Inject ExpectationStore expectationStore;
-    @Inject Date date;
+    private final File directory;
+    private final ExpectationStore expectationStore;
+    private final Date date;
 
-    private boolean printAll;
+    public XmlReportPrinter(File directory, ExpectationStore expectationStore, Date date) {
+        this.directory = directory;
+        this.expectationStore = expectationStore;
+        this.date = date;
+    }
 
     /**
      * Returns true if this XML Report printer can be used to emit XML.
      */
     public boolean isReady() {
         return directory != null;
-    }
-
-    /**
-     * @param printAll true if successful tests should have their output
-     *     printed (e.g. something with success signature "SUCCESS (EXEC_FAILED)"
-     *     would not normally be printed).
-     */
-    public void setOutput(File outcomeResultDir, boolean printAll) {
-        this.directory = outcomeResultDir;
-        this.printAll = printAll;
-    }
-
-    public void generateReport(Outcome outcome, String outputFileName) {
-        String timestamp = getGMTTimestamp();
-        Suite suite = testToSuite(outcome);
-        suite.printReport(timestamp, outputFileName);
     }
 
     private String getGMTTimestamp() {
@@ -97,23 +83,6 @@ public class XmlReportPrinter {
         }
 
         return suites.size();
-    }
-
-    private Suite testToSuite(Outcome outcome) {
-        String suiteName = outcome.getSuiteName();
-        Suite suite = new Suite(suiteName);
-        suite.outcomes.add(outcome);
-
-        Expectation expectation = expectationStore.get(outcome);
-        if (!expectation.matches(outcome)) {
-            if (outcome.getResult() == Result.EXEC_FAILED) {
-                suite.failuresCount++;
-            } else {
-                suite.errorsCount++;
-            }
-        }
-
-        return suite;
     }
 
     private Map<String, Suite> testsToSuites(Collection<Outcome> outcomes) {
@@ -180,7 +149,7 @@ public class XmlReportPrinter {
             serializer.attribute(ns, XmlReportConstants.ATTR_TIME, "0");
 
             Expectation expectation = expectationStore.get(outcome);
-            if (printAll || !expectation.matches(outcome)) {
+            if (!expectation.matches(outcome)) {
                 String result;
                 switch (outcome.getResult()) {
                     case EXEC_FAILED:

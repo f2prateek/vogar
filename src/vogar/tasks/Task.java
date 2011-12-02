@@ -16,7 +16,9 @@
 
 package vogar.tasks;
 
-import java.util.Collection;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import vogar.Console;
 import vogar.Result;
 
@@ -27,24 +29,47 @@ import vogar.Result;
  */
 public abstract class Task {
     private final String name;
+    final List<Task> tasksThatMustFinishFirst = new ArrayList<Task>();
+    final List<Task> tasksThatMustFinishSuccessfullyFirst = new ArrayList<Task>();
     volatile Result result;
+    Exception thrown;
 
     protected Task(String name) {
         this.name = name;
     }
 
-    /**
-     * Returns the result of this task; null if this task has not yet completed.
-     */
-    public Result getResult() {
-        return result;
+    public Task after(Task prerequisite) {
+        tasksThatMustFinishFirst.add(prerequisite);
+        return this;
+    }
+
+    public Task afterSuccess(Task prerequisite) {
+        tasksThatMustFinishSuccessfullyFirst.add(prerequisite);
+        return this;
+    }
+
+    public Task afterSuccess(Set<Task> prerequisitess) {
+        tasksThatMustFinishSuccessfullyFirst.addAll(prerequisitess);
+        return this;
+    }
+
+    public final boolean isRunnable() {
+        for (Task task : tasksThatMustFinishFirst) {
+            if (task.result == null) {
+                return false;
+            }
+        }
+        for (Task task : tasksThatMustFinishSuccessfullyFirst) {
+            if (task.result != Result.SUCCESS) {
+                return false;
+            }
+        }
+        return true;
     }
 
     protected abstract Result execute() throws Exception;
 
-    public abstract boolean isRunnable();
-
-    public final void run(Console console) {
+    final void run(Console console) {
         if (result != null) {
             throw new IllegalStateException();
         }
@@ -52,43 +77,16 @@ public abstract class Task {
             console.verbose("running " + this);
             result = execute();
         } catch (Exception e) {
-            e.printStackTrace(); // TODO: capture this properly (for XML etc.)
+            thrown = e;
             result = Result.ERROR;
         }
 
         if (result != Result.SUCCESS) {
             console.verbose("warning " + this + " " + result);
-        } else {
-            console.verbose("success " + this);
         }
     }
 
     @Override public final String toString() {
         return name;
-    }
-
-    /**
-     * A task that is complete only when {@code tasks} are complete.
-     * TODO: don't use tasks as predicates
-     */
-    public static Task uponSuccessOf(final Collection<Task> tasks) {
-        return new Task("completion of " + tasks) {
-            @Override protected Result execute() throws Exception {
-                for (Task task : tasks) {
-                    if (task.getResult() != Result.SUCCESS) {
-                        return task.getResult();
-                    }
-                }
-                return Result.SUCCESS;
-            }
-            @Override public boolean isRunnable() {
-                for (Task task : tasks) {
-                    if (task.getResult() == null) {
-                        return false;
-                    }
-                }
-                return true;
-            }
-        };
     }
 }

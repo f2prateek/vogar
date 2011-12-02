@@ -14,23 +14,23 @@
  * limitations under the License.
  */
 
-package vogar;
+package vogar.commands;
 
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import vogar.commands.Command;
+import vogar.Classpath;
+import vogar.Log;
 import vogar.util.Strings;
 
 /**
  * A javac command.
  */
-final class Javac {
-
+public final class Javac {
     private final Command.Builder builder;
 
-    Javac(Log log, String javac) {
+    public Javac(Log log, String javac) {
         builder = new Command.Builder(log);
         builder.args(javac);
     }

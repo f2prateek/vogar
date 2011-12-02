@@ -17,33 +17,18 @@
 package vogar;
 
 import java.io.File;
-import javax.inject.Inject;
-import javax.inject.Named;
-import vogar.commands.Rm;
+import vogar.tasks.DeleteDirectoryTask;
+import vogar.tasks.Task;
 import vogar.tasks.TaskQueue;
-import vogar.util.Strings;
 
 /**
  * A target runtime environment such as a remote device or the local host
  */
 public abstract class Environment {
-    @Inject Log log;
-    @Inject Rm rm;
-    @Inject @Named("cleanBefore") boolean cleanBefore;
-    @Inject @Named("cleanAfter") boolean cleanAfter;
-    @Inject @Named("debugPort") Integer debugPort;
-    @Inject @Named("localTemp") File localTemp;
+    protected final Run run;
 
-    public final boolean cleanBefore() {
-        return cleanBefore;
-    }
-
-    public final boolean cleanAfter() {
-        return cleanAfter;
-    }
-
-    public final Integer getDebugPort() {
-        return debugPort;
+    protected Environment(Run run) {
+        this.run = run;
     }
 
     /**
@@ -57,28 +42,22 @@ public abstract class Environment {
      * Deletes files and releases any resources required for the execution of
      * the given action.
      */
-    public void cleanup(Action action) {
-        if (cleanAfter) {
-            rm.directoryTree(file(action));
+    public void cleanup(TaskQueue taskQueue, Action action, Task runActionTask) {
+        if (run.cleanAfter) {
+            taskQueue.enqueue(new DeleteDirectoryTask(run.rm, run.localFile(action))
+                    .after(runActionTask));
         }
     }
 
-    public final File file(Object... path) {
-        return new File(localTemp + "/" + Strings.join("/", path));
-    }
-
     public final File hostJar(Object nameOrAction) {
-        return file(nameOrAction, nameOrAction + ".jar");
+        return run.localFile(nameOrAction, nameOrAction + ".jar");
     }
 
-    public final File actionUserDir(Action action) {
-        File testTemp = new File(localTemp, "userDir");
-        return new File(testTemp, action.getName());
-    }
+    public abstract File actionUserDir(Action action);
 
     public void shutdown() {
-        if (cleanAfter) {
-            rm.directoryTree(localTemp);
+        if (run.cleanAfter) {
+            run.rm.directoryTree(run.localTemp);
         }
     }
 }

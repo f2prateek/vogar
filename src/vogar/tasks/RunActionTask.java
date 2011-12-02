@@ -16,16 +16,17 @@
 
 package vogar.tasks;
 
+import java.io.File;
 import java.io.IOException;
 import vogar.Action;
-import vogar.Console;
-import vogar.Driver;
-import vogar.Mode;
 import vogar.Outcome;
 import vogar.Result;
+import vogar.Run;
 import vogar.commands.Command;
+import vogar.commands.VmCommandBuilder;
 import vogar.monitor.HostMonitor;
 import vogar.target.CaliperRunner;
+import vogar.target.TestRunner;
 
 /**
  * Executes a single action and then prints the result.
@@ -42,44 +43,24 @@ public class RunActionTask extends Task implements HostMonitor.Handler {
         }
     };
 
+    protected final Run run;
+    private final boolean useLargeTimeout;
     private final Action action;
     private final String actionName;
-    private final Console console;
-    private final Mode mode;
-    private final int timeoutSeconds;
-    private final Driver driver;
-    private final Task installAction;
-    private final Task installRunner;
     private Command currentCommand;
     private String lastStartedOutcome;
     private String lastFinishedOutcome;
 
-    public RunActionTask(Action action, Console console, Mode mode, int timeoutSeconds,
-            Driver driver, Task installRunner, Task installAction) {
+    public RunActionTask(Run run, Action action, boolean useLargeTimeout) {
         super("run " + action.getName());
+        this.run = run;
         this.action = action;
         this.actionName = action.getName();
-        this.console = console;
-        this.mode = mode;
-        this.timeoutSeconds = timeoutSeconds;
-        this.driver = driver;
-        this.installRunner = installRunner;
-        this.installAction = installAction;
-    }
-
-    @Override public boolean isRunnable() {
-        return installRunner.getResult() != null && installAction.getResult() != null;
+        this.useLargeTimeout = useLargeTimeout;
     }
 
     @Override protected Result execute() throws Exception {
-        if (installRunner.getResult() != Result.SUCCESS) {
-            return installRunner.getResult();
-        }
-        if (installAction.getResult() != Result.SUCCESS) {
-            return installAction.getResult();
-        }
-
-        console.action(actionName);
+        run.console.action(actionName);
 
         while (true) {
             /*
@@ -90,16 +71,20 @@ public class RunActionTask extends Task implements HostMonitor.Handler {
             String skipPast = lastStartedOutcome;
             lastStartedOutcome = null;
 
-            currentCommand = mode.createActionCommand(action, skipPast, monitorPort(-1));
+            currentCommand = createActionCommand(action, skipPast, monitorPort(-1));
             try {
                 currentCommand.start();
+
+                int timeoutSeconds = useLargeTimeout
+                        ? run.largeTimeoutSeconds
+                        : run.smallTimeoutSeconds;
                 if (timeoutSeconds != 0) {
-                    currentCommand.scheduleTimeout(timeoutSeconds);
+                    currentCommand.scheduleTimeout(run.timeoutSeconds);
                 }
 
-                HostMonitor hostMonitor = new HostMonitor(console, this);
-                boolean completedNormally = mode.useSocketMonitor()
-                        ? hostMonitor.attach(monitorPort(driver.firstMonitorPort))
+                HostMonitor hostMonitor = new HostMonitor(run.console, this);
+                boolean completedNormally = useSocketMonitor()
+                        ? hostMonitor.attach(monitorPort(run.firstMonitorPort))
                         : hostMonitor.followStream(currentCommand.getInputStream());
 
                 if (completedNormally) {
@@ -119,7 +104,7 @@ public class RunActionTask extends Task implements HostMonitor.Handler {
                     continue;
                 }
 
-                driver.addEarlyResult(new Outcome(earlyResultOutcome, Result.ERROR,
+                run.driver.addEarlyResult(new Outcome(earlyResultOutcome, Result.ERROR,
                         "Action " + action + " did not complete normally.\n"
                                 + "timedOut=" + currentCommand.timedOut() + "\n"
                                 + "lastStartedOutcome=" + lastStartedOutcome + "\n"
@@ -131,7 +116,7 @@ public class RunActionTask extends Task implements HostMonitor.Handler {
                 }
             } catch (IOException e) {
                 // if the monitor breaks, assume the worst and don't retry
-                driver.addEarlyResult(new Outcome(actionName, Result.ERROR, e));
+                run.driver.addEarlyResult(new Outcome(actionName, Result.ERROR, e));
                 return Result.ERROR;
             } finally {
                 currentCommand.destroy();
@@ -140,10 +125,50 @@ public class RunActionTask extends Task implements HostMonitor.Handler {
         }
     }
 
-    public int monitorPort(int defaultValue) {
-        return driver.numRunnerThreads == 1
+    /**
+     * Create the command that executes the action.
+     *
+     * @param skipPast the last outcome to skip, or null to run all outcomes.
+     * @param monitorPort the port to accept connections on, or -1 for the
+     */
+    public Command createActionCommand(Action action, String skipPast, int monitorPort) {
+        File workingDirectory = action.getUserDir();
+        VmCommandBuilder vmCommandBuilder = run.mode.newVmCommandBuilder(action, workingDirectory);
+        if (run.useBootClasspath) {
+            vmCommandBuilder.bootClasspath(run.mode.getRuntimeClasspath(action));
+        } else {
+            vmCommandBuilder.classpath(run.mode.getRuntimeClasspath(action));
+        }
+
+        if (monitorPort != -1) {
+            vmCommandBuilder.args("--monitorPort", Integer.toString(monitorPort));
+        }
+        if (skipPast != null) {
+            vmCommandBuilder.args("--skipPast", skipPast);
+        }
+
+        return vmCommandBuilder
+                .temp(workingDirectory)
+                .debugPort(run.debugPort)
+                .vmArgs(run.additionalVmArgs)
+                .mainClass(TestRunner.class.getName())
+                .args(run.targetArgs)
+                .build();
+    }
+
+    /**
+     * Returns true if this mode requires a socket connection for reading test
+     * results. Otherwise all communication happens over the output stream of
+     * the forked process.
+     */
+    protected boolean useSocketMonitor() {
+        return false;
+    }
+
+    private int monitorPort(int defaultValue) {
+        return run.numRunners == 1
                 ? defaultValue
-                : driver.firstMonitorPort + (runnerThreadId.get() % driver.numRunnerThreads);
+                : run.firstMonitorPort + (runnerThreadId.get() % run.numRunners);
     }
 
     @Override public void start(String outcomeName, String runnerClass) {
@@ -151,35 +176,35 @@ public class RunActionTask extends Task implements HostMonitor.Handler {
         lastStartedOutcome = outcomeName;
         // TODO add to Outcome knowledge about what class was used to run it
         if (CaliperRunner.class.getName().equals(runnerClass)) {
-            if (!driver.benchmark) {
+            if (!run.benchmark) {
                 throw new RuntimeException("you must use --benchmark when running Caliper "
                         + "benchmarks.");
             }
-            console.verbose("running " + outcomeName + " with unlimited timeout");
+            run.console.verbose("running " + outcomeName + " with unlimited timeout");
             Command command = currentCommand;
-            if (command != null && driver.smallTimeoutSeconds != 0) {
-                command.scheduleTimeout(driver.smallTimeoutSeconds);
+            if (command != null && run.smallTimeoutSeconds != 0) {
+                command.scheduleTimeout(run.smallTimeoutSeconds);
             }
-            driver.recordResults = false;
+            run.driver.recordResults = false;
         } else {
-            driver.recordResults = true;
+            run.driver.recordResults = true;
         }
     }
 
     @Override public void output(String outcomeName, String output) {
         outcomeName = toQualifiedOutcomeName(outcomeName);
-        console.outcome(outcomeName);
-        console.streamOutput(outcomeName, output);
+        run.console.outcome(outcomeName);
+        run.console.streamOutput(outcomeName, output);
     }
 
     @Override public void finish(Outcome outcome) {
         Command command = currentCommand;
-        if (command != null && driver.smallTimeoutSeconds != 0) {
-            command.scheduleTimeout(driver.smallTimeoutSeconds);
+        if (command != null && run.smallTimeoutSeconds != 0) {
+            command.scheduleTimeout(run.smallTimeoutSeconds);
         }
         lastFinishedOutcome = toQualifiedOutcomeName(outcome.getName());
         // TODO: support flexible timeouts for JUnit tests
-        driver.recordOutcome(new Outcome(lastFinishedOutcome, outcome.getResult(),
+        run.driver.recordOutcome(new Outcome(lastFinishedOutcome, outcome.getResult(),
                 outcome.getOutputLines()));
     }
 
@@ -198,6 +223,6 @@ public class RunActionTask extends Task implements HostMonitor.Handler {
     }
 
     @Override public void print(String string) {
-        console.streamOutput(string);
+        run.console.streamOutput(string);
     }
 }

@@ -22,15 +22,12 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import javax.inject.Inject;
 
 /**
  * Stores and presents information about jars the user may have forgotten to include.
  */
 public final class JarSuggestions {
     private final Set<File> allSuggestedJars = new HashSet<File>();
-
-    @Inject JarSuggestions() {}
 
     public Set<File> getAllSuggestedJars() {
         return allSuggestedJars;

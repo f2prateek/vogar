@@ -16,31 +16,22 @@
 
 package vogar.tasks;
 
-import vogar.Action;
-import vogar.Mode;
+import java.io.File;
 import vogar.Result;
+import vogar.commands.Rm;
 
-/**
- * Delete temporary files on local and remote file systems.
- */
-public final class CleanupActionTask extends Task {
-    private final Action action;
-    private final Mode mode;
-    private final Task dependOn;
+public final class DeleteDirectoryTask extends Task {
+    private final Rm rm;
+    private final File file;
 
-    public CleanupActionTask(Action action, Mode mode, Task dependOn) {
-        super("clean " + action.getName());
-        this.action = action;
-        this.mode = mode;
-        this.dependOn = dependOn;
+    public DeleteDirectoryTask(Rm rm, File file) {
+        super("rm " + file);
+        this.rm = rm;
+        this.file = file;
     }
 
     @Override protected Result execute() throws Exception {
-        mode.cleanup(action);
+        rm.directoryTree(file);
         return Result.SUCCESS;
-    }
-
-    @Override public boolean isRunnable() {
-        return dependOn.getResult() != null;
     }
 }

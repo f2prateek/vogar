@@ -20,107 +20,71 @@ import com.google.common.collect.Iterables;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import javax.inject.Inject;
-import javax.inject.Named;
+import java.util.Set;
 import vogar.Action;
 import vogar.Classpath;
-import vogar.Result;
-import vogar.Vm;
+import vogar.Mode;
+import vogar.Run;
+import vogar.commands.VmCommandBuilder;
 import vogar.tasks.Task;
-import vogar.tasks.TaskQueue;
 
 /**
  * Execute actions on a Dalvik VM using an Android device or emulator.
  */
-public class DeviceDalvikVm extends Vm {
-    @Inject @Named("benchmark") boolean fastMode;
-    @Inject @Named("deviceUserHome") File deviceUserHome;
-
-    protected EnvironmentDevice getEnvironmentDevice() {
-        return (EnvironmentDevice) environment;
+public class DeviceDalvikVm extends Mode {
+    public DeviceDalvikVm(Run run) {
+        super(run);
     }
 
-    protected AndroidSdk getSdk() {
-        return getEnvironmentDevice().androidSdk;
-    }
-
-    @Override protected void installTasks(TaskQueue taskQueue) {
+    @Override protected void installTasks(Set<Task> tasks) {
         // dex everything on the classpath and push it to the device.
-        for (File classpathElement : classpath.getElements()) {
-            dexAndPush(taskQueue, null, getSdk().basenameOfJar(classpathElement),
+        for (File classpathElement : run.classpath.getElements()) {
+            dexAndPush(tasks, null, run.androidSdk.basenameOfJar(classpathElement),
                     classpathElement, null);
         }
     }
 
-    @Override public Task installActionTask(TaskQueue taskQueue, Task compileTask,
+    @Override public void installActionTask(Set<Task> tasks, Task compileTask,
             Action action, File jar) {
-        return dexAndPush(taskQueue, compileTask, action.getName(), jar, action);
+        dexAndPush(tasks, compileTask, action.getName(), jar, action);
     }
 
-    private Task dexAndPush(TaskQueue taskQueue, final Task compileTask, final String name,
+    private void dexAndPush(Set<Task> tasks, final Task compileTask, final String name,
             final File jar, final Action action) {
-        final File localDex = environment.file(name, name + ".dx.jar");
-        final Task dex = new Task("dex " + name) {
-            @Override protected Result execute() throws Exception {
-                // make the local dex (inside a jar)
-                Classpath cp = Classpath.of(jar);
-                if (fastMode && action != null) {
-                    cp.addAll(classpath);
-                }
-                getSdk().dex(localDex, cp);
-                return Result.SUCCESS;
-            }
-            @Override public boolean isRunnable() {
-                return compileTask == null || compileTask.getResult() != null;
-            }
-        };
-        final Task push = new Task("push " + name) {
-            @Override protected Result execute() throws Exception {
-                if (action != null) {
-                    prepareUserDir(action);
-                }
-                getSdk().push(localDex, deviceDexFile(name));
-                return Result.SUCCESS;
-            }
-            @Override public boolean isRunnable() {
-                return getEnvironmentDevice().prepareDeviceTask.getResult() == Result.SUCCESS
-                        && dex.getResult() == Result.SUCCESS;
-            }
-            private void prepareUserDir(Action action) {
-                File actionClassesDir = getEnvironmentDevice().actionClassesDirOnDevice(action);
-                getSdk().mkdir(actionClassesDir);
-                File resourcesDirectory = action.getResourcesDirectory();
-                if (resourcesDirectory != null) {
-                    getSdk().push(resourcesDirectory, actionClassesDir);
-                }
-                action.setUserDir(actionClassesDir);
-            }
-        };
-        taskQueue.enqueue(dex);
-        taskQueue.enqueue(push);
-        return push;
+        File localDex = run.localFile(name, name + ".dx.jar");
+        File deviceDex = run.deviceDexFile(name);
+        Task dex = new DexTask(run.androidSdk, run.classpath, run.benchmark, name, jar, action,
+                localDex);
+        if (compileTask != null) {
+            dex.afterSuccess(compileTask);
+        }
+        if (action != null) {
+            tasks.add(new PrepareUserDirTask(run.androidSdk, action)
+                    .afterSuccess(run.environmentDevice.prepareDeviceTask));
+        }
+        Task push = new InstallDexOnDeviceTask(run.androidSdk, localDex, deviceDex)
+                .afterSuccess(run.environmentDevice.prepareDeviceTask)
+                .afterSuccess(dex);
+        tasks.add(dex);
+        tasks.add(push);
     }
 
-    private File deviceDexFile(String name) {
-        return new File(getEnvironmentDevice().runnerDir, name + ".jar");
-    }
-
-    @Override protected VmCommandBuilder newVmCommandBuilder(Action action, File workingDirectory) {
+    @Override public VmCommandBuilder newVmCommandBuilder(Action action, File workingDirectory) {
         List<String> vmCommand = new ArrayList<String>();
-        vmCommand.addAll(getSdk().deviceProcessPrefix(workingDirectory));
-        vmCommand.add(getEnvironmentDevice().getAndroidData());
+        vmCommand.addAll(run.androidSdk.deviceProcessPrefix(workingDirectory));
+        vmCommand.add(run.environmentDevice.getAndroidData());
         Iterables.addAll(vmCommand, invokeWith());
         vmCommand.add("dalvikvm");
 
         // If you edit this, see also HostDalvikVm...
-        VmCommandBuilder vmCommandBuilder = new VmCommandBuilder()
+        VmCommandBuilder vmCommandBuilder = new VmCommandBuilder(run.log)
                 .vmCommand(vmCommand)
-                .vmArgs("-Duser.home=" + deviceUserHome)
-                .vmArgs("-Duser.name=" + getSdk().getDeviceUserName())
+                .vmArgs("-Duser.home=" + run.deviceUserHome)
+                .vmArgs("-Duser.name=" + run.androidSdk.getDeviceUserName())
                 .vmArgs("-Duser.language=en")
                 .vmArgs("-Duser.region=US")
                 .maxLength(1024);
-        if (!fastMode) {
+        if (!run.benchmark) {
             vmCommandBuilder.vmArgs("-Xverify:none");
             vmCommandBuilder.vmArgs("-Xdexopt:none");
             vmCommandBuilder.vmArgs("-Xcheck:jni");
@@ -130,12 +94,12 @@ public class DeviceDalvikVm extends Vm {
         return vmCommandBuilder;
     }
 
-    @Override protected Classpath getRuntimeClasspath(Action action) {
+    @Override public Classpath getRuntimeClasspath(Action action) {
         Classpath result = new Classpath();
-        result.addAll(deviceDexFile(action.getName()));
-        if (!fastMode) {
-            for (File classpathElement : classpath.getElements()) {
-                result.addAll(deviceDexFile(getSdk().basenameOfJar(classpathElement)));
+        result.addAll(run.deviceDexFile(action.getName()));
+        if (!run.benchmark) {
+            for (File classpathElement : run.classpath.getElements()) {
+                result.addAll(run.deviceDexFile(run.androidSdk.basenameOfJar(classpathElement)));
             }
         }
         return result;
