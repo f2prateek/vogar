@@ -22,23 +22,27 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Properties;
 import java.util.Set;
 import vogar.Action;
 import vogar.Classpath;
 import vogar.Mode;
 import vogar.Run;
 import vogar.commands.VmCommandBuilder;
+import vogar.tasks.RunActionTask;
 import vogar.tasks.Task;
 
 /**
  * Execute actions on a Dalvik VM using an Android device or emulator.
  */
-public class DeviceDalvikVm extends Mode {
+public class DeviceDalvikVm implements Mode {
+    protected final Run run;
+
     public DeviceDalvikVm(Run run) {
-        super(run);
+        this.run = run;
     }
 
-    @Override protected Set<Task> installTasks() {
+    @Override public Set<Task> installTasks() {
         Set<Task> result = new HashSet<Task>();
         // dex everything on the classpath and push it to the device.
         for (File classpathElement : run.classpath.getElements()) {
@@ -48,32 +52,30 @@ public class DeviceDalvikVm extends Mode {
         return result;
     }
 
-    @Override public Task prepareUserDirTask(Action action) {
-        return new PrepareUserDirTask(run.androidSdk, action);
-    }
-
     @Override public Set<Task> installActionTasks(Action action, File jar) {
         Set<Task> result = new HashSet<Task>();
         dexAndPush(result, action.getName(), jar, action);
         return result;
     }
 
-    private void dexAndPush(Set<Task> tasks, final String name,
-            final File jar, final Action action) {
-        File localDex = run.localFile(name, name + ".dx.jar");
+    @Override public Task executeActionTask(Action action, boolean useLargeTimeout) {
+        return new RunActionTask(run, action, useLargeTimeout);
+    }
+
+    private void dexAndPush(Set<Task> tasks, String name, File jar, Action action) {
+        File localDex = run.localDexFile(name);
         File deviceDex = run.deviceDexFile(name);
         Task dex = new DexTask(run.androidSdk, run.classpath, run.benchmark, name, jar, action,
                 localDex);
         tasks.add(dex);
-        tasks.add(new InstallDexOnDeviceTask(run.androidSdk, localDex, deviceDex)
-                .afterSuccess(dex));
+        tasks.add(new AdbPushTask(run.androidSdk, localDex, deviceDex).afterSuccess(dex));
     }
 
     @Override public VmCommandBuilder newVmCommandBuilder(Action action, File workingDirectory) {
         List<String> vmCommand = new ArrayList<String>();
         vmCommand.addAll(run.androidSdk.deviceProcessPrefix(workingDirectory));
         vmCommand.add(run.getAndroidData());
-        Iterables.addAll(vmCommand, invokeWith());
+        Iterables.addAll(vmCommand, run.invokeWith());
         vmCommand.add("dalvikvm");
 
         // If you edit this, see also HostDalvikVm...
@@ -94,12 +96,9 @@ public class DeviceDalvikVm extends Mode {
         return vmCommandBuilder;
     }
 
-    @Override public Task retrieveFilesTask(Action action) {
-        return run.environmentDevice.retrieveFilesTask(action);
-    }
-
     @Override public Set<Task> cleanupTasks(Action action) {
-        return Collections.singleton(run.environmentDevice.cleanupTask(action));
+        return Collections.<Task>singleton(
+                new DeleteTargetFilesTask(run.androidSdk, action.getUserDir()));
     }
 
     @Override public Classpath getRuntimeClasspath(Action action) {

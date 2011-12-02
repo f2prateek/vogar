@@ -26,11 +26,11 @@ import vogar.Result;
 import vogar.Run;
 import vogar.tasks.Task;
 
-public final class RetrieveDeviceFilesTask extends Task {
+public final class RetrieveTargetFilesTask extends Task {
     private final Run run;
     private final File deviceFile;
 
-    public RetrieveDeviceFilesTask(Run run, File deviceFile) {
+    public RetrieveTargetFilesTask(Run run, File deviceFile) {
         super("retrieve files " + deviceFile);
         this.run = run;
         this.deviceFile = deviceFile;

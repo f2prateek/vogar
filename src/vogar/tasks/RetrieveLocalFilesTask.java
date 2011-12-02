@@ -22,13 +22,13 @@ import vogar.Result;
 import vogar.Run;
 import vogar.commands.Command;
 
-public final class RetrieveFilesTask extends Task {
+public final class RetrieveLocalFilesTask extends Task {
     private final Run run;
     private final File destination;
     private final File source;
     private final FileFilter filenameFilter;
 
-    public RetrieveFilesTask(Run run, File destination, File source, FileFilter filenameFilter) {
+    public RetrieveLocalFilesTask(Run run, File destination, File source, FileFilter filenameFilter) {
         super("retrieve files from " + source);
         this.run = run;
         this.destination = destination;

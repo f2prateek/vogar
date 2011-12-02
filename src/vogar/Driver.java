@@ -73,7 +73,7 @@ public final class Driver {
         run.console.info("Actions: " + actions.size());
         final long t0 = System.currentTimeMillis();
 
-        prepareTargetTasks = run.environment.prepareTargetTasks();
+        prepareTargetTasks = run.target.prepareTargetTasks();
         run.taskQueue.enqueueAll(prepareTargetTasks);
 
         installVogarTasks = run.mode.installTasks();
@@ -81,7 +81,7 @@ public final class Driver {
         registerPrerequisites(prepareTargetTasks, installVogarTasks);
 
         for (Action action : actions.values()) {
-            action.setUserDir(run.environment.actionUserDir(action));
+            action.setUserDir(run.target.actionUserDir(action));
             Outcome outcome = outcomes.get(action.getName());
             if (outcome != null) {
                 addEarlyResult(outcome);
@@ -96,7 +96,7 @@ public final class Driver {
         if (run.cleanAfter) {
             Set<Task> shutdownTasks = new HashSet<Task>();
             shutdownTasks.add(new DeleteDirectoryTask(run.rm, run.localTemp));
-            shutdownTasks.addAll(run.environment.shutdownTasks());
+            shutdownTasks.addAll(run.target.shutdownTasks());
             for (Task task : shutdownTasks) {
                 task.after(run.taskQueue.getTasks());
             }
@@ -149,7 +149,7 @@ public final class Driver {
         Task build = new BuildActionTask(run, action, this, jar);
         run.taskQueue.enqueue(build);
 
-        Task prepareUserDir = run.mode.prepareUserDirTask(action);
+        Task prepareUserDir = run.target.prepareUserDirTask(action);
         prepareUserDir.after(installVogarTasks);
         run.taskQueue.enqueue(prepareUserDir);
 
@@ -166,7 +166,7 @@ public final class Driver {
                 .afterSuccess(install);
         run.taskQueue.enqueue(execute);
 
-        Task retrieveFiles = run.mode.retrieveFilesTask(action).after(execute);
+        Task retrieveFiles = run.target.retrieveFilesTask(action).after(execute);
         run.taskQueue.enqueue(retrieveFiles);
 
         if (run.cleanAfter) {
@@ -231,7 +231,7 @@ public final class Driver {
 
         JarSuggestions singleOutcomeJarSuggestions = new JarSuggestions();
         singleOutcomeJarSuggestions.addSuggestionsFromOutcome(outcome, run.classFileIndex,
-                run.mode.getClasspath());
+                run.classpath);
         List<String> jarStringList = singleOutcomeJarSuggestions.getStringList();
         if (!jarStringList.isEmpty()) {
             run.console.warn(

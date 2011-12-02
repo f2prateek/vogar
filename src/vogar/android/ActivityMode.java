@@ -18,31 +18,29 @@ package vogar.android;
 
 import java.io.File;
 import java.util.Collections;
-import java.util.HashSet;
-import java.util.Properties;
+import java.util.LinkedHashSet;
 import java.util.Set;
 import vogar.Action;
+import vogar.Classpath;
 import vogar.Mode;
 import vogar.Run;
-import vogar.TestProperties;
+import vogar.commands.VmCommandBuilder;
 import vogar.tasks.ExtractJarResourceTask;
 import vogar.tasks.Task;
 
 /**
  * Runs an action in the context of an android.app.Activity on a device
  */
-public final class ActivityMode extends Mode {
+public final class ActivityMode implements Mode {
+    private final Run run;
+
     public ActivityMode(Run run) {
-        super(run);
+        this.run = run;
     }
 
-    @Override protected Set<Task> installTasks() {
+    @Override public Set<Task> installTasks() {
         return Collections.<Task>singleton(
                 new ExtractJarResourceTask("/vogar/vogar.keystore", run.keystore));
-    }
-
-    @Override public Task prepareUserDirTask(Action action) {
-        return new PrepareUserDirTask(run.androidSdk, action);
     }
 
     @Override public Set<Task> installActionTasks(Action action, File jar) {
@@ -53,19 +51,18 @@ public final class ActivityMode extends Mode {
         return new RunActivityTask(run, action, useLargeTimeout);
     }
 
-    @Override public void fillInProperties(Properties properties, Action action) {
-        super.fillInProperties(properties, action);
-        properties.setProperty(TestProperties.DEVICE_RUNNER_DIR, run.runnerDir.getPath());
-    }
-
-    @Override public Task retrieveFilesTask(Action action) {
-        return run.environmentDevice.retrieveFilesTask(action);
-    }
-
     @Override public Set<Task> cleanupTasks(Action action) {
-        Set<Task> result = new HashSet<Task>();
-        result.add(run.environmentDevice.cleanupTask(action));
+        Set<Task> result = new LinkedHashSet<Task>();
+        result.add(new DeleteTargetFilesTask(run.androidSdk, action.getUserDir()));
         result.add(new UninstallApkTask(run.androidSdk, action.getName()));
         return result;
+    }
+
+    @Override public VmCommandBuilder newVmCommandBuilder(Action action, File workingDirectory) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override public Classpath getRuntimeClasspath(Action action) {
+        throw new UnsupportedOperationException();
     }
 }

@@ -40,11 +40,6 @@ final public class TestProperties {
     public static final String QUALIFIED_NAME = "qualifiedName";
 
     /**
-     * Name of the property used by TestActivity to the test directory.
-     */
-    public static final String DEVICE_RUNNER_DIR = "deviceRunnerDir";
-
-    /**
      * Port to accept monitor connections on.
      */
     public static final String MONITOR_PORT = "monitorPort";

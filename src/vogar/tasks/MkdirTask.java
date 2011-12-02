@@ -14,26 +14,22 @@
  * limitations under the License.
  */
 
-package vogar.android;
+package vogar.tasks;
 
 import java.io.File;
 import vogar.Result;
-import vogar.tasks.Task;
+import vogar.commands.Mkdir;
 
-public final class InstallDexOnDeviceTask extends Task {
-    private final AndroidSdk androidSdk;
-    private final File localDex;
-    private final File targetDex;
-
-    public InstallDexOnDeviceTask(AndroidSdk androidSdk, File localDex, File targetDex) {
-        super("install " + targetDex);
-        this.androidSdk = androidSdk;
-        this.localDex = localDex;
-        this.targetDex = targetDex;
+public final class MkdirTask extends Task {
+    private final Mkdir mkdir;
+    private final File dir;
+    public MkdirTask(Mkdir mkdir, File dir) {
+        super("mkdir " + dir);
+        this.mkdir = mkdir;
+        this.dir = dir;
     }
-
     @Override protected Result execute() throws Exception {
-        androidSdk.push(localDex, targetDex);
+        mkdir.mkdirs(dir);
         return Result.SUCCESS;
     }
 }

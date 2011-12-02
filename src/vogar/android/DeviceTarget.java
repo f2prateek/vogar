@@ -14,27 +14,41 @@
  * limitations under the License.
  */
 
-package vogar;
+package vogar.android;
 
 import java.io.File;
 import java.util.Collections;
 import java.util.Set;
+import vogar.Action;
+import vogar.Run;
+import vogar.Target;
 import vogar.tasks.Task;
 
-public final class EnvironmentHost extends Environment {
-    public EnvironmentHost(Run run) {
-        super(run);
+public final class DeviceTarget implements Target {
+    private final Run run;
+
+    public DeviceTarget(Run run) {
+        this.run = run;
     }
 
     @Override public Set<Task> prepareTargetTasks() {
-        return Collections.emptySet();
+        return Collections.<Task>singleton(new PrepareDeviceTask(run));
     }
 
-    public File actionUserDir(Action action) {
-        return run.localFile("userDir", action.getName());
+    @Override public Task prepareUserDirTask(Action action) {
+        return new PrepareUserDirTask(run.androidSdk, action);
+    }
+
+    @Override public File actionUserDir(Action action) {
+        return new File(run.runnerDir, action.getName());
+    }
+
+    @Override public Task retrieveFilesTask(Action action) {
+        return new RetrieveTargetFilesTask(run, action.getUserDir());
     }
 
     @Override public Set<Task> shutdownTasks() {
-        return Collections.emptySet();
+        return Collections.<Task>singleton(
+                new DeleteTargetFilesTask(run.androidSdk, run.runnerDir));
     }
 }

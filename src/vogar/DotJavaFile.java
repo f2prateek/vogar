@@ -50,7 +50,7 @@ public final class DotJavaFile {
 
     /**
      * Returns true if this file looks like a jtreg test. Jtreg tests usually
-     * require additional environment setup; in particular they expect to be
+     * require additional target setup; in particular they expect to be
      * able to load files from their working directory.
      */
     public boolean isJtreg() {

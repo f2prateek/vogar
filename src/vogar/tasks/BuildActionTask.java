@@ -28,7 +28,6 @@ import java.util.regex.Pattern;
 import vogar.Action;
 import vogar.Classpath;
 import vogar.Driver;
-import vogar.commands.Javac;
 import vogar.Mode;
 import vogar.Outcome;
 import vogar.Result;
@@ -36,6 +35,7 @@ import vogar.Run;
 import vogar.TestProperties;
 import vogar.commands.Command;
 import vogar.commands.CommandFailedException;
+import vogar.commands.Javac;
 
 /**
  * Compiles classes for the given action and makes them ready for execution.
@@ -137,7 +137,6 @@ public final class BuildActionTask extends Task {
                 Integer.toString(run.profileInterval));
         properties.setProperty(TestProperties.PROFILE_FILE, run.profileFile.getName());
         properties.setProperty(TestProperties.PROFILE_THREAD_GROUP,
-                               Boolean.toString(run.profileThreadGroup));
-        run.mode.fillInProperties(properties, action);
+                Boolean.toString(run.profileThreadGroup));
     }
 }

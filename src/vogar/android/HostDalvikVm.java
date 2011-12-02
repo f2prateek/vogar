@@ -20,70 +20,60 @@ import com.google.common.collect.Iterables;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Properties;
 import java.util.Set;
 import vogar.Action;
 import vogar.Classpath;
 import vogar.Mode;
-import vogar.Result;
 import vogar.Run;
 import vogar.commands.VmCommandBuilder;
-import vogar.tasks.PrepareUserDirTask;
-import vogar.tasks.RetrieveFilesTask;
+import vogar.tasks.MkdirTask;
+import vogar.tasks.RunActionTask;
 import vogar.tasks.Task;
 
 /**
  * Executes actions on a Dalvik VM on a Linux desktop.
  */
-public class HostDalvikVm extends Mode {
-    private String buildRoot;
+public final class HostDalvikVm implements Mode {
+    private final Run run;
 
     public HostDalvikVm(Run run) {
-        super(run);
+        this.run = run;
     }
 
-    public File dalvikCache() {
+    @Override public Task executeActionTask(Action action, boolean useLargeTimeout) {
+        return new RunActionTask(run, action, useLargeTimeout);
+    }
+
+    private File dalvikCache() {
         return run.localFile("android-data", "dalvik-cache");
     }
 
-    @Override protected Set<Task> installTasks() {
-        return Collections.<Task>singleton(new Task("install runner") {
-            @Override protected Result execute() throws Exception {
-                // dex everything on the classpath
-                for (File classpathElement : run.classpath.getElements()) {
-                    run.androidSdk.dex(nameDexFile(run.androidSdk.basenameOfJar(classpathElement)),
-                            Classpath.of(classpathElement));
-                }
-                run.mkdir.mkdirs(dalvikCache());
-                buildRoot = System.getenv("ANDROID_BUILD_TOP");
-                return Result.SUCCESS;
-            }
-        });
-    }
-
-    @Override public Task retrieveFilesTask(Action action) {
-        return new RetrieveFilesTask(run, new File("./vogar-results"),
-                action.getUserDir(), run.retrievedFiles);
+    @Override public Set<Task> installTasks() {
+        Set<Task> result = new HashSet<Task>();
+        for (File classpathElement : run.classpath.getElements()) {
+            String name = run.androidSdk.basenameOfJar(classpathElement);
+            result.add(new DexTask(run.androidSdk, run.classpath, run.benchmark, name,
+                    classpathElement, null, run.localDexFile(name)));
+        }
+        result.add(new MkdirTask(run.mkdir, dalvikCache()));
+        return result;
     }
 
     @Override public Set<Task> cleanupTasks(Action action) {
         return Collections.emptySet();
     }
 
-    private File nameDexFile(String name) {
-        return run.localFile(name, name + ".dx.jar");
-    }
-
-    @Override public Task prepareUserDirTask(Action action) {
-        return new PrepareUserDirTask(run.log, run.mkdir, action);
-    }
-
     @Override public Set<Task> installActionTasks(Action action, File jar) {
         return Collections.<Task>singleton(new DexTask(run.androidSdk, Classpath.of(jar),
-                run.benchmark, action.getName(), jar, action, nameDexFile(action.getName())));
+                run.benchmark, action.getName(), jar, action, run.localDexFile(action.getName())));
     }
 
     @Override public VmCommandBuilder newVmCommandBuilder(Action action, File workingDirectory) {
+        String buildRoot = System.getenv("ANDROID_BUILD_TOP");
+
         List<File> jars = new ArrayList<File>();
         for (String jar : AndroidSdk.HOST_BOOTCLASSPATH) {
             jars.add(new File(buildRoot, "out/host/linux-x86/framework/" + jar + ".jar"));
@@ -97,20 +87,12 @@ public class HostDalvikVm extends Mode {
                 .env("ANDROID_DATA", dalvikCache().getParent());
 
         List<String> vmCommand = new ArrayList<String>();
-        Iterables.addAll(vmCommand, invokeWith());
+        Iterables.addAll(vmCommand, run.invokeWith());
 
-        if (run.hostBuild) {
-            vmCommand.add(buildRoot + "/out/host/linux-x86/bin/dalvikvm");
-            builder.env("ANDROID_ROOT", buildRoot + "/out/host/linux-x86")
-                    .env("LD_LIBRARY_PATH", buildRoot + "/out/host/linux-x86/lib")
-                    .env("DYLD_LIBRARY_PATH", buildRoot + "/out/host/linux-x86/lib");
-        } else {
-            String base = System.getenv("OUT");
-            vmCommand.add(base + "/system/bin/dalvikvm");
-            builder.env("ANDROID_ROOT", base + "/system")
-                    .env("LD_LIBRARY_PATH", base + "/system/lib")
-                    .env("DYLD_LIBRARY_PATH", base + "/system/lib");
-        }
+        vmCommand.add(buildRoot + "/out/host/linux-x86/bin/dalvikvm");
+        builder.env("ANDROID_ROOT", buildRoot + "/out/host/linux-x86")
+                .env("LD_LIBRARY_PATH", buildRoot + "/out/host/linux-x86/lib")
+                .env("DYLD_LIBRARY_PATH", buildRoot + "/out/host/linux-x86/lib");
 
         // If you edit this, see also DeviceDalvikVm...
         builder.vmCommand(vmCommand)
@@ -129,9 +111,9 @@ public class HostDalvikVm extends Mode {
 
     @Override public Classpath getRuntimeClasspath(Action action) {
         Classpath result = new Classpath();
-        result.addAll(nameDexFile(action.getName()));
+        result.addAll(run.localDexFile(action.getName()));
         for (File classpathElement : run.classpath.getElements()) {
-            result.addAll(nameDexFile(run.androidSdk.basenameOfJar(classpathElement)));
+            result.addAll(run.localDexFile(run.androidSdk.basenameOfJar(classpathElement)));
         }
         return result;
     }

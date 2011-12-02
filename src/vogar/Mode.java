@@ -16,13 +16,9 @@
 
 package vogar;
 
-import com.google.common.base.Splitter;
 import java.io.File;
-import java.util.Collections;
-import java.util.Properties;
 import java.util.Set;
 import vogar.commands.VmCommandBuilder;
-import vogar.tasks.RunActionTask;
 import vogar.tasks.Task;
 
 /**
@@ -30,55 +26,25 @@ import vogar.tasks.Task;
  * either on the host or a device or within a specific context such as within an
  * Activity.
  */
-public abstract class Mode {
-    protected final Run run;
-
-    protected Mode(Run run) {
-        this.run = run;
-    }
-
-    /**
-     * Returns a parsed list of the --invoke-with command and its
-     * arguments, or an empty list if no --invoke-with was provided.
-     */
-    protected Iterable<String> invokeWith() {
-        if (run.invokeWith == null) {
-            return Collections.emptyList();
-        }
-        return Splitter.onPattern("\\s+").omitEmptyStrings().split(run.invokeWith);
-    }
-
+public interface Mode {
     /**
      * Initializes the temporary directories and harness necessary to run
      * actions.
      */
-    protected abstract Set<Task> installTasks();
+    Set<Task> installTasks();
 
-    public abstract Task prepareUserDirTask(Action action);
-
-    public Task executeActionTask(Action action, boolean useLargeTimeout) {
-        return new RunActionTask(run, action, useLargeTimeout);
-    }
+    Task executeActionTask(Action action, boolean useLargeTimeout);
 
     /**
      * Hook method called after action compilation.
      */
-    public abstract Set<Task> installActionTasks(Action action, File jar);
-
-    public abstract Task retrieveFilesTask(Action action);
+    Set<Task> installActionTasks(Action action, File jar);
 
     /**
      * Deletes files and releases any resources required for the execution of
      * the given action.
      */
-    public abstract Set<Task> cleanupTasks(Action action);
-
-    public void fillInProperties(Properties properties, Action action) {
-    }
-
-    public Classpath getClasspath() {
-        return run.classpath;
-    }
+    Set<Task> cleanupTasks(Action action);
 
     /**
      * Returns a VM for action execution.
@@ -87,15 +53,11 @@ public abstract class Mode {
      *     the process runs on another device, this is the working directory of
      *     the device.
      */
-    public VmCommandBuilder newVmCommandBuilder(Action action, File workingDirectory) {
-        throw new UnsupportedOperationException();
-    }
+    VmCommandBuilder newVmCommandBuilder(Action action, File workingDirectory);
 
     /**
      * Returns the classpath containing JUnit and the dalvik annotations
      * required for action execution.
      */
-    public Classpath getRuntimeClasspath(Action action) {
-        throw new UnsupportedOperationException();
-    }
+    Classpath getRuntimeClasspath(Action action);
 }

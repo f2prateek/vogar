@@ -21,27 +21,29 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Properties;
 import java.util.Set;
 import vogar.commands.VmCommandBuilder;
-import vogar.tasks.PrepareUserDirTask;
-import vogar.tasks.RetrieveFilesTask;
+import vogar.tasks.RunActionTask;
 import vogar.tasks.Task;
 
 /**
  * A local Java virtual machine like Harmony or the RI.
  */
-final class JavaVm extends Mode {
+final class JavaVm implements Mode {
+    private final Run run;
+
     JavaVm(Run run) {
-        super(run);
+        this.run = run;
     }
 
-    @Override protected Set<Task> installTasks() {
+    @Override public Set<Task> installTasks() {
         return Collections.emptySet();
     }
 
     @Override public VmCommandBuilder newVmCommandBuilder(Action action, File workingDirectory) {
         List<String> vmCommand = new ArrayList<String>();
-        Iterables.addAll(vmCommand, invokeWith());
+        Iterables.addAll(vmCommand, run.invokeWith());
         vmCommand.add(run.javaPath("java"));
         if (run.profile) {
             vmCommand.add("-agentlib:hprof="
@@ -58,8 +60,8 @@ final class JavaVm extends Mode {
                 .vmCommand(vmCommand);
     }
 
-    @Override public Task prepareUserDirTask(Action action) {
-        return new PrepareUserDirTask(run.log, run.mkdir, action);
+    @Override public Task executeActionTask(Action action, boolean useLargeTimeout) {
+        return new RunActionTask(run, action, useLargeTimeout);
     }
 
     @Override public Set<Task> installActionTasks(Action action, File jar) {
@@ -81,11 +83,6 @@ final class JavaVm extends Mode {
          */
         result.addAll(new File("/usr/share/java/bcprov.jar"));
         return result;
-    }
-
-    public Task retrieveFilesTask(Action action) {
-        return new RetrieveFilesTask(run, new File("./vogar-results"),
-                action.getUserDir(), run.retrievedFiles);
     }
 
     @Override public Set<Task> cleanupTasks(Action action) {

@@ -14,38 +14,43 @@
  * limitations under the License.
  */
 
-package vogar.android;
+package vogar;
 
 import java.io.File;
 import java.util.Collections;
 import java.util.Set;
-import vogar.Action;
-import vogar.Environment;
-import vogar.Run;
+import vogar.tasks.PrepareUserDirTask;
+import vogar.tasks.RetrieveLocalFilesTask;
 import vogar.tasks.Task;
 
-public final class EnvironmentDevice extends Environment {
-    public EnvironmentDevice(Run run) {
-        super(run);
+/**
+ * Run tests on the host machine.
+ */
+public final class LocalTarget implements Target {
+    private final Run run;
+
+    public LocalTarget(Run run) {
+        this.run = run;
     }
 
     @Override public Set<Task> prepareTargetTasks() {
-        return Collections.<Task>singleton(new PrepareDeviceTask(run));
+        return Collections.emptySet();
     }
 
-    @Override public File actionUserDir(Action action) {
-        return new File(run.runnerDir, action.getName());
+    @Override public Task prepareUserDirTask(Action action) {
+        return new PrepareUserDirTask(run.log, run.mkdir, action);
     }
 
-    public Task retrieveFilesTask(Action action) {
-        return new RetrieveDeviceFilesTask(run, action.getUserDir());
+    public File actionUserDir(Action action) {
+        return run.localFile("userDir", action.getName());
     }
 
-    public Task cleanupTask(Action action) {
-        return new DeleteDeviceFilesTask(run.androidSdk, action.getUserDir());
+    @Override public Task retrieveFilesTask(Action action) {
+        return new RetrieveLocalFilesTask(run, new File("./vogar-results"),
+                action.getUserDir(), run.retrievedFiles);
     }
 
     @Override public Set<Task> shutdownTasks() {
-        return Collections.<Task>singleton(new DeleteDeviceFilesTask(run.androidSdk, run.runnerDir));
+        return Collections.emptySet();
     }
 }

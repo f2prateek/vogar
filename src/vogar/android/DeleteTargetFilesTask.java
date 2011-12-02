@@ -20,11 +20,11 @@ import java.io.File;
 import vogar.Result;
 import vogar.tasks.Task;
 
-public final class DeleteDeviceFilesTask extends Task {
+public final class DeleteTargetFilesTask extends Task {
     private final AndroidSdk androidSdk;
     private final File dir;
 
-    public DeleteDeviceFilesTask(AndroidSdk androidSdk, File dir) {
+    public DeleteTargetFilesTask(AndroidSdk androidSdk, File dir) {
         super("delete " + dir);
         this.androidSdk = androidSdk;
         this.dir = dir;

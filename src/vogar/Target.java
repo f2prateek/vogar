@@ -23,16 +23,10 @@ import vogar.tasks.Task;
 /**
  * A target runtime environment such as a remote device or the local host
  */
-public abstract class Environment {
-    protected final Run run;
-
-    protected Environment(Run run) {
-        this.run = run;
-    }
-
-    public abstract Set<Task> prepareTargetTasks();
-
-    public abstract File actionUserDir(Action action);
-
-    public abstract Set<Task> shutdownTasks();
+public interface Target {
+    Set<Task> prepareTargetTasks();
+    Task prepareUserDirTask(Action action);
+    File actionUserDir(Action action);
+    Task retrieveFilesTask(Action action);
+    Set<Task> shutdownTasks();
 }

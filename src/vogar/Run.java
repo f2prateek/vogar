@@ -16,9 +16,11 @@
 
 package vogar;
 
+import com.google.common.base.Splitter;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -27,7 +29,7 @@ import vogar.android.AndroidSdk;
 import vogar.android.AppProcessMode;
 import vogar.android.DeviceDalvikVm;
 import vogar.android.DeviceFileCache;
-import vogar.android.EnvironmentDevice;
+import vogar.android.DeviceTarget;
 import vogar.android.HostDalvikVm;
 import vogar.commands.Mkdir;
 import vogar.commands.Rm;
@@ -35,7 +37,6 @@ import vogar.tasks.TaskQueue;
 import vogar.util.Strings;
 
 public final class Run {
-    public final boolean hostBuild;
     public final File xmlReportsDirectory;
     public final File resultsDir;
     public final boolean recordResults;
@@ -76,8 +77,7 @@ public final class Run {
     public final RetrievedFilesFilter retrievedFiles;
     public final Driver driver;
     public final Mode mode;
-    public final Environment environment;
-    public final EnvironmentDevice environmentDevice;
+    public final Target target;
     public final AndroidSdk androidSdk;
     public final XmlReportPrinter reportPrinter;
     public final JarSuggestions jarSuggestions;
@@ -105,7 +105,6 @@ public final class Run {
         this.mkdir = new Mkdir(console);
         this.rm = new Rm(console);
         this.firstMonitorPort = vogar.firstMonitorPort;
-        this.hostBuild = vogar.mode == ModeId.HOST;
         this.invokeWith = vogar.invokeWith;
         this.javacArgs = vogar.javacArgs;
         this.javaHome = vogar.javaHome;
@@ -139,13 +138,9 @@ public final class Run {
         androidSdk.setCaches(new HostFileCache(log, mkdir),
                 new DeviceFileCache(log, vogar.deviceDir, androidSdk));
 
-        if (vogar.mode.isHost()) {
-            this.environment = new EnvironmentHost(this);
-            this.environmentDevice = null;
-        } else {
-            this.environmentDevice = new EnvironmentDevice(this);
-            this.environment = environmentDevice;
-        }
+        this.target = vogar.mode.isHost()
+                ? new LocalTarget(this)
+                : new DeviceTarget(this);
 
         expectationStore = ExpectationStore.parse(console, vogar.expectationFiles, vogar.mode);
         if (vogar.openBugsCommand != null) {
@@ -229,6 +224,10 @@ public final class Run {
         return new File(runnerDir, name + ".jar");
     }
 
+    public File localDexFile(String name) {
+        return localFile(name, name + ".dx.jar");
+    }
+
     public File vogarTemp() {
         return new File(runnerDir, "tmp");
     }
@@ -245,5 +244,16 @@ public final class Run {
     public String getAndroidData() {
         // The VM wants the parent directory of a directory named "dalvik-cache"
         return "ANDROID_DATA=" + dalvikCache().getParentFile();
+    }
+
+    /**
+     * Returns a parsed list of the --invoke-with command and its
+     * arguments, or an empty list if no --invoke-with was provided.
+     */
+    public Iterable<String> invokeWith() {
+        if (invokeWith == null) {
+            return Collections.emptyList();
+        }
+        return Splitter.onPattern("\\s+").omitEmptyStrings().split(invokeWith);
     }
 }
