@@ -27,11 +27,11 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import vogar.android.ActivityMode;
+import vogar.android.AdbTarget;
 import vogar.android.AndroidSdk;
 import vogar.android.AppProcessMode;
 import vogar.android.DeviceDalvikVm;
 import vogar.android.DeviceFileCache;
-import vogar.android.AdbTarget;
 import vogar.android.HostDalvikVm;
 import vogar.commands.Mkdir;
 import vogar.commands.Rm;
@@ -154,10 +154,13 @@ public final class Run {
         this.classpath = Classpath.of(vogar.classpath);
         this.classpath.addAll(vogarJar());
 
-
-        androidSdk = new AndroidSdk(log, mkdir, vogar.mode);
-        androidSdk.setCaches(new HostFileCache(log, mkdir),
-                new DeviceFileCache(log, runnerDir, androidSdk));
+        if (vogar.mode.requiresAndroidSdk()) {
+            androidSdk = new AndroidSdk(log, mkdir, vogar.mode);
+            androidSdk.setCaches(new HostFileCache(log, mkdir),
+                    new DeviceFileCache(log, runnerDir, androidSdk));
+        } else {
+            androidSdk = null;
+        }
 
         expectationStore = ExpectationStore.parse(console, vogar.expectationFiles, vogar.mode);
         if (vogar.openBugsCommand != null) {
