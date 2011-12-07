@@ -18,38 +18,25 @@ package vogar.tasks;
 
 import java.io.File;
 import vogar.Action;
-import vogar.Log;
 import vogar.Result;
-import vogar.commands.Command;
-import vogar.commands.Mkdir;
+import vogar.Target;
 
 public final class PrepareUserDirTask extends Task {
-    private final Log log;
-    private final Mkdir mkdir;
+    private final Target target;
     private final Action action;
 
-    public PrepareUserDirTask(Log log, Mkdir mkdir, Action action) {
-        super("install " + action);
-        this.log = log;
-        this.mkdir = mkdir;
+    public PrepareUserDirTask(Target target, Action action) {
+        super("prepare " + action.getUserDir());
+        this.target = target;
         this.action = action;
     }
 
     @Override protected Result execute() throws Exception {
-        File actionUserDir = action.getUserDir();
-
-        // if the user dir exists, cp would copy the files to the wrong place
-        if (actionUserDir.exists()) {
-            throw new IllegalStateException();
-        }
-
+        File userDir = action.getUserDir();
+        target.mkdirs(userDir);
         File resourcesDirectory = action.getResourcesDirectory();
         if (resourcesDirectory != null) {
-            mkdir.mkdirs(actionUserDir.getParentFile());
-            new Command(log, "cp", "-r", resourcesDirectory.toString(),
-                    actionUserDir.toString()).execute();
-        } else {
-            mkdir.mkdirs(actionUserDir);
+            target.push(resourcesDirectory, userDir);
         }
         return Result.SUCCESS;
     }

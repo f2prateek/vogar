@@ -14,23 +14,19 @@
  * limitations under the License.
  */
 
-package vogar.android;
+package vogar.tasks;
 
-import com.google.common.base.Predicate;
-import com.google.common.collect.Collections2;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileNotFoundException;
-import java.util.Collection;
 import vogar.Result;
 import vogar.Run;
-import vogar.tasks.Task;
 
-public final class RetrieveTargetFilesTask extends Task {
+public final class RetrieveFilesTask extends Task {
     private final Run run;
     private final File deviceFile;
 
-    public RetrieveTargetFilesTask(Run run, File deviceFile) {
+    public RetrieveFilesTask(Run run, File deviceFile) {
         super("retrieve files " + deviceFile);
         this.run = run;
         this.deviceFile = deviceFile;
@@ -46,24 +42,12 @@ public final class RetrieveTargetFilesTask extends Task {
      */
     private void retrieveFiles(File destination, File source, FileFilter filenameFilter)
             throws FileNotFoundException {
-        for (File file : run.androidSdk.ls(source)) {
+        for (File file : run.target.ls(source)) {
             if (filenameFilter.accept(file)) {
                 run.log.info("Moving " + file + " to " + destination);
                 run.mkdir.mkdirs(destination);
-                run.androidSdk.pull(file, destination);
+                run.target.pull(file, destination);
             }
-        }
-
-        // special case check if this directory exists so that we retrieve results on Caliper
-        // failure.
-        // TODO figure out which files are directories, and recurse.
-        Collection<File> dirs = Collections2.filter(run.androidSdk.ls(source), new Predicate<File>() {
-            public boolean apply(File file) {
-                return file.getName().equals("caliper-results");
-            }
-        });
-        for (File subDir : dirs) {
-            retrieveFiles(new File(destination, subDir.getName()), subDir, filenameFilter);
         }
     }
 }

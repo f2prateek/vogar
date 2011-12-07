@@ -21,7 +21,6 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Properties;
 import java.util.Set;
 import vogar.commands.VmCommandBuilder;
 import vogar.tasks.RunActionTask;

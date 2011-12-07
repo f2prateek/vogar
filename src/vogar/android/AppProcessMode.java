@@ -34,7 +34,7 @@ public final class AppProcessMode extends DeviceDalvikVm {
 
     @Override public VmCommandBuilder newVmCommandBuilder(Action action, File workingDirectory) {
         List<String> vmCommand = new ArrayList<String>();
-        vmCommand.addAll(run.androidSdk.deviceProcessPrefix(workingDirectory));
+        vmCommand.addAll(run.target.targetProcessPrefix(workingDirectory));
         vmCommand.add(run.getAndroidData());
         Iterables.addAll(vmCommand, run.invokeWith());
         vmCommand.add("app_process");

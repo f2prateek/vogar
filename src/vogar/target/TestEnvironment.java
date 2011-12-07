@@ -21,7 +21,6 @@ import java.net.Authenticator;
 import java.net.CookieHandler;
 import java.net.ResponseCache;
 import java.util.Locale;
-import java.util.Properties;
 import java.util.TimeZone;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.LogManager;

@@ -51,6 +51,9 @@ public final class Vogar {
     @Option(names = { "--mode" })
     ModeId mode = ModeId.DEVICE;
 
+    @Option(names = { "--ssh" })
+    String sshHost;
+
     @Option(names = { "--timeout" })
     int timeoutSeconds = 1 * 60; // default is one minute;
 
@@ -97,7 +100,7 @@ public final class Vogar {
     Integer debugPort;
 
     @Option(names = { "--device-dir" })
-    File deviceDir = new File("/sdcard/vogar");
+    File deviceDir;
 
     @Option(names = { "--vm-arg" })
     List<String> vmArgs = new ArrayList<String>();
@@ -192,6 +195,8 @@ public final class Vogar {
         System.out.println("      jvm: runs in a Java VM on the local desktop");
         System.out.println("      Default is: " + mode);
         System.out.println();
+        System.out.println("  --ssh <host:port>: target a remote machine via SSH.");
+        System.out.println();
         System.out.println("  --clean: synonym for --clean-before and --clean-after (default).");
         System.out.println("      Disable with --no-clean if you want no files removed.");
         System.out.println();
@@ -261,7 +266,6 @@ public final class Vogar {
         System.out.println();
         System.out.println("  --device-dir <directory>: use the specified directory for");
         System.out.println("      on-device temporary files and code.");
-        System.out.println("      Default is: " + deviceDir);
         System.out.println();
         System.out.println("  --vm-arg <argument>: include the specified argument when spawning a");
         System.out.println("      virtual machine. Examples: -Xint:fast, -ea, -Xmx16M");

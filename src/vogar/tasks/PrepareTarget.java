@@ -14,47 +14,45 @@
  * limitations under the License.
  */
 
-package vogar.android;
+package vogar.tasks;
 
 import java.io.File;
 import vogar.Result;
 import vogar.Run;
+import vogar.Target;
 import vogar.Vogar;
-import vogar.tasks.Task;
 
-public final class PrepareDeviceTask extends Task {
+public final class PrepareTarget extends Task {
     private final Run run;
-    private final AndroidSdk androidSdk;
+    private final Target target;
 
-    public PrepareDeviceTask(Run run) {
-        super("prepare device");
+    public PrepareTarget(Run run, Target target) {
+        super("prepare target");
         this.run = run;
-        this.androidSdk = run.androidSdk;
+        this.target = target;
     }
 
     @Override protected Result execute() throws Exception {
-        androidSdk.waitForDevice();
         // Even if runner dir is /vogar/run, the grandparent will be / (and non-null)
-        androidSdk.waitForNonEmptyDirectory(run.runnerDir.getParentFile().getParentFile(), 5 * 60);
-        androidSdk.remount();
+        target.await(run.runnerDir.getParentFile().getParentFile());
         if (run.cleanBefore) {
-            androidSdk.rm(run.runnerDir);
+            target.rm(run.runnerDir);
         }
-        androidSdk.mkdirs(run.runnerDir);
-        androidSdk.mkdir(run.vogarTemp());
-        androidSdk.mkdir(run.dalvikCache());
+        target.mkdirs(run.runnerDir);
+        target.mkdirs(run.vogarTemp());
+        target.mkdirs(run.dalvikCache());
         for (int i = 0; i < run.numRunners; i++) {
-            androidSdk.forwardTcp(run.firstMonitorPort + i, run.firstMonitorPort + i);
+            target.forwardTcp(run.firstMonitorPort + i);
         }
         if (run.debugPort != null) {
-            androidSdk.forwardTcp(run.debugPort, run.debugPort);
+            target.forwardTcp(run.debugPort);
         }
-        androidSdk.mkdirs(run.deviceUserHome);
+        target.mkdirs(run.deviceUserHome);
 
         // push ~/.caliperrc to device if found
         File hostCaliperRc = Vogar.dotFile(".caliperrc");
         if (hostCaliperRc.exists()) {
-            androidSdk.push(hostCaliperRc, new File(run.deviceUserHome, ".caliperrc"));
+            target.push(hostCaliperRc, new File(run.deviceUserHome, ".caliperrc"));
         }
         return Result.SUCCESS;
     }

@@ -289,6 +289,15 @@ public final class Command {
             return this;
         }
 
+        /**
+         * Prevents execute() from throwing if the invoked process returns a
+         * nonzero exit code.
+         */
+        public Builder permitNonZeroExitStatus() {
+            this.permitNonZeroExitStatus = true;
+            return this;
+        }
+
         public Builder tee(PrintStream printStream) {
             tee = printStream;
             return this;

@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Properties;
 import java.util.Set;
 import vogar.Action;
 import vogar.Classpath;
@@ -46,7 +45,7 @@ public class DeviceDalvikVm implements Mode {
         Set<Task> result = new HashSet<Task>();
         // dex everything on the classpath and push it to the device.
         for (File classpathElement : run.classpath.getElements()) {
-            dexAndPush(result, run.androidSdk.basenameOfJar(classpathElement),
+            dexAndPush(result, run.basenameOfJar(classpathElement),
                     classpathElement, null);
         }
         return result;
@@ -64,16 +63,16 @@ public class DeviceDalvikVm implements Mode {
 
     private void dexAndPush(Set<Task> tasks, String name, File jar, Action action) {
         File localDex = run.localDexFile(name);
-        File deviceDex = run.deviceDexFile(name);
+        File deviceDex = run.targetDexFile(name);
         Task dex = new DexTask(run.androidSdk, run.classpath, run.benchmark, name, jar, action,
                 localDex);
         tasks.add(dex);
-        tasks.add(new AdbPushTask(run.androidSdk, localDex, deviceDex).afterSuccess(dex));
+        tasks.add(run.target.pushTask(localDex, deviceDex).afterSuccess(dex));
     }
 
     @Override public VmCommandBuilder newVmCommandBuilder(Action action, File workingDirectory) {
         List<String> vmCommand = new ArrayList<String>();
-        vmCommand.addAll(run.androidSdk.deviceProcessPrefix(workingDirectory));
+        vmCommand.addAll(run.target.targetProcessPrefix(workingDirectory));
         vmCommand.add(run.getAndroidData());
         Iterables.addAll(vmCommand, run.invokeWith());
         vmCommand.add("dalvikvm");
@@ -82,7 +81,7 @@ public class DeviceDalvikVm implements Mode {
         VmCommandBuilder vmCommandBuilder = new VmCommandBuilder(run.log)
                 .vmCommand(vmCommand)
                 .vmArgs("-Duser.home=" + run.deviceUserHome)
-                .vmArgs("-Duser.name=" + run.androidSdk.getDeviceUserName())
+                .vmArgs("-Duser.name=" + run.target.getDeviceUserName())
                 .vmArgs("-Duser.language=en")
                 .vmArgs("-Duser.region=US")
                 .maxLength(1024);
@@ -97,16 +96,15 @@ public class DeviceDalvikVm implements Mode {
     }
 
     @Override public Set<Task> cleanupTasks(Action action) {
-        return Collections.<Task>singleton(
-                new DeleteTargetFilesTask(run.androidSdk, action.getUserDir()));
+        return Collections.singleton(run.target.rmTask(action.getUserDir()));
     }
 
     @Override public Classpath getRuntimeClasspath(Action action) {
         Classpath result = new Classpath();
-        result.addAll(run.deviceDexFile(action.getName()));
+        result.addAll(run.targetDexFile(action.getName()));
         if (!run.benchmark) {
             for (File classpathElement : run.classpath.getElements()) {
-                result.addAll(run.deviceDexFile(run.androidSdk.basenameOfJar(classpathElement)));
+                result.addAll(run.targetDexFile(run.basenameOfJar(classpathElement)));
             }
         }
         return result;

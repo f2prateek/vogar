@@ -16,29 +16,20 @@
 
 package vogar.android;
 
-import com.google.common.collect.ImmutableList;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.TimeoutException;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import vogar.Classpath;
 import vogar.HostFileCache;
 import vogar.Log;
 import vogar.Md5Cache;
 import vogar.ModeId;
 import vogar.commands.Command;
-import vogar.commands.CommandFailedException;
 import vogar.commands.Mkdir;
 import vogar.util.Strings;
 
@@ -63,29 +54,13 @@ public class AndroidSdk {
             "apache-xml-hostdex",
     };
 
-    private static final Comparator<File> ORDER_BY_NAME = new Comparator<File>() {
-        public int compare(File a, File b) {
-            // TODO: this should be a numeric comparison, but we don't
-            // need to worry until version 10.
-            return a.getName().compareTo(b.getName());
-        }
-    };
-
-    /** A list of generic names that we avoid when naming generated files. */
-    private static final Set<String> BANNED_NAMES = new HashSet<String>();
-    static {
-        BANNED_NAMES.add("classes");
-        BANNED_NAMES.add("javalib");
-    }
-
     private final Log log;
     private final Mkdir mkdir;
     private final File[] androidClasses;
+    public final DeviceFilesystem deviceFilesystem;
 
     private Md5Cache dexCache;
     private Md5Cache pushCache;
-    private final Set<File> mkdirCache = new HashSet<File>();
-
 
     public static Collection<File> defaultExpectations() {
         File[] files = new File("libcore/expectations").listFiles(new FilenameFilter() {
@@ -100,6 +75,7 @@ public class AndroidSdk {
     public AndroidSdk(Log log, Mkdir mkdir, ModeId mode) {
         this.log = log;
         this.mkdir = mkdir;
+        this.deviceFilesystem = new DeviceFilesystem(log, "adb", "shell");
 
         List<String> path = new Command(log, "which", "dx").execute();
         if (path.isEmpty()) {
@@ -188,23 +164,6 @@ public class AndroidSdk {
     }
 
     /**
-     * Returns a recognizable readable name for the given generated .jar file,
-     * appropriate for use in naming derived files.
-     *
-     * @param file a product of the android build system, such as
-     *     "out/core_intermediates/javalib.jar".
-     * @return a recognizable base name like "core_intermediates".
-     */
-    public String basenameOfJar(File file) {
-        String name = file.getName().replaceAll("\\.jar$", "");
-        while (BANNED_NAMES.contains(name)) {
-            file = file.getParentFile();
-            name = file.getName();
-        }
-        return name;
-    }
-
-    /**
      * Converts all the .class files on 'classpath' into a dex file written to 'output'.
      */
     public void dex(File output, Classpath classpath) {
@@ -257,38 +216,6 @@ public class AndroidSdk {
         new Command(log, "aapt", "add", "-k", apk.getPath(), dex.getPath()).execute();
     }
 
-    public void mkdir(File name) {
-        // to reduce adb traffic, only try to make a directory if we haven't tried before.
-        if (mkdirCache.contains(name)) {
-            return;
-        }
-        List<String> args = Arrays.asList("adb", "shell", "mkdir", name.getPath());
-        List<String> rawResult = new Command(log, args).execute();
-        // fail if this failed for any reason other than the file existing.
-        if (!rawResult.isEmpty() && !rawResult.get(0).contains("File exists")) {
-            throw new CommandFailedException(args, rawResult);
-        }
-        mkdirCache.add(name);
-    }
-
-    public void mkdirs(File name) {
-        LinkedList<File> directoryStack = new LinkedList<File>();
-        File dir = name;
-        // Do some directory bootstrapping since "mkdir -p" doesn't work in adb shell. Don't bother
-        // trying to create /sdcard or /. This might reach dir == null if given a relative path,
-        // otherwise it should terminate with "/sdcard" or "/".
-        while (dir != null && !dir.getPath().equals("/sdcard") && !dir.getPath().equals("/")) {
-            directoryStack.addFirst(dir);
-            dir = dir.getParentFile();
-        }
-        // would love to do "adb shell mkdir DIR1 DIR2 DIR3 ..." but unfortunately this will stop
-        // if any of the directories fail to be created (even for a reason like "file exists"), so
-        // they have to be created one by one.
-        for (File createDir : directoryStack) {
-            mkdir(createDir);
-        }
-    }
-
     public void mv(File source, File destination) {
         new Command(log, "adb", "shell", "mv", source.getPath(), destination.getPath()).execute();
     }
@@ -303,38 +230,13 @@ public class AndroidSdk {
                 .execute();
     }
 
-    public String getDeviceUserName() {
-        // The default environment doesn't include $USER, so dalvikvm doesn't set "user.name".
-        // DeviceDalvikVm uses this to set "user.name" manually with -D.
-        String line = new Command(log, "adb", "shell", "id").execute().get(0);
-        Matcher m = Pattern.compile("uid=\\d+\\((\\S+)\\) gid=\\d+\\(\\S+\\)").matcher(line);
-        return m.matches() ? m.group(1) : "root";
-    }
-
-    public Set<File> ls(File dir) throws FileNotFoundException {
-        List<String> rawResult = new Command(log, "adb", "shell", "ls", dir.getPath()).execute();
-        Set<File> files = new HashSet<File>();
-        for (String fileString : rawResult) {
-            if (fileString.equals(dir.getPath() + ": No such file or directory")) {
-                throw new FileNotFoundException("File or directory " + dir + " not found.");
-            }
-            if (fileString.equals(dir.getPath())) {
-                // The argument must have been a file or symlink, not a directory
-                files.add(dir);
-            } else {
-                files.add(new File(dir, fileString));
-            }
-        }
-        return files;
-    }
-
     public void pull(File remote, File local) {
         new Command(log, "adb", "pull", remote.getPath(), local.getPath()).execute();
     }
 
     public void push(File local, File remote) {
         Command fallback = new Command(log, "adb", "push", local.getPath(), remote.getPath());
-        mkdirs(remote.getParentFile());
+        deviceFilesystem.mkdirs(remote.getParentFile());
         // don't yet cache directories (only used by jtreg tests)
         if (pushCache != null && local.isFile()) {
             String key = pushCache.makeKey(local);
@@ -358,8 +260,8 @@ public class AndroidSdk {
         new Command(log, "adb", "uninstall", packageName).execute();
     }
 
-    public void forwardTcp(int localPort, int devicePort) {
-        new Command(log, "adb", "forward", "tcp:" + localPort, "tcp:" + devicePort).execute();
+    public void forwardTcp(int port) {
+        new Command(log, "adb", "forward", "tcp:" + port, "tcp:" + port).execute();
     }
 
     public void remount() {
@@ -368,10 +270,6 @@ public class AndroidSdk {
 
     public void waitForDevice() {
         new Command(log, "adb", "wait-for-device").execute();
-    }
-
-    public List<String> deviceProcessPrefix(File workingDirectory) {
-        return ImmutableList.of("adb", "shell", "cd", workingDirectory.getAbsolutePath(), "&&");
     }
 
     /**

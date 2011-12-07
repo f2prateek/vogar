@@ -17,40 +17,64 @@
 package vogar;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.Collections;
-import java.util.Set;
-import vogar.tasks.PrepareUserDirTask;
-import vogar.tasks.RetrieveLocalFilesTask;
-import vogar.tasks.Task;
+import java.util.List;
+import vogar.commands.Command;
 
 /**
  * Run tests on the host machine.
  */
-public final class LocalTarget implements Target {
+public final class LocalTarget extends Target {
     private final Run run;
 
     public LocalTarget(Run run) {
         this.run = run;
     }
 
-    @Override public Set<Task> prepareTargetTasks() {
-        return Collections.emptySet();
+    @Override public File defaultDeviceDir() {
+        return new File("/tmp/vogar");
     }
 
-    @Override public Task prepareUserDirTask(Action action) {
-        return new PrepareUserDirTask(run.log, run.mkdir, action);
+    @Override public List<String> targetProcessPrefix(File workingDirectory) {
+        return Collections.emptyList();
     }
 
-    public File actionUserDir(Action action) {
-        return run.localFile("userDir", action.getName());
+    @Override public String getDeviceUserName() {
+        throw new UnsupportedOperationException();
     }
 
-    @Override public Task retrieveFilesTask(Action action) {
-        return new RetrieveLocalFilesTask(run, new File("./vogar-results"),
-                action.getUserDir(), run.retrievedFiles);
+    @Override public void await(File nonEmptyDirectory) {
     }
 
-    @Override public Set<Task> shutdownTasks() {
-        return Collections.emptySet();
+    @Override public void rm(File file) {
+        run.rm.file(file);
+    }
+
+    @Override public List<File> ls(File directory) {
+        return Arrays.asList(directory.listFiles());
+    }
+
+    @Override public void mkdirs(File file) {
+        run.mkdir.mkdirs(file);
+    }
+
+    @Override public void forwardTcp(int port) {
+        // do nothing
+    }
+
+    @Override public void push(File local, File remote) {
+        if (remote.equals(local)) {
+            return;
+        }
+        // if the user dir exists, cp would copy the files to the wrong place
+        if (remote.exists()) {
+            throw new IllegalStateException();
+        }
+        new Command(run.log, "cp", "-r", local.toString(), remote.toString()).execute();
+    }
+
+    @Override public void pull(File remote, File local) {
+        new Command(run.log, "cp", remote.getPath(), local.getPath()).execute();
     }
 }

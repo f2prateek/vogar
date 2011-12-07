@@ -30,10 +30,6 @@ public final class Rm {
     }
 
     public void file(File file) {
-        new Command(log, "rm", "-f", file.getPath()).execute();
-    }
-
-    public void directoryTree(File directory) {
-        new Command(log, "rm", "-rf", directory.getPath()).execute();
+        new Command(log, "rm", "-rf", file.getPath()).execute();
     }
 }

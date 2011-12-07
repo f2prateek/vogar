@@ -40,7 +40,8 @@ public class DeviceFileCache implements FileCache {
     public boolean existsInCache(String key) {
         if (cachedFiles == null) {
             try {
-                cachedFiles = androidSdk.ls(cacheRoot);
+                cachedFiles = new HashSet<File>();
+                cachedFiles.addAll(androidSdk.deviceFilesystem.ls(cacheRoot));
                 log.verbose("indexed on-device cache: " + cachedFiles.size() + " entries.");
             } catch (FileNotFoundException e) {
                 // cacheRoot probably just hasn't been created yet.
@@ -58,7 +59,7 @@ public class DeviceFileCache implements FileCache {
 
     public void copyToCache(File source, String key) {
         File cachedFile = new File(cacheRoot, key);
-        androidSdk.mkdirs(cacheRoot);
+        androidSdk.deviceFilesystem.mkdirs(cacheRoot);
         // Copy it onto the same file system first, then atomically move it into place.
         // That way, if we fail, we don't leave anything dangerous lying around.
         File temporary = new File(cachedFile + ".tmp");

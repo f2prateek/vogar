@@ -20,18 +20,18 @@ import java.io.File;
 import vogar.Result;
 import vogar.commands.Rm;
 
-public final class DeleteDirectoryTask extends Task {
+public final class RmTask extends Task {
     private final Rm rm;
     private final File file;
 
-    public DeleteDirectoryTask(Rm rm, File file) {
+    public RmTask(Rm rm, File file) {
         super("rm " + file);
         this.rm = rm;
         this.file = file;
     }
 
     @Override protected Result execute() throws Exception {
-        rm.directoryTree(file);
+        rm.file(file);
         return Result.SUCCESS;
     }
 }

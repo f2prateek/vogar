@@ -53,7 +53,7 @@ public final class ActivityMode implements Mode {
 
     @Override public Set<Task> cleanupTasks(Action action) {
         Set<Task> result = new LinkedHashSet<Task>();
-        result.add(new DeleteTargetFilesTask(run.androidSdk, action.getUserDir()));
+        result.add(run.target.rmTask(action.getUserDir()));
         result.add(new UninstallApkTask(run.androidSdk, action.getName()));
         return result;
     }

@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Properties;
 import java.util.Set;
 import vogar.Action;
 import vogar.Classpath;
@@ -54,7 +53,7 @@ public final class HostDalvikVm implements Mode {
     @Override public Set<Task> installTasks() {
         Set<Task> result = new HashSet<Task>();
         for (File classpathElement : run.classpath.getElements()) {
-            String name = run.androidSdk.basenameOfJar(classpathElement);
+            String name = run.basenameOfJar(classpathElement);
             result.add(new DexTask(run.androidSdk, run.classpath, run.benchmark, name,
                     classpathElement, null, run.localDexFile(name)));
         }
@@ -113,7 +112,7 @@ public final class HostDalvikVm implements Mode {
         Classpath result = new Classpath();
         result.addAll(run.localDexFile(action.getName()));
         for (File classpathElement : run.classpath.getElements()) {
-            result.addAll(run.localDexFile(run.androidSdk.basenameOfJar(classpathElement)));
+            result.addAll(run.localDexFile(run.basenameOfJar(classpathElement)));
         }
         return result;
     }

@@ -22,14 +22,16 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import vogar.android.ActivityMode;
 import vogar.android.AndroidSdk;
 import vogar.android.AppProcessMode;
 import vogar.android.DeviceDalvikVm;
 import vogar.android.DeviceFileCache;
-import vogar.android.DeviceTarget;
+import vogar.android.AdbTarget;
 import vogar.android.HostDalvikVm;
 import vogar.commands.Mkdir;
 import vogar.commands.Rm;
@@ -37,6 +39,13 @@ import vogar.tasks.TaskQueue;
 import vogar.util.Strings;
 
 public final class Run {
+    /** A list of generic names that we avoid when naming generated files. */
+    private static final Set<String> BANNED_NAMES = new HashSet<String>();
+    static {
+        BANNED_NAMES.add("classes");
+        BANNED_NAMES.add("javalib");
+    }
+
     public final File xmlReportsDirectory;
     public final File resultsDir;
     public final boolean recordResults;
@@ -93,15 +102,28 @@ public final class Run {
         console.setAnsi(vogar.ansi);
         console.setIndent(vogar.indent);
         console.setVerbose(vogar.verbose);
+
         this.localTemp = new File("/tmp/vogar/" + UUID.randomUUID());
         this.log = console;
+
+        if (vogar.sshHost != null) {
+            this.target = new SshTarget(vogar.sshHost, log);
+        } else if (vogar.mode.isHost()) {
+            this.target = new LocalTarget(this);
+        } else {
+            this.target = new AdbTarget(this);
+        }
+
         this.additionalVmArgs = vogar.vmArgs;
         this.benchmark = vogar.benchmark;
         this.cleanBefore = vogar.cleanBefore;
         this.cleanAfter = vogar.cleanAfter;
         this.date = new Date();
         this.debugPort = vogar.debugPort;
-        this.deviceUserHome = new File(vogar.deviceDir, "user.home");
+        this.runnerDir = vogar.deviceDir != null
+                ? new File(vogar.deviceDir, "run")
+                : new File(target.defaultDeviceDir(), "run");
+        this.deviceUserHome = new File(runnerDir, "user.home");
         this.mkdir = new Mkdir(console);
         this.rm = new Rm(console);
         this.firstMonitorPort = vogar.firstMonitorPort;
@@ -128,7 +150,6 @@ public final class Run {
         this.resultsDir =  vogar.resultsDir == null
                 ? new File(vogar.vogarDir, "results")
                 : vogar.resultsDir;
-        this.runnerDir = new File(vogar.deviceDir, "run");
         this.keystore = localFile("activity", "vogar.keystore");
         this.classpath = Classpath.of(vogar.classpath);
         this.classpath.addAll(vogarJar());
@@ -136,11 +157,7 @@ public final class Run {
 
         androidSdk = new AndroidSdk(log, mkdir, vogar.mode);
         androidSdk.setCaches(new HostFileCache(log, mkdir),
-                new DeviceFileCache(log, vogar.deviceDir, androidSdk));
-
-        this.target = vogar.mode.isHost()
-                ? new LocalTarget(this)
-                : new DeviceTarget(this);
+                new DeviceFileCache(log, runnerDir, androidSdk));
 
         expectationStore = ExpectationStore.parse(console, vogar.expectationFiles, vogar.mode);
         if (vogar.openBugsCommand != null) {
@@ -220,12 +237,29 @@ public final class Run {
             : new File(new File(javaHome, "bin"), tool).getPath();
     }
 
-    public File deviceDexFile(String name) {
-        return new File(runnerDir, name + ".jar");
+    public File targetDexFile(String name) {
+        return new File(runnerDir, name + ".dex.jar");
     }
 
     public File localDexFile(String name) {
-        return localFile(name, name + ".dx.jar");
+        return localFile(name, name + ".dex.jar");
+    }
+
+    /**
+     * Returns a recognizable readable name for the given generated .jar file,
+     * appropriate for use in naming derived files.
+     *
+     * @param file a product of the android build system, such as
+     *     "out/core_intermediates/javalib.jar".
+     * @return a recognizable base name like "core_intermediates".
+     */
+    public String basenameOfJar(File file) {
+        String name = file.getName().replaceAll("\\.jar$", "");
+        while (BANNED_NAMES.contains(name)) {
+            file = file.getParentFile();
+            name = file.getName();
+        }
+        return name;
     }
 
     public File vogarTemp() {

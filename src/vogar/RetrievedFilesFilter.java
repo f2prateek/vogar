@@ -32,10 +32,15 @@ public final class RetrievedFilesFilter implements FileFilter {
     }
 
     @Override public boolean accept(File file) {
-        // save Caliper and profiler results; discard java.util.prefs XML
-        return !file.getName().equals("prefs.xml")
-                && (file.getName().endsWith(".xml")
-                        || file.getName().endsWith(".json")
-                        || (profile && file.getName().equals(profileFile.getName())));
+        if (file.getName().equals("prefs.xml")) {
+            return false;
+        }
+        if (file.getName().endsWith(".xml")
+                || file.getName().equals("caliper-results")
+                || file.getName().endsWith(".json")
+                || (profile && file.getName().equals(profileFile.getName()))) {
+            return true;
+        }
+        return false;
     }
 }

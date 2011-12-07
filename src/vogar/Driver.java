@@ -25,7 +25,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import vogar.tasks.BuildActionTask;
-import vogar.tasks.DeleteDirectoryTask;
+import vogar.tasks.PrepareTarget;
+import vogar.tasks.PrepareUserDirTask;
+import vogar.tasks.RetrieveFilesTask;
+import vogar.tasks.RmTask;
 import vogar.tasks.Task;
 import vogar.util.TimeUtilities;
 
@@ -43,7 +46,7 @@ public final class Driver {
     private int failures = 0;
     private int skipped = 0;
 
-    private Set<Task> prepareTargetTasks;
+    private Task prepareTargetTask;
     private Set<Task> installVogarTasks;
 
     private final Map<String, Action> actions = Collections.synchronizedMap(
@@ -73,15 +76,15 @@ public final class Driver {
         run.console.info("Actions: " + actions.size());
         final long t0 = System.currentTimeMillis();
 
-        prepareTargetTasks = run.target.prepareTargetTasks();
-        run.taskQueue.enqueueAll(prepareTargetTasks);
+        prepareTargetTask = new PrepareTarget(run, run.target);
+        run.taskQueue.enqueue(prepareTargetTask);
 
         installVogarTasks = run.mode.installTasks();
         run.taskQueue.enqueueAll(installVogarTasks);
-        registerPrerequisites(prepareTargetTasks, installVogarTasks);
+        registerPrerequisites(Collections.singleton(prepareTargetTask), installVogarTasks);
 
         for (Action action : actions.values()) {
-            action.setUserDir(run.target.actionUserDir(action));
+            action.setUserDir(new File(run.runnerDir, action.getName()));
             Outcome outcome = outcomes.get(action.getName());
             if (outcome != null) {
                 addEarlyResult(outcome);
@@ -95,8 +98,8 @@ public final class Driver {
 
         if (run.cleanAfter) {
             Set<Task> shutdownTasks = new HashSet<Task>();
-            shutdownTasks.add(new DeleteDirectoryTask(run.rm, run.localTemp));
-            shutdownTasks.addAll(run.target.shutdownTasks());
+            shutdownTasks.add(new RmTask(run.rm, run.localTemp));
+            shutdownTasks.add(run.target.rmTask(run.runnerDir));
             for (Task task : shutdownTasks) {
                 task.after(run.taskQueue.getTasks());
             }
@@ -149,14 +152,14 @@ public final class Driver {
         Task build = new BuildActionTask(run, action, this, jar);
         run.taskQueue.enqueue(build);
 
-        Task prepareUserDir = run.target.prepareUserDirTask(action);
+        Task prepareUserDir = new PrepareUserDirTask(run.target, action);
         prepareUserDir.after(installVogarTasks);
         run.taskQueue.enqueue(prepareUserDir);
 
         Set<Task> install = run.mode.installActionTasks(action, jar);
         registerPrerequisites(Collections.singleton(build), install);
         registerPrerequisites(installVogarTasks, install);
-        registerPrerequisites(prepareTargetTasks, install);
+        registerPrerequisites(Collections.singleton(prepareTargetTask), install);
         run.taskQueue.enqueueAll(install);
 
         Task execute = run.mode.executeActionTask(action, useLargeTimeout)
@@ -166,11 +169,11 @@ public final class Driver {
                 .afterSuccess(install);
         run.taskQueue.enqueue(execute);
 
-        Task retrieveFiles = run.target.retrieveFilesTask(action).after(execute);
+        Task retrieveFiles = new RetrieveFilesTask(run, action.getUserDir()).after(execute);
         run.taskQueue.enqueue(retrieveFiles);
 
         if (run.cleanAfter) {
-            run.taskQueue.enqueue(new DeleteDirectoryTask(run.rm, run.localFile(action))
+            run.taskQueue.enqueue(new RmTask(run.rm, run.localFile(action))
                     .after(execute).after(retrieveFiles));
             Set<Task> cleanupTasks = run.mode.cleanupTasks(action);
             for (Task task : cleanupTasks) {
