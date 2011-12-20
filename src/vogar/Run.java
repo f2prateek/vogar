@@ -75,7 +75,7 @@ public final class Run {
     public final boolean cleanBefore;
     public final boolean cleanAfter;
     public final File localTemp;
-    public final int numRunners;
+    public final int maxConcurrentActions;
     public final File deviceUserHome;
     public final Console console;
     public final int smallTimeoutSeconds;
@@ -131,7 +131,7 @@ public final class Run {
         this.javacArgs = vogar.javacArgs;
         this.javaHome = vogar.javaHome;
         this.largeTimeoutSeconds = vogar.timeoutSeconds * Vogar.LARGE_TIMEOUT_MULTIPLIER;
-        this.numRunners = (vogar.stream || vogar.mode == ModeId.ACTIVITY)
+        this.maxConcurrentActions = (vogar.stream || vogar.mode == ModeId.ACTIVITY)
                     ? 1
                     : Vogar.NUM_PROCESSORS;
         this.timeoutSeconds = vogar.timeoutSeconds;
@@ -197,7 +197,7 @@ public final class Run {
         this.outcomeStore = new OutcomeStore(log, mkdir, rm, resultsDir, recordResults,
                 expectationStore, date);
         this.driver = new Driver(this);
-        this.taskQueue = new TaskQueue(console);
+        this.taskQueue = new TaskQueue(console, maxConcurrentActions);
     }
 
     public final File localFile(Object... path) {

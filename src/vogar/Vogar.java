@@ -30,7 +30,7 @@ import vogar.android.AndroidSdk;
  */
 public final class Vogar {
     static final int LARGE_TIMEOUT_MULTIPLIER = 10;
-    static final int NUM_PROCESSORS = Runtime.getRuntime().availableProcessors();
+    public static final int NUM_PROCESSORS = Runtime.getRuntime().availableProcessors();
 
     private final List<File> actionFiles = new ArrayList<File>();
     private final List<String> actionClassesAndPackages = new ArrayList<String>();

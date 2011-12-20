@@ -38,6 +38,14 @@ public abstract class Task {
         this.name = name;
     }
 
+    /**
+     * Returns true if this task is an action task. The queue imposes limits
+     * on how many actions may be run concurrently.
+     */
+    public boolean isAction() {
+        return false;
+    }
+
     public Task after(Task prerequisite) {
         tasksThatMustFinishFirst.add(prerequisite);
         return this;

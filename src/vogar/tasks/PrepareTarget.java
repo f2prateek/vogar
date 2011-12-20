@@ -41,7 +41,7 @@ public final class PrepareTarget extends Task {
         target.mkdirs(run.runnerDir);
         target.mkdirs(run.vogarTemp());
         target.mkdirs(run.dalvikCache());
-        for (int i = 0; i < run.numRunners; i++) {
+        for (int i = 0; i < Vogar.NUM_PROCESSORS; i++) {
             target.forwardTcp(run.firstMonitorPort + i);
         }
         if (run.debugPort != null) {

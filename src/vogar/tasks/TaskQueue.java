@@ -34,12 +34,16 @@ public final class TaskQueue {
     private static final int FOREVER = 60 * 60 * 24 * 28; // four weeks
     private final Console console;
     private int runningTasks;
+    private int runningActions;
+    private int maxConcurrentActions;
     private final LinkedList<Task> tasks = new LinkedList<Task>();
+    private final LinkedList<Task> runnableActions = new LinkedList<Task>();
     private final LinkedList<Task> runnableTasks = new LinkedList<Task>();
     private final List<Task> failedTasks = new ArrayList<Task>();
 
-    public TaskQueue(Console console) {
+    public TaskQueue(Console console, int maxConcurrentActions) {
         this.console = console;
+        this.maxConcurrentActions = maxConcurrentActions;
     }
 
     /**
@@ -146,9 +150,19 @@ public final class TaskQueue {
 
     private synchronized Task takeTask() {
         while (true) {
-            Task task = runnableTasks.poll();
+            Task task = null;
+            if (runningActions < maxConcurrentActions) {
+                task = runnableActions.poll();
+            }
+            if (task == null) {
+                task = runnableTasks.poll();
+            }
+
             if (task != null) {
                 runningTasks++;
+                if (task.isAction()) {
+                    runningActions++;
+                }
                 return task;
             }
 
@@ -169,6 +183,9 @@ public final class TaskQueue {
             failedTasks.add(task);
         }
         runningTasks--;
+        if (task.isAction()) {
+            runningActions--;
+        }
         promoteBlockedTasks();
         if (isExhausted()) {
             notifyAll();
@@ -180,7 +197,11 @@ public final class TaskQueue {
             Task potentiallyUnblocked = it.next();
             if (potentiallyUnblocked.isRunnable()) {
                 it.remove();
-                runnableTasks.add(potentiallyUnblocked);
+                if (potentiallyUnblocked.isAction()) {
+                    runnableActions.add(potentiallyUnblocked);
+                } else {
+                    runnableTasks.add(potentiallyUnblocked);
+                }
                 notifyAll();
             }
         }
@@ -190,6 +211,6 @@ public final class TaskQueue {
      * Returns true if there are no tasks to run and no tasks currently running.
      */
     private boolean isExhausted() {
-        return runnableTasks.isEmpty() && runningTasks == 0;
+        return runnableTasks.isEmpty() && runnableActions.isEmpty() && runningTasks == 0;
     }
 }

@@ -59,6 +59,10 @@ public class RunActionTask extends Task implements HostMonitor.Handler {
         this.useLargeTimeout = useLargeTimeout;
     }
 
+    @Override public boolean isAction() {
+        return true;
+    }
+
     @Override protected Result execute() throws Exception {
         run.console.action(actionName);
 
@@ -166,9 +170,9 @@ public class RunActionTask extends Task implements HostMonitor.Handler {
     }
 
     private int monitorPort(int defaultValue) {
-        return run.numRunners == 1
+        return run.maxConcurrentActions == 1
                 ? defaultValue
-                : run.firstMonitorPort + (runnerThreadId.get() % run.numRunners);
+                : run.firstMonitorPort + runnerThreadId.get();
     }
 
     @Override public void start(String outcomeName, String runnerClass) {
