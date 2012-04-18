@@ -24,6 +24,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import vogar.android.AndroidSdk;
+import vogar.util.Strings;
 
 /**
  * Command line interface for running benchmarks and tests on dalvik.
@@ -37,6 +38,7 @@ public final class Vogar {
     final List<String> targetArgs = new ArrayList<String>();
     private final OptionParser optionParser = new OptionParser(this);
     private File configFile = Vogar.dotFile(".vogarconfig");
+    private String[] configArgs;
 
     public static File dotFile (String name) {
         return new File(System.getProperty("user.home", "."), name);
@@ -341,14 +343,12 @@ public final class Vogar {
     }
 
     private boolean parseArgs(String[] args) {
-        List<String> actionsAndTargetArgs;
-
         // extract arguments from config file
-        String[] configArgs = optionParser.readFile(configFile);
+        configArgs = optionParser.readFile(configFile);
 
         // config file args are added first so that in a conflict, the currently supplied
         // arguments win.
-        actionsAndTargetArgs = optionParser.parse(configArgs);
+        List<String> actionsAndTargetArgs = optionParser.parse(configArgs);
         if (!actionsAndTargetArgs.isEmpty()) {
             throw new RuntimeException(
                     "actions or targets given in .vogarconfig: " + actionsAndTargetArgs);
@@ -443,6 +443,10 @@ public final class Vogar {
 
     private boolean run() throws IOException {
         Run run = new Run(this);
+        if (configArgs.length > 0) {
+            run.console.verbose("loaded arguments from .vogarconfig: " +
+                                Strings.join(" ", configArgs));
+        }
         return run.driver.buildAndRun(actionFiles, actionClassesAndPackages);
     }
 

@@ -207,7 +207,7 @@ public class OptionParser {
         this.defaultOptionMap = new HashMap<Field, Object>();
     }
 
-    public String[] readFile(File configFile) {
+    public static String[] readFile(File configFile) {
         if (!configFile.exists()) {
             return new String[0];
         }
