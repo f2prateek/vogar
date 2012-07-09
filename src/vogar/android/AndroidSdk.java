@@ -151,7 +151,15 @@ public class AndroidSdk {
 
     public static Collection<File> defaultSourcePath() {
         File supportSrc = new File("libcore/support/src/test/java");
-        return supportSrc.exists() ? Arrays.asList(supportSrc) : Collections.<File>emptyList();
+        File mockWebServerSrc = new File("external/mockwebserver/src/main/java/");
+        ArrayList<File> sourcePath = new ArrayList<File>();
+        if (supportSrc.exists()) {
+            sourcePath.add(supportSrc);
+        }
+        if (mockWebServerSrc.exists()) {
+            sourcePath.add(mockWebServerSrc);
+        }
+        return sourcePath;
     }
 
     public File[] getAndroidClasses() {
