@@ -28,6 +28,6 @@ public enum ModeId {
     }
 
     public boolean requiresAndroidSdk() {
-        return this == DEVICE || this == ACTIVITY || this == HOST || this == APP_PROCESS;
+        return this != JVM;
     }
 }
