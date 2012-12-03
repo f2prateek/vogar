@@ -150,8 +150,9 @@ public class AndroidSdk {
     }
 
     public static Collection<File> defaultSourcePath() {
-        File supportSrc = new File("libcore/support/src/test/java");
-        File mockWebServerSrc = new File("external/mockwebserver/src/main/java/");
+        String buildRoot = System.getenv("ANDROID_BUILD_TOP");
+        File supportSrc = new File(buildRoot, "libcore/support/src/test/java");
+        File mockWebServerSrc = new File(buildRoot, "external/mockwebserver/src/main/java/");
         ArrayList<File> sourcePath = new ArrayList<File>();
         if (supportSrc.exists()) {
             sourcePath.add(supportSrc);
