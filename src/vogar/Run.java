@@ -56,6 +56,7 @@ public final class Run {
     public final Log log;
     public final Classpath classpath;
     public final Classpath buildClasspath;
+    public final Classpath resourceClasspath;
     public final List<File> sourcepath;
     public final Mkdir mkdir;
     public final Rm rm;
@@ -137,6 +138,7 @@ public final class Run {
         this.timeoutSeconds = vogar.timeoutSeconds;
         this.smallTimeoutSeconds = vogar.timeoutSeconds;
         this.sourcepath = vogar.sourcepath;
+        this.resourceClasspath = Classpath.of(vogar.resourceClasspath);
         this.useBootClasspath = vogar.useBootClasspath;
         this.targetArgs = vogar.targetArgs;
         this.xmlReportsDirectory = vogar.xmlReportsDirectory;

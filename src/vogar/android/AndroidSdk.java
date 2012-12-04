@@ -150,17 +150,28 @@ public class AndroidSdk {
     }
 
     public static Collection<File> defaultSourcePath() {
+        return filterNonExistentPathsFrom("libcore/support/src/test/java",
+                                          "external/mockwebserver/src/main/java/");
+    }
+
+    public static Collection<File> defaultResourceClassPath() {
+        return filterNonExistentPathsFrom("libcore/dom/src/test/resources",
+                                          "libcore/support/src/test/java/tests/resources",
+                                          "libcore/luni/src/test/etc/loading-test-jar/resources",
+                                          "libcore/luni/src/test/etc/loading-test2-jar/resources",
+                                          "libcore/luni/src/test/resources");
+    }
+
+    private static Collection<File> filterNonExistentPathsFrom(String... paths) {
+        ArrayList<File> result = new ArrayList<File>();
         String buildRoot = System.getenv("ANDROID_BUILD_TOP");
-        File supportSrc = new File(buildRoot, "libcore/support/src/test/java");
-        File mockWebServerSrc = new File(buildRoot, "external/mockwebserver/src/main/java/");
-        ArrayList<File> sourcePath = new ArrayList<File>();
-        if (supportSrc.exists()) {
-            sourcePath.add(supportSrc);
+        for (String path : paths) {
+            File file = new File(buildRoot, path);
+            if (file.exists()) {
+                result.add(file);
+            }
         }
-        if (mockWebServerSrc.exists()) {
-            sourcePath.add(mockWebServerSrc);
-        }
-        return sourcePath;
+        return result;
     }
 
     public File[] getAndroidClasses() {

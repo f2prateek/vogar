@@ -144,6 +144,8 @@ public class RunActionTask extends Task implements HostMonitor.Handler {
             vmCommandBuilder.classpath(run.mode.getRuntimeClasspath(action));
         }
 
+        vmCommandBuilder.classpath(run.resourceClasspath);
+
         if (monitorPort != -1) {
             vmCommandBuilder.args("--monitorPort", Integer.toString(monitorPort));
         }

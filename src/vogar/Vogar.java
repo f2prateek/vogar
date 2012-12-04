@@ -122,6 +122,12 @@ public final class Vogar {
     @Option(names = { "--classpath", "-cp" })
     List<File> classpath = new ArrayList<File>();
 
+    @Option(names = { "--resource-classpath" })
+    List<File> resourceClasspath = new ArrayList<File>();
+    {
+        resourceClasspath.addAll(AndroidSdk.defaultResourceClassPath());
+    }
+
     @Option(names = { "--sourcepath" })
     List<File> sourcepath = new ArrayList<File>();
     {
