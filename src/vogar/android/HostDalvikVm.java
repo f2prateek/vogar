@@ -114,6 +114,7 @@ public final class HostDalvikVm implements Mode {
         for (File classpathElement : run.classpath.getElements()) {
             result.addAll(run.localDexFile(run.basenameOfJar(classpathElement)));
         }
+        result.addAll(run.resourceClasspath);
         return result;
     }
 }

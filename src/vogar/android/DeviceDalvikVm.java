@@ -107,6 +107,8 @@ public class DeviceDalvikVm implements Mode {
                 result.addAll(run.targetDexFile(run.basenameOfJar(classpathElement)));
             }
         }
+        // Note we intentionally do not add run.resourceClasspath on
+        // the device since it contains host path names.
         return result;
     }
 }

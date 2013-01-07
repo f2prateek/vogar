@@ -19,6 +19,7 @@ package vogar.tasks;
 import java.io.File;
 import java.io.IOException;
 import vogar.Action;
+import vogar.Classpath;
 import vogar.Outcome;
 import vogar.Result;
 import vogar.Run;
@@ -138,21 +139,18 @@ public class RunActionTask extends Task implements HostMonitor.Handler {
     public Command createActionCommand(Action action, String skipPast, int monitorPort) {
         File workingDirectory = action.getUserDir();
         VmCommandBuilder vmCommandBuilder = run.mode.newVmCommandBuilder(action, workingDirectory);
+        Classpath runtimeClasspath = run.mode.getRuntimeClasspath(action);
         if (run.useBootClasspath) {
-            vmCommandBuilder.bootClasspath(run.mode.getRuntimeClasspath(action));
+            vmCommandBuilder.bootClasspath(runtimeClasspath);
         } else {
-            vmCommandBuilder.classpath(run.mode.getRuntimeClasspath(action));
+            vmCommandBuilder.classpath(runtimeClasspath);
         }
-
-        vmCommandBuilder.classpath(run.resourceClasspath);
-
         if (monitorPort != -1) {
             vmCommandBuilder.args("--monitorPort", Integer.toString(monitorPort));
         }
         if (skipPast != null) {
             vmCommandBuilder.args("--skipPast", skipPast);
         }
-
         return vmCommandBuilder
                 .temp(workingDirectory)
                 .debugPort(run.debugPort)

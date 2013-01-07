@@ -81,6 +81,8 @@ final class JavaVm implements Mode {
          * --java-home /usr/lib/jvm/java-6-openjdk
          */
         result.addAll(new File("/usr/share/java/bcprov.jar"));
+
+        result.addAll(run.resourceClasspath);
         return result;
     }
 
