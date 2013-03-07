@@ -224,7 +224,8 @@ public class AndroidSdk {
         List<String> aapt = new ArrayList<String>(Arrays.asList("aapt",
                                                                 "package",
                                                                 "-F", apk.getPath(),
-                                                                "-M", manifest.getPath()));
+                                                                "-M", manifest.getPath(),
+                                                                "-I", "prebuilts/sdk/current/android.jar"));
         for (File jar : androidClasses) {
             aapt.add("-I");
             aapt.add(jar.getPath());
