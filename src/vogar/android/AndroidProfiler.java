@@ -26,7 +26,7 @@ import vogar.target.Profiler;
 public class AndroidProfiler extends Profiler {
     // SamplingProfiler methods
     private final Method newArrayThreadSet;
-    private final Method newThreadGroupTheadSet;
+    private final Method newThreadGroupThreadSet;
     private final Constructor newThreadSet;
     private final Method start;
     private final Method stop;
@@ -41,8 +41,8 @@ public class AndroidProfiler extends Profiler {
         Class<?> HprofData = Class.forName(packageName + ".HprofData");
         Class<?> Writer = Class.forName(packageName + ".AsciiHprofWriter");
         newArrayThreadSet = SamplingProfiler.getMethod("newArrayThreadSet", Thread[].class);
-        newThreadGroupTheadSet = SamplingProfiler.getMethod("newThreadGroupTheadSet",
-                                                            ThreadGroup.class);
+        newThreadGroupThreadSet = SamplingProfiler.getMethod("newThreadGroupThreadSet",
+                                                             ThreadGroup.class);
         newThreadSet = SamplingProfiler.getConstructor(Integer.TYPE, ThreadSet);
         start = SamplingProfiler.getMethod("start", Integer.TYPE);
         stop = SamplingProfiler.getMethod("stop");
@@ -61,7 +61,7 @@ public class AndroidProfiler extends Profiler {
             thread[0] = t;
             Object threadSet;
             if (profileThreadGroup) {
-                threadSet = newThreadGroupTheadSet.invoke(null, t.getThreadGroup());
+                threadSet = newThreadGroupThreadSet.invoke(null, t.getThreadGroup());
             } else {
                 threadSet = newArrayThreadSet.invoke(null, (Object)thread);
             }
