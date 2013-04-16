@@ -23,7 +23,7 @@ import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.ListIterator;
-import vogar.target.junit.Junit;
+import vogar.target.junit.Junit3;
 
 public class TestSuite implements Test {
     /** A heterogeneous list containing of tests and test classes. */
@@ -81,7 +81,7 @@ public class TestSuite implements Test {
             Object o = i.next();
             if (o instanceof Class) {
                 i.remove();
-                for (Test test : Junit.classToJunitTests((Class<?>) o)) {
+                for (Test test : Junit3.classToJunitTests((Class<?>) o)) {
                     i.add(test);
                 }
             }

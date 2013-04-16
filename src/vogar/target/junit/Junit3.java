@@ -19,18 +19,21 @@ package vogar.target.junit;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
+import vogar.ClassAnalyzer;
 
 /**
  * Utilities for manipulating JUnit tests.
  */
-public final class Junit {
-    private Junit() {}
+public final class Junit3 {
+    private Junit3() {}
 
     private static final Method setUp;
     private static final Method tearDown;
@@ -93,6 +96,16 @@ public final class Junit {
         List<VogarTest> result = new ArrayList<VogarTest>();
         getSuiteMethods(result, testClass, args);
         return result;
+    }
+
+    public static boolean isJunit3Test(Class<?> klass) {
+        // public class FooTest extends TestCase {...}
+        //   or
+        // public class FooSuite {
+        //    public static Test suite() {...}
+        // }
+        return (TestCase.class.isAssignableFrom(klass) && !Modifier.isAbstract(klass.getModifiers()))
+                || new ClassAnalyzer(klass).hasMethod(true, Test.class, "suite");
     }
 
     private static void getSuiteMethods(List<VogarTest> out, Class<?> testClass, String... args) {

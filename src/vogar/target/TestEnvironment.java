@@ -59,6 +59,14 @@ public final class TestEnvironment {
         // Reset system properties.
         System.setProperties(null);
 
+
+        System.setProperty("java.runtime.version", "x");
+        System.setProperty("java.vm.info", "x");
+        System.setProperty("java.vm.version", "x");
+        System.setProperty("java.vm.vendor", "x");
+        System.setProperty("java.vm.name", "x");
+
+
         // Require writable java.home and user.dir directories for preferences
         String tmpDir = System.getProperty("java.io.tmpdir");
         if ("Dalvik".equals(System.getProperty("java.vm.name"))) {
@@ -84,7 +92,7 @@ public final class TestEnvironment {
         boolean usedParentHandlers = loggerToMute.getUseParentHandlers();
         loggerToMute.setUseParentHandlers(false);
         try {
-            resetPreferences(Preferences.systemRoot());
+            // resetPreferences(Preferences.systemRoot());
             resetPreferences(Preferences.userRoot());
         } finally {
             loggerToMute.setUseParentHandlers(usedParentHandlers);

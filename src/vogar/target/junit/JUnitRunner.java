@@ -16,7 +16,6 @@
 
 package vogar.target.junit;
 
-import java.lang.reflect.Modifier;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -25,9 +24,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
-import junit.framework.Test;
-import junit.framework.TestCase;
-import vogar.ClassAnalyzer;
+
+import junit.framework.AssertionFailedError;
 import vogar.Result;
 import vogar.monitor.TargetMonitor;
 import vogar.target.Profiler;
@@ -65,9 +63,18 @@ public final class JUnitRunner implements Runner {
     }
 
     public boolean run(String actionName, Profiler profiler, String[] args) {
-        List<VogarTest> tests = qualification != null
-                ? Junit.classToVogarTests(testClass, qualification)
-                : Junit.classToVogarTests(testClass, args);
+        final List<VogarTest> tests;
+        if (Junit3.isJunit3Test(testClass)) {
+            tests = qualification != null
+                    ? Junit3.classToVogarTests(testClass, qualification)
+                    : Junit3.classToVogarTests(testClass, args);
+        } else if (Junit4.isJunit4Test(testClass)) {
+            tests = qualification != null
+                    ? Junit4.classToVogarTests(testClass, qualification)
+                    : Junit4.classToVogarTests(testClass, args); 
+        } else {
+            throw new AssertionFailedError("Unknown JUnit type: " + testClass.getName());
+        }
 
         for (VogarTest test : tests) {
             String skipPast = skipPastReference.get();
@@ -207,16 +214,6 @@ public final class JUnitRunner implements Runner {
     }
 
     public boolean supports(Class<?> klass) {
-        return isJunit3Test(klass);
-    }
-
-    static boolean isJunit3Test(Class<?> klass) {
-        // public class FooTest extends TestCase {...}
-        //   or
-        // public class FooSuite {
-        //    public static Test suite() {...}
-        // }
-        return (TestCase.class.isAssignableFrom(klass) && !Modifier.isAbstract(klass.getModifiers()))
-                || new ClassAnalyzer(klass).hasMethod(true, Test.class, "suite");
+        return Junit3.isJunit3Test(klass) || Junit4.isJunit4Test(klass);
     }
 }

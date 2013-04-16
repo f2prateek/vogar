@@ -205,7 +205,7 @@ public class Assert {
         throw new AssertionFailedError();
     }
 
-    private static void fail(String message, String detail) {
+    protected static void fail(String message, String detail) {
         if (message == null || message.isEmpty()) {
             throw new AssertionFailedError(detail);
         } else {
