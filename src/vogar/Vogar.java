@@ -107,6 +107,12 @@ public final class Vogar {
     @Option(names = { "--vm-arg" })
     List<String> vmArgs = new ArrayList<String>();
 
+    @Option(names = { "--vm-command" })
+    String vmCommand;
+
+    @Option(names = { "--dalvik-cache" })
+    String dalvikCache = "dalvik-cache";
+
     @Option(names = { "--java-home" })
     File javaHome;
 
@@ -278,6 +284,9 @@ public final class Vogar {
         System.out.println("  --vm-arg <argument>: include the specified argument when spawning a");
         System.out.println("      virtual machine. Examples: -Xint:fast, -ea, -Xmx16M");
         System.out.println();
+        System.out.println("  --vm-command <argument>: override default vm executable name.");
+        System.out.println("      Default is java for the host and dalvikvm for the target.");
+        System.out.println();
         System.out.println("  --java-home <java_home>: execute the actions on the local workstation");
         System.out.println("      using the specified java home directory. This does not impact");
         System.out.println("      which javac gets used. When unset, java is used from the PATH.");
@@ -327,6 +336,9 @@ public final class Vogar {
         System.out.println();
         System.out.println("  --javac-arg <argument>: include the specified argument when invoking");
         System.out.println("      javac. Examples: --javac-arg -Xmaxerrs --javac-arg 1");
+        System.out.println();
+        System.out.println("  --dalvik-cache <argument>: override default dalvik-cache location.");
+        System.out.println("      Default is: " + dalvikCache);
         System.out.println();
         System.out.println("  --first-monitor-port <port>: the port on the host (and possibly target)");
         System.out.println("      used to traffic control messages between vogar and forked processes.");
@@ -395,6 +407,10 @@ public final class Vogar {
         //
         // Post-processing arguments
         //
+
+        if (vmCommand == null) {
+            vmCommand = mode.defaultVmCommand();
+        }
 
         // disable timeout when benchmarking or debugging
         if (benchmark || debugPort != null) {

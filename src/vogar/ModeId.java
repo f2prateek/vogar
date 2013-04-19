@@ -30,4 +30,17 @@ public enum ModeId {
     public boolean requiresAndroidSdk() {
         return this != JVM;
     }
+
+    public String defaultVmCommand() {
+        if (this == DEVICE || this == HOST) {
+            return "dalvikvm";
+        }
+        if (this == JVM) {
+            return "java";
+        }
+        if (this == APP_PROCESS) {
+            return "app_process";
+        }
+        return null;
+    }
 }

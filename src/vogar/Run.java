@@ -80,6 +80,8 @@ public final class Run {
     public final File deviceUserHome;
     public final Console console;
     public final int smallTimeoutSeconds;
+    public final String vmCommand;
+    public final String dalvikCache;
     public final List<String> additionalVmArgs;
     public final List<String> targetArgs;
     public final boolean useBootClasspath;
@@ -115,6 +117,8 @@ public final class Run {
             this.target = new AdbTarget(this);
         }
 
+        this.vmCommand = vogar.vmCommand;
+        this.dalvikCache = vogar.dalvikCache;
         this.additionalVmArgs = vogar.vmArgs;
         this.benchmark = vogar.benchmark;
         this.cleanBefore = vogar.cleanBefore;
@@ -272,7 +276,7 @@ public final class Run {
     }
 
     public File dalvikCache() {
-        return new File(runnerDir.getParentFile(), "dalvik-cache");
+        return new File(runnerDir.getParentFile(), dalvikCache);
     }
 
     /**

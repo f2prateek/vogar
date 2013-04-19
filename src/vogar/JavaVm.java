@@ -43,7 +43,7 @@ final class JavaVm implements Mode {
     @Override public VmCommandBuilder newVmCommandBuilder(Action action, File workingDirectory) {
         List<String> vmCommand = new ArrayList<String>();
         Iterables.addAll(vmCommand, run.invokeWith());
-        vmCommand.add(run.javaPath("java"));
+        vmCommand.add(run.javaPath(run.vmCommand));
         if (run.profile) {
             vmCommand.add("-agentlib:hprof="
                           + "cpu=samples,"

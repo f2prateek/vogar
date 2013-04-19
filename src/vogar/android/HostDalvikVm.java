@@ -47,7 +47,7 @@ public final class HostDalvikVm implements Mode {
     }
 
     private File dalvikCache() {
-        return run.localFile("android-data", "dalvik-cache");
+        return run.localFile("android-data", run.dalvikCache);
     }
 
     @Override public Set<Task> installTasks() {
@@ -88,7 +88,7 @@ public final class HostDalvikVm implements Mode {
         List<String> vmCommand = new ArrayList<String>();
         Iterables.addAll(vmCommand, run.invokeWith());
 
-        vmCommand.add(buildRoot + "/out/host/linux-x86/bin/dalvikvm");
+        vmCommand.add(buildRoot + "/out/host/linux-x86/bin/" + run.vmCommand);
         builder.env("ANDROID_ROOT", buildRoot + "/out/host/linux-x86")
                 .env("LD_LIBRARY_PATH", buildRoot + "/out/host/linux-x86/lib")
                 .env("DYLD_LIBRARY_PATH", buildRoot + "/out/host/linux-x86/lib");

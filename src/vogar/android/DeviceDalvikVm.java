@@ -75,7 +75,7 @@ public class DeviceDalvikVm implements Mode {
         vmCommand.addAll(run.target.targetProcessPrefix(workingDirectory));
         vmCommand.add(run.getAndroidData());
         Iterables.addAll(vmCommand, run.invokeWith());
-        vmCommand.add("dalvikvm");
+        vmCommand.add(run.vmCommand);
 
         // If you edit this, see also HostDalvikVm...
         VmCommandBuilder vmCommandBuilder = new VmCommandBuilder(run.log)
