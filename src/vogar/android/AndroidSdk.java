@@ -40,6 +40,7 @@ public class AndroidSdk {
 
     // $BOOTCLASSPATH defined by system/core/rootdir/init.rc
     public static final String[] BOOTCLASSPATH = new String[] { "core",
+                                                                "conscrypt",
                                                                 "okhttp",
                                                                 "core-junit",
                                                                 "bouncycastle",
@@ -55,6 +56,7 @@ public class AndroidSdk {
 
     public static final String[] HOST_BOOTCLASSPATH = new String[] {
             "core-hostdex",
+            "conscrypt-hostdex",
             "okhttp-hostdex",
             "bouncycastle-hostdex",
             "apache-xml-hostdex",
