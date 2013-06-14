@@ -41,6 +41,12 @@ public final class TestEnvironment {
     private final HostnameVerifier defaultHostnameVerifier;
     private final SSLSocketFactory defaultSSLSocketFactory;
 
+    private static final String JAVA_RUNTIME_VERSION = System.getProperty("java.runtime.version"); 
+    private static final String JAVA_VM_INFO = System.getProperty("java.vm.info"); 
+    private static final String JAVA_VM_VERSION = System.getProperty("java.vm.version"); 
+    private static final String JAVA_VM_VENDOR = System.getProperty("java.vm.vendor"); 
+    private static final String JAVA_VM_NAME = System.getProperty("java.vm.name"); 
+
     public TestEnvironment() {
         System.setProperties(null); // Reset.
         String tmpDir = System.getProperty("java.io.tmpdir");
@@ -59,13 +65,21 @@ public final class TestEnvironment {
         // Reset system properties.
         System.setProperties(null);
 
-
-        System.setProperty("java.runtime.version", "x");
-        System.setProperty("java.vm.info", "x");
-        System.setProperty("java.vm.version", "x");
-        System.setProperty("java.vm.vendor", "x");
-        System.setProperty("java.vm.name", "x");
-
+        if (JAVA_RUNTIME_VERSION != null) {
+            System.setProperty("java.runtime.version", JAVA_RUNTIME_VERSION);
+        }
+        if (JAVA_VM_INFO != null) {
+            System.setProperty("java.vm.info", JAVA_VM_INFO);
+        }
+        if (JAVA_VM_VERSION != null) {
+            System.setProperty("java.vm.version", JAVA_VM_VERSION);
+        }
+        if (JAVA_VM_VENDOR != null) {
+            System.setProperty("java.vm.vendor", JAVA_VM_VENDOR);
+        }
+        if (JAVA_VM_NAME != null) {
+            System.setProperty("java.vm.name", JAVA_VM_NAME);
+        }
 
         // Require writable java.home and user.dir directories for preferences
         String tmpDir = System.getProperty("java.io.tmpdir");
