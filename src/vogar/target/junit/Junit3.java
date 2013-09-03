@@ -124,8 +124,7 @@ public final class Junit3 {
                     if (m.getParameterTypes().length == 0) {
                         out.add(TestMethod.create(testCaseClass, m));
                     } else {
-                        out.add(new ConfigurationError(testClass.getName() + "#" + m.getName(),
-                                new IllegalStateException("Tests may not have parameters!")));
+                        // TODO: warn
                     }
                 }
             } else {
