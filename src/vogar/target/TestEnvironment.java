@@ -17,10 +17,13 @@
 package vogar.target;
 
 import java.io.File;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.net.Authenticator;
 import java.net.CookieHandler;
 import java.net.ResponseCache;
 import java.util.Locale;
+import java.util.HashMap;
 import java.util.TimeZone;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.LogManager;
@@ -59,6 +62,8 @@ public final class TestEnvironment {
 
         defaultHostnameVerifier = HttpsURLConnection.getDefaultHostnameVerifier();
         defaultSSLSocketFactory = HttpsURLConnection.getDefaultSSLSocketFactory();
+
+        disableSecurity();
     }
 
     public void reset() {
@@ -137,6 +142,38 @@ public final class TestEnvironment {
             root.flush();
         } catch (BackingStoreException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    /** A class that always returns TRUE. */
+    @SuppressWarnings("serial")
+    public static class LyingMap extends HashMap<Object, Boolean> {
+        @Override
+        public Boolean get(Object key) {
+            return Boolean.TRUE;
+        }
+    }
+
+    /**
+     * Does what is necessary to disable security checks for testing security-related classes.
+     */
+    @SuppressWarnings("unchecked")
+    private static void disableSecurity() {
+        try {
+            Class<?> securityBrokerClass = Class.forName("javax.crypto.JceSecurity");
+
+            Field modifiersField = Field.class.getDeclaredField("modifiers");
+            modifiersField.setAccessible(true);
+
+            Field verifyMapField = securityBrokerClass.getDeclaredField("verificationResults");
+            modifiersField.setInt(verifyMapField, verifyMapField.getModifiers() & ~Modifier.FINAL);
+            verifyMapField.setAccessible(true);
+            verifyMapField.set(null, new LyingMap());
+
+            Field restrictedField = securityBrokerClass.getDeclaredField("isRestricted");
+            restrictedField.setAccessible(true);
+            restrictedField.set(null, Boolean.FALSE);
+        } catch (Exception ignored) {
         }
     }
 }
