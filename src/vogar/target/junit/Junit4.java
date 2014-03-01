@@ -28,6 +28,7 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -60,19 +61,13 @@ public final class Junit4 {
         /* JUnit 4.x: methods marked with @Test annotation. */
         if (args.length == 0) {
             for (Method m : testClass.getMethods()) {
-                boolean isTest = false;
-                for (Annotation a : m.getAnnotations()) {
-                    if (org.junit.Test.class.isAssignableFrom(a.annotationType())) {
-                        isTest = true;
-                    }
-                }
-                if (!isTest) {
-                    continue;
-                }
+                if (!m.isAnnotationPresent(org.junit.Test.class)) continue;
 
                 isJunit4TestClass = true;
 
-                if (m.getParameterTypes().length == 0) {
+                if (m.isAnnotationPresent(Ignore.class)) {
+                    out.add(new IgnoredTest(testClass, m));
+                } else if (m.getParameterTypes().length == 0) {
                     addAllParameterizedTests(out, testClass, m, argCollection);
                 } else {
                     out.add(new ConfigurationError(testClass.getName() + "#" + m.getName(),
@@ -209,8 +204,6 @@ public final class Junit4 {
             Object testCase = getTestCase();
             Throwable failure = null;
 
-            // TODO: add @Ignore support
-
             try {
                 Class.forName("org.mockito.MockitoAnnotations")
                         .getMethod("initMocks", Object.class)
@@ -331,6 +324,24 @@ public final class Junit4 {
 
         @Override protected Object getTestCase() throws Exception {
             return constructor.newInstance(constructorArgs);
+        }
+
+        @Override public String toString() {
+            return testClass.getName() + "#" + method.getName();
+        }
+    }
+
+    private static class IgnoredTest extends VogarJUnitTest {
+        private IgnoredTest(Class<?> testClass, Method method) {
+            super(testClass, method);
+        }
+
+        @Override public void run() throws Throwable {
+          System.out.println("@Ignored.");
+        }
+
+        @Override protected Object getTestCase() {
+            throw new UnsupportedOperationException();
         }
 
         @Override public String toString() {
