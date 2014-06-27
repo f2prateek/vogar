@@ -39,7 +39,7 @@ import vogar.util.Strings;
 public class AndroidSdk {
 
     // $BOOTCLASSPATH defined by system/core/rootdir/init.rc
-    public static final String[] BOOTCLASSPATH = new String[] { "core",
+    public static final String[] BOOTCLASSPATH = new String[] { "core-libart",
                                                                 "conscrypt",
                                                                 "okhttp",
                                                                 "core-junit",
@@ -55,7 +55,7 @@ public class AndroidSdk {
 
 
     public static final String[] HOST_BOOTCLASSPATH = new String[] {
-            "core-hostdex",
+            "core-libart-hostdex",
             "conscrypt-hostdex",
             "okhttp-hostdex",
             "bouncycastle-hostdex",
@@ -107,7 +107,7 @@ public class AndroidSdk {
          *  <source>/out/host/linux-x86/bin/aapt
          *  <source>/out/host/linux-x86/bin/adb
          *  <source>/out/host/linux-x86/bin/dx
-         *  <source>/out/target/common/obj/JAVA_LIBRARIES/core_intermediates/classes.jar
+         *  <source>/out/target/common/obj/JAVA_LIBRARIES/core-libart_intermediates/classes.jar
          */
 
         if ("platform-tools".equals(parentFileName)) {

@@ -259,8 +259,8 @@ public final class Run {
      * appropriate for use in naming derived files.
      *
      * @param file a product of the android build system, such as
-     *     "out/core_intermediates/javalib.jar".
-     * @return a recognizable base name like "core_intermediates".
+     *     "out/core-libart_intermediates/javalib.jar".
+     * @return a recognizable base name like "core-libart_intermediates".
      */
     public String basenameOfJar(File file) {
         String name = file.getName().replaceAll("\\.jar$", "");
