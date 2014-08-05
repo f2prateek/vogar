@@ -48,16 +48,25 @@ public final class TestEnvironment {
     private static final String JAVA_VM_INFO = System.getProperty("java.vm.info"); 
     private static final String JAVA_VM_VERSION = System.getProperty("java.vm.version"); 
     private static final String JAVA_VM_VENDOR = System.getProperty("java.vm.vendor"); 
-    private static final String JAVA_VM_NAME = System.getProperty("java.vm.name"); 
+    private static final String JAVA_VM_NAME = System.getProperty("java.vm.name");
+
+    private final String tmpDir;
 
     public TestEnvironment() {
+        this.tmpDir = System.getProperty("java.io.tmpdir");
+        if (tmpDir == null || tmpDir.length() == 0) {
+            throw new AssertionError("tmpDir is null or empty: " + tmpDir);
+        }
         System.setProperties(null); // Reset.
-        String tmpDir = System.getProperty("java.io.tmpdir");
+
+        // From "L" release onwards, calling System.setProperties(null) clears the java.io.tmpdir,
+        // so we set it again. No-op on earlier releases.
+        System.setProperty("java.io.tmpdir", tmpDir);
+
         String userHome = System.getProperty("user.home");
         String userDir = System.getProperty("user.dir");
-        if (tmpDir == null || userHome == null || userDir == null) {
-            throw new NullPointerException("java.io.tmpdir=" + tmpDir + ", user.home="
-                    + userHome + "user.dir=" + userDir);
+        if (userHome == null || userDir == null) {
+            throw new NullPointerException("user.home=" + userHome + ", user.dir=" + userDir);
         }
 
         defaultHostnameVerifier = HttpsURLConnection.getDefaultHostnameVerifier();
@@ -69,6 +78,10 @@ public final class TestEnvironment {
     public void reset() {
         // Reset system properties.
         System.setProperties(null);
+
+        // From "L" release onwards, calling System.setProperties(null) clears the java.io.tmpdir,
+        // so we set it again. No-op on earlier releases.
+        System.setProperty("java.io.tmpdir", tmpDir);
 
         if (JAVA_RUNTIME_VERSION != null) {
             System.setProperty("java.runtime.version", JAVA_RUNTIME_VERSION);
@@ -87,7 +100,6 @@ public final class TestEnvironment {
         }
 
         // Require writable java.home and user.dir directories for preferences
-        String tmpDir = System.getProperty("java.io.tmpdir");
         if ("Dalvik".equals(System.getProperty("java.vm.name"))) {
             String javaHome = tmpDir + "/java.home";
             IoUtils.safeMkdirs(new File(javaHome));
@@ -134,6 +146,14 @@ public final class TestEnvironment {
     }
 
     private static void resetPreferences(Preferences root) {
+        try {
+            root.sync();
+        } catch (BackingStoreException e) {
+            // Indicates that Preferences is probably not working. It's not really supported on
+            // Android so ignore.
+            return;
+        }
+
         try {
             for (String child : root.childrenNames()) {
                 root.node(child).removeNode();

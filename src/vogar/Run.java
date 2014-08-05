@@ -29,10 +29,9 @@ import java.util.UUID;
 import vogar.android.ActivityMode;
 import vogar.android.AdbTarget;
 import vogar.android.AndroidSdk;
-import vogar.android.AppProcessMode;
-import vogar.android.DeviceDalvikVm;
 import vogar.android.DeviceFileCache;
-import vogar.android.HostDalvikVm;
+import vogar.android.DeviceRuntime;
+import vogar.android.HostRuntime;
 import vogar.commands.Mkdir;
 import vogar.commands.Rm;
 import vogar.tasks.TaskQueue;
@@ -111,7 +110,7 @@ public final class Run {
 
         if (vogar.sshHost != null) {
             this.target = new SshTarget(vogar.sshHost, log);
-        } else if (vogar.mode.isHost()) {
+        } else if (vogar.modeId.isLocal()) {
             this.target = new LocalTarget(this);
         } else {
             this.target = new AdbTarget(this);
@@ -136,7 +135,7 @@ public final class Run {
         this.javacArgs = vogar.javacArgs;
         this.javaHome = vogar.javaHome;
         this.largeTimeoutSeconds = vogar.timeoutSeconds * Vogar.LARGE_TIMEOUT_MULTIPLIER;
-        this.maxConcurrentActions = (vogar.stream || vogar.mode == ModeId.ACTIVITY)
+        this.maxConcurrentActions = (vogar.stream || vogar.modeId == ModeId.ACTIVITY)
                     ? 1
                     : Vogar.NUM_PROCESSORS;
         this.timeoutSeconds = vogar.timeoutSeconds;
@@ -160,36 +159,24 @@ public final class Run {
         this.classpath = Classpath.of(vogar.classpath);
         this.classpath.addAll(vogarJar());
 
-        if (vogar.mode.requiresAndroidSdk()) {
-            androidSdk = new AndroidSdk(log, mkdir, vogar.mode);
+        if (vogar.modeId.requiresAndroidSdk()) {
+            androidSdk = new AndroidSdk(log, mkdir, vogar.modeId);
             androidSdk.setCaches(new HostFileCache(log, mkdir),
                     new DeviceFileCache(log, runnerDir, androidSdk));
         } else {
             androidSdk = null;
         }
 
-        expectationStore = ExpectationStore.parse(console, vogar.expectationFiles, vogar.mode);
+        expectationStore = ExpectationStore.parse(console, vogar.expectationFiles, vogar.modeId);
         if (vogar.openBugsCommand != null) {
             expectationStore.loadBugStatuses(new CommandBugDatabase(log, vogar.openBugsCommand));
         }
 
-        if (vogar.mode == ModeId.JVM) {
-            this.mode = new JavaVm(this);
-        } else if (vogar.mode == ModeId.HOST) {
-            this.mode = new HostDalvikVm(this);
-        } else if (vogar.mode == ModeId.DEVICE) {
-            this.mode = new DeviceDalvikVm(this);
-        } else if (vogar.mode == ModeId.ACTIVITY) {
-            this.mode = new ActivityMode(this);
-        } else if (vogar.mode == ModeId.APP_PROCESS) {
-            this.mode = new AppProcessMode(this);
-        } else {
-            throw new IllegalStateException();
-        }
+        this.mode = createMode(vogar.modeId, vogar.variant);
 
         this.buildClasspath = Classpath.of(vogar.buildClasspath);
-        if (vogar.mode.requiresAndroidSdk()) {
-            buildClasspath.addAll(androidSdk.getAndroidClasses());
+        if (vogar.modeId.requiresAndroidSdk()) {
+            buildClasspath.addAll(androidSdk.getCompilationClasspath());
         }
 
         this.classFileIndex = new ClassFileIndex(log, mkdir, vogar.jarSearchDirs);
@@ -204,6 +191,26 @@ public final class Run {
                 expectationStore, date);
         this.driver = new Driver(this);
         this.taskQueue = new TaskQueue(console, maxConcurrentActions);
+    }
+
+    private Mode createMode(ModeId modeId, Variant variant) {
+        switch (modeId) {
+            case JVM:
+                return new JavaVm(this);
+            case HOST:
+            case HOST_DALVIK:
+            case HOST_ART_KITKAT:
+                return new HostRuntime(this, modeId, variant);
+            case DEVICE:
+            case DEVICE_DALVIK:
+            case DEVICE_ART_KITKAT:
+            case APP_PROCESS:
+                return new DeviceRuntime(this, modeId, variant);
+            case ACTIVITY:
+                return new ActivityMode(this);
+            default:
+                throw new IllegalArgumentException("Unsupported mode: " + modeId);
+        }
     }
 
     public final File localFile(Object... path) {

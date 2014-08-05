@@ -24,21 +24,29 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import vogar.Action;
+import vogar.Variant;
 import vogar.Classpath;
 import vogar.Mode;
+import vogar.ModeId;
 import vogar.Run;
 import vogar.commands.VmCommandBuilder;
 import vogar.tasks.RunActionTask;
 import vogar.tasks.Task;
 
 /**
- * Execute actions on a Dalvik VM using an Android device or emulator.
+ * Execute actions on an Android device or emulator using "app_process" or the runtime directly.
  */
-public class DeviceDalvikVm implements Mode {
-    protected final Run run;
+public final class DeviceRuntime implements Mode {
+    private final Run run;
+    private final ModeId modeId;
 
-    public DeviceDalvikVm(Run run) {
+  public DeviceRuntime(Run run, ModeId modeId, Variant variant) {
+        if (!modeId.isDevice() || !modeId.supportsVariant(variant)) {
+            throw new IllegalArgumentException("Unsupported mode:" + modeId +
+                    " or variant: " + variant);
+        }
         this.run = run;
+        this.modeId = modeId;
     }
 
     @Override public Set<Task> installTasks() {
@@ -77,14 +85,26 @@ public class DeviceDalvikVm implements Mode {
         Iterables.addAll(vmCommand, run.invokeWith());
         vmCommand.add(run.vmCommand);
 
-        // If you edit this, see also HostDalvikVm...
+        // If you edit this, see also HostRuntime...
         VmCommandBuilder vmCommandBuilder = new VmCommandBuilder(run.log)
                 .vmCommand(vmCommand)
                 .vmArgs("-Duser.home=" + run.deviceUserHome)
+                .maxLength(1024);
+        if (modeId == ModeId.APP_PROCESS) {
+            return vmCommandBuilder
+                .vmArgs(action.getUserDir().getPath())
+                .classpathViaProperty(true);
+        }
+
+        vmCommandBuilder
                 .vmArgs("-Duser.name=" + run.target.getDeviceUserName())
                 .vmArgs("-Duser.language=en")
-                .vmArgs("-Duser.region=US")
-                .maxLength(1024);
+                .vmArgs("-Duser.region=US");
+
+        if (modeId == ModeId.DEVICE_ART_KITKAT) {
+            // Required for KitKat to select the ART runtime. Default is Dalvik.
+            vmCommandBuilder.vmArgs("-XXlib:libart.so");
+        }
         if (!run.benchmark) {
             vmCommandBuilder.vmArgs("-Xverify:none");
             vmCommandBuilder.vmArgs("-Xdexopt:none");

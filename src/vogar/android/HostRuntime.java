@@ -26,20 +26,28 @@ import java.util.Set;
 import vogar.Action;
 import vogar.Classpath;
 import vogar.Mode;
+import vogar.ModeId;
 import vogar.Run;
+import vogar.Variant;
 import vogar.commands.VmCommandBuilder;
 import vogar.tasks.MkdirTask;
 import vogar.tasks.RunActionTask;
 import vogar.tasks.Task;
 
 /**
- * Executes actions on a Dalvik VM on a Linux desktop.
+ * Executes actions on a Dalvik or ART runtime on a Linux desktop.
  */
-public final class HostDalvikVm implements Mode {
+public final class HostRuntime implements Mode {
     private final Run run;
+    private final ModeId modeId;
 
-    public HostDalvikVm(Run run) {
+    public HostRuntime(Run run, ModeId modeId, Variant variant) {
+        if (!modeId.isHost() || !modeId.supportsVariant(variant)) {
+            throw new IllegalArgumentException("Unsupported mode:" + modeId +
+                    " or variant: " + variant);
+        }
         this.run = run;
+        this.modeId = modeId;
     }
 
     @Override public Task executeActionTask(Action action, boolean useLargeTimeout) {
@@ -74,7 +82,7 @@ public final class HostDalvikVm implements Mode {
         String buildRoot = System.getenv("ANDROID_BUILD_TOP");
 
         List<File> jars = new ArrayList<File>();
-        for (String jar : AndroidSdk.HOST_BOOTCLASSPATH) {
+        for (String jar : modeId.getJarNames()) {
             jars.add(new File(buildRoot, "out/host/linux-x86/framework/" + jar + ".jar"));
         }
         Classpath bootClasspath = Classpath.of(jars);
@@ -89,11 +97,13 @@ public final class HostDalvikVm implements Mode {
         Iterables.addAll(vmCommand, run.invokeWith());
 
         vmCommand.add(buildRoot + "/out/host/linux-x86/bin/" + run.vmCommand);
-        builder.env("ANDROID_ROOT", buildRoot + "/out/host/linux-x86")
-                .env("LD_LIBRARY_PATH", buildRoot + "/out/host/linux-x86/lib")
-                .env("DYLD_LIBRARY_PATH", buildRoot + "/out/host/linux-x86/lib");
 
-        // If you edit this, see also DeviceDalvikVm...
+        String libDir = buildRoot + "/out/host/linux-x86/lib";
+        builder.env("ANDROID_ROOT", buildRoot + "/out/host/linux-x86")
+                .env("LD_LIBRARY_PATH", libDir)
+                .env("DYLD_LIBRARY_PATH", libDir);
+
+        // If you edit this, see also DeviceRuntime...
         builder.vmCommand(vmCommand)
                 .vmArgs("-Xbootclasspath:" + bootClasspath.toString())
                 .vmArgs("-Duser.language=en")
@@ -102,6 +112,10 @@ public final class HostDalvikVm implements Mode {
             builder.vmArgs("-Xverify:none");
             builder.vmArgs("-Xdexopt:none");
             builder.vmArgs("-Xcheck:jni");
+        }
+        if (modeId == ModeId.HOST_ART_KITKAT) {
+            // Required for KitKat to select the ART runtime. Default is Dalvik.
+            builder.vmArgs("-XXlib:libart.so");
         }
         // dalvikvm defaults to no limit, but the framework sets the limit at 2000.
         builder.vmArgs("-Xjnigreflimit:2000");

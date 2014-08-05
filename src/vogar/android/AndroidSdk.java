@@ -64,7 +64,7 @@ public class AndroidSdk {
 
     private final Log log;
     private final Mkdir mkdir;
-    private final File[] androidClasses;
+    private final File[] compilationClasspath;
     public final DeviceFilesystem deviceFilesystem;
 
     private Md5Cache dexCache;
@@ -80,7 +80,7 @@ public class AndroidSdk {
         return (files != null) ? Arrays.asList(files) : Collections.<File>emptyList();
     }
 
-    public AndroidSdk(Log log, Mkdir mkdir, ModeId mode) {
+    public AndroidSdk(Log log, Mkdir mkdir, ModeId modeId) {
         this.log = log;
         this.mkdir = mkdir;
         this.deviceFilesystem = new DeviceFilesystem(log, "adb", "shell");
@@ -103,7 +103,7 @@ public class AndroidSdk {
          *  <sdk>/platform-tools/dx
          *  <sdk>/platforms/android-?/android.jar
          *
-         * Android build tree:
+         * Android build tree (target):
          *  <source>/out/host/linux-x86/bin/aapt
          *  <source>/out/host/linux-x86/bin/adb
          *  <source>/out/host/linux-x86/bin/dx
@@ -114,7 +114,7 @@ public class AndroidSdk {
             File sdkRoot = adb.getParentFile().getParentFile();
             File newestPlatform = getNewestPlatform(sdkRoot);
             log.verbose("using android platform: " + newestPlatform);
-            androidClasses = new File[] { new File(newestPlatform, "android.jar") };
+            compilationClasspath = new File[] { new File(newestPlatform, "android.jar") };
             log.verbose("using android sdk: " + sdkRoot);
         } else if ("bin".equals(parentFileName)) {
             File sourceRoot = adb.getParentFile().getParentFile()
@@ -122,14 +122,15 @@ public class AndroidSdk {
             log.verbose("using android build tree: " + sourceRoot);
 
             String pattern = "out/target/common/obj/JAVA_LIBRARIES/%s_intermediates/classes.jar";
-            if (mode == ModeId.HOST) {
-                pattern = "out/host/common/obj/JAVA_LIBRARIES/%s-hostdex_intermediates/classes.jar";
+            if (modeId.isHost()) {
+                pattern = "out/host/common/obj/JAVA_LIBRARIES/%s_intermediates/classes.jar";
             }
 
-            androidClasses = new File[BOOTCLASSPATH.length];
-            for (int i = 0; i < BOOTCLASSPATH.length; i++) {
-                String jar = BOOTCLASSPATH[i];
-                androidClasses[i] = new File(sourceRoot, String.format(pattern, jar));
+            String[] jarNames = modeId.getJarNames();
+            compilationClasspath = new File[jarNames.length];
+            for (int i = 0; i < jarNames.length; i++) {
+                String jar = jarNames[i];
+                compilationClasspath[i] = new File(sourceRoot, String.format(pattern, jar));
             }
         } else {
             throw new RuntimeException("Couldn't derive Android home from " + adb);
@@ -182,8 +183,8 @@ public class AndroidSdk {
         return result;
     }
 
-    public File[] getAndroidClasses() {
-        return androidClasses;
+    public File[] getCompilationClasspath() {
+        return compilationClasspath;
     }
 
     public void setCaches(HostFileCache hostFileCache, DeviceFileCache deviceCache) {
@@ -234,10 +235,6 @@ public class AndroidSdk {
                                                                 "-F", apk.getPath(),
                                                                 "-M", manifest.getPath(),
                                                                 "-I", "prebuilts/sdk/current/android.jar"));
-        for (File jar : androidClasses) {
-            aapt.add("-I");
-            aapt.add(jar.getPath());
-        }
         new Command(log, aapt).execute();
     }
 

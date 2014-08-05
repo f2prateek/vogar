@@ -51,7 +51,10 @@ public final class Vogar {
     }
 
     @Option(names = { "--mode" })
-    ModeId mode = ModeId.DEVICE;
+    ModeId modeId = ModeId.DEVICE;
+
+    @Option(names = { "--var" })
+    Variant variant = Variant.X32;
 
     @Option(names = { "--ssh" })
     String sshHost;
@@ -202,12 +205,20 @@ public final class Vogar {
         System.out.println();
         System.out.println("GENERAL OPTIONS");
         System.out.println();
-        System.out.println("  --mode <activity|device|host|jvm>: specify which environment to run in.");
+        System.out.println("  --mode <activity|device|device_dalvik|host|host_dalvik|jvm>: specify which environment to run in.");
         System.out.println("      activity: runs in an Android application on a device or emulator");
-        System.out.println("      device: runs in a Dalvik VM on a device or emulator");
-        System.out.println("      host: runs in a Dalvik VM on the local desktop built with any lunch combo.");
+        System.out.println("      device: runs in an ART runtime on a device or emulator");
+        System.out.println("      device_dalvik: runs in a Dalvik runtime on a device or emulator");
+        System.out.println("      device_art_kitkat: runs in a KitKat ART runtime on a device or emulator");
+        System.out.println("      host: runs in an ART runtime on the local desktop built with any lunch combo.");
+        System.out.println("      host_dalvik: runs in a Dalvik runtime on the local desktop built with any lunch combo.");
+        System.out.println("      host_art_kitkat: runs in a KitKat ART runtime on the local desktop built with any lunch combo.");
         System.out.println("      jvm: runs in a Java VM on the local desktop");
-        System.out.println("      Default is: " + mode);
+        System.out.println("      Default is: " + modeId);
+        System.out.println();
+        System.out.println("  --variant <x32>: specify which architecture variant to execute with.");
+        System.out.println("      x32: 32-bit");
+        System.out.println("      Default is: " + variant);
         System.out.println();
         System.out.println("  --ssh <host:port>: target a remote machine via SSH.");
         System.out.println();
@@ -285,7 +296,7 @@ public final class Vogar {
         System.out.println("      virtual machine. Examples: -Xint:fast, -ea, -Xmx16M");
         System.out.println();
         System.out.println("  --vm-command <argument>: override default vm executable name.");
-        System.out.println("      Default is java for the host and dalvikvm for the target.");
+        System.out.println("      Default is 'java' for the JVM and a version of dalvikvm for the host and target.");
         System.out.println();
         System.out.println("  --java-home <java_home>: execute the actions on the local workstation");
         System.out.println("      using the specified java home directory. This does not impact");
@@ -389,8 +400,14 @@ public final class Vogar {
         }
 
         // check vm option consistency
-        if (!mode.acceptsVmArgs() && !vmArgs.isEmpty()) {
-            System.out.println("VM args " + vmArgs + " should not be specified for mode " + mode);
+        if (!modeId.acceptsVmArgs() && !vmArgs.isEmpty()) {
+            System.out.println("VM args " + vmArgs + " should not be specified for mode " + modeId);
+            return false;
+        }
+
+        // Check variant / mode compatibility.
+        if (!modeId.supportsVariant(variant)) {
+            System.out.println("Variant " + variant + " not supported for mode " + modeId);
             return false;
         }
 
@@ -409,7 +426,7 @@ public final class Vogar {
         //
 
         if (vmCommand == null) {
-            vmCommand = mode.defaultVmCommand();
+            vmCommand = modeId.defaultVmCommand(variant);
         }
 
         // disable timeout when benchmarking or debugging
@@ -418,7 +435,7 @@ public final class Vogar {
         }
 
         if (firstMonitorPort == -1) {
-            firstMonitorPort = mode.isHost() ? 8788 : 8787;
+            firstMonitorPort = modeId.isLocal() ? 8788 : 8787;
         }
 
         if (profileFile == null) {
@@ -455,8 +472,8 @@ public final class Vogar {
             return false;
         }
 
-        if (!mode.acceptsVmArgs() && !targetArgs.isEmpty()) {
-            System.out.println("Target args " + targetArgs + " should not be specified for mode " + mode);
+        if (!modeId.acceptsVmArgs() && !targetArgs.isEmpty()) {
+            System.out.println("Target args " + targetArgs + " should not be specified for mode " + modeId);
             return false;
         }
 
