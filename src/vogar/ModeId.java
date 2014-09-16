@@ -95,18 +95,22 @@ public enum ModeId {
     }
 
     public boolean supportsVariant(Variant variant) {
-        return variant == Variant.X32;
+        return variant == Variant.X32 || (this == HOST && variant == Variant.X64);
     }
 
     /** The default command to use for the mode unless overridden by --vm-command */
     public String defaultVmCommand(Variant variant) {
-        if (variant != Variant.X32) {
-            throw new IllegalArgumentException("Unsupported architecture variant");
+        if (!supportsVariant(variant)) {
+            throw new AssertionError("Unsupported variant: " + variant + " for " + this);
         }
         switch (this) {
             case DEVICE:
             case HOST:
-                return "dalvikvm32";
+                if (variant == Variant.X32) {
+                    return "dalvikvm32";
+                } else {
+                    return "dalvikvm64";
+                }
             case DEVICE_DALVIK:
             case DEVICE_ART_KITKAT:
             case HOST_DALVIK:

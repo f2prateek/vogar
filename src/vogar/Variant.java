@@ -21,5 +21,7 @@ package vogar;
  */
 public enum Variant {
     /** 32-bit */
-    X32
+    X32,
+    /** 64-bit */
+    X64
 }

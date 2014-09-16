@@ -40,6 +40,7 @@ import vogar.tasks.Task;
 public final class HostRuntime implements Mode {
     private final Run run;
     private final ModeId modeId;
+    private final Variant variant;
 
     public HostRuntime(Run run, ModeId modeId, Variant variant) {
         if (!modeId.isHost() || !modeId.supportsVariant(variant)) {
@@ -48,6 +49,7 @@ public final class HostRuntime implements Mode {
         }
         this.run = run;
         this.modeId = modeId;
+        this.variant = variant;
     }
 
     @Override public Task executeActionTask(Action action, boolean useLargeTimeout) {
@@ -98,7 +100,14 @@ public final class HostRuntime implements Mode {
 
         vmCommand.add(buildRoot + "/out/host/linux-x86/bin/" + run.vmCommand);
 
-        String libDir = buildRoot + "/out/host/linux-x86/lib";
+        String libDir = buildRoot + "/out/host/linux-x86";
+        if (variant == Variant.X32) {
+            libDir += "/lib";
+        } else if (variant == Variant.X64) {
+            libDir += "/lib64";
+        } else {
+            throw new AssertionError("Unsupported variant:" + variant);
+        }
         builder.env("ANDROID_ROOT", buildRoot + "/out/host/linux-x86")
                 .env("LD_LIBRARY_PATH", libDir)
                 .env("DYLD_LIBRARY_PATH", libDir);
