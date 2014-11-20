@@ -484,7 +484,7 @@ public final class Vogar {
         Run run = new Run(this);
         if (configArgs.length > 0) {
             run.console.verbose("loaded arguments from .vogarconfig: " +
-                                Strings.join(" ", configArgs));
+                                Strings.join(" ", (Object)configArgs));
         }
         return run.driver.buildAndRun(actionFiles, actionClassesAndPackages);
     }
