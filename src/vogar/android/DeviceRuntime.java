@@ -106,8 +106,11 @@ public final class DeviceRuntime implements Mode {
             vmCommandBuilder.vmArgs("-XXlib:libart.so");
         }
         if (!run.benchmark) {
-            vmCommandBuilder.vmArgs("-Xverify:none");
-            vmCommandBuilder.vmArgs("-Xdexopt:none");
+            if (modeId == ModeId.DEVICE_DALVIK) {
+              // Historically, vogar has turned off these options for Dalvik.
+              vmCommandBuilder.vmArgs("-Xverify:none");
+              vmCommandBuilder.vmArgs("-Xdexopt:none");
+            }
             vmCommandBuilder.vmArgs("-Xcheck:jni");
         }
         // dalvikvm defaults to no limit, but the framework sets the limit at 2000.

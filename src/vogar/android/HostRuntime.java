@@ -118,8 +118,11 @@ public final class HostRuntime implements Mode {
                 .vmArgs("-Duser.language=en")
                 .vmArgs("-Duser.region=US");
         if (!run.benchmark) {
-            builder.vmArgs("-Xverify:none");
-            builder.vmArgs("-Xdexopt:none");
+            if (modeId == ModeId.HOST_DALVIK) {
+              // Historically, vogar has turned off these options for Dalvik.
+              builder.vmArgs("-Xverify:none");
+              builder.vmArgs("-Xdexopt:none");
+            }
             builder.vmArgs("-Xcheck:jni");
         }
         if (modeId == ModeId.HOST_ART_KITKAT) {
