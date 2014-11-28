@@ -53,7 +53,7 @@ public final class Vogar {
     @Option(names = { "--mode" })
     ModeId modeId = ModeId.DEVICE;
 
-    @Option(names = { "--var" })
+    @Option(names = { "--variant" })
     Variant variant = Variant.X32;
 
     @Option(names = { "--ssh" })
@@ -493,7 +493,7 @@ public final class Vogar {
         Vogar vogar = new Vogar();
         if (!vogar.parseArgs(args)) {
             vogar.printUsage();
-            return;
+            System.exit(1);
         }
         boolean allSuccess = vogar.run();
         System.exit(allSuccess ? 0 : 1);
