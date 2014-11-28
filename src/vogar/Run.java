@@ -167,7 +167,8 @@ public final class Run {
             androidSdk = null;
         }
 
-        expectationStore = ExpectationStore.parse(console, vogar.expectationFiles, vogar.modeId);
+        expectationStore = ExpectationStore.parse(
+            console, vogar.expectationFiles, vogar.modeId, vogar.variant);
         if (vogar.openBugsCommand != null) {
             expectationStore.loadBugStatuses(new CommandBugDatabase(log, vogar.openBugsCommand));
         }

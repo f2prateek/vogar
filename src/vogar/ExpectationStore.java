@@ -23,6 +23,8 @@ import com.google.gson.stream.JsonReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.EnumSet;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -104,18 +106,21 @@ final class ExpectationStore {
         }
     }
 
-    public static ExpectationStore parse(Log log, Set<File> expectationFiles, ModeId mode)
+    public static ExpectationStore parse(Log log,
+                                         Set<File> expectationFiles,
+                                         ModeId mode,
+                                         Variant variant)
             throws IOException {
         ExpectationStore result = new ExpectationStore(log);
         for (File f : expectationFiles) {
             if (f.exists()) {
-                result.parse(f, mode);
+                result.parse(f, mode, variant);
             }
         }
         return result;
     }
 
-    public void parse(File expectationsFile, ModeId mode) throws IOException {
+    public void parse(File expectationsFile, ModeId mode, Variant variant) throws IOException {
         log.verbose("loading expectations file " + expectationsFile);
 
         int count = 0;
@@ -125,7 +130,7 @@ final class ExpectationStore {
             reader.setLenient(true);
             reader.beginArray();
             while (reader.hasNext()) {
-                readExpectation(reader, mode);
+                readExpectation(reader, mode, variant);
                 count++;
             }
             reader.endArray();
@@ -138,12 +143,14 @@ final class ExpectationStore {
         }
     }
 
-    private void readExpectation(JsonReader reader, ModeId mode) throws IOException {
+    private void readExpectation(JsonReader reader, ModeId mode, Variant variant)
+          throws IOException {
         boolean isFailure = false;
         Result result = Result.SUCCESS;
         Pattern pattern = Expectation.MATCH_ALL_PATTERN;
         Set<String> names = new LinkedHashSet<String>();
         Set<String> tags = new LinkedHashSet<String>();
+        Map<ModeId, Set<Variant>> modeVariants = null;
         Set<ModeId> modes = null;
         String description = "";
         long buganizerBug = -1;
@@ -175,6 +182,8 @@ final class ExpectationStore {
                 buganizerBug = reader.nextLong();
             } else if (name.equals("modes")) {
                 modes = readModes(reader);
+            } else if (name.equals("modes_variants")) {
+                modeVariants = readModesAndVariants(reader);
             } else {
                 log.warn("Unhandled name in expectations file: " + name);
                 reader.skipValue();
@@ -187,6 +196,12 @@ final class ExpectationStore {
         }
         if (modes != null && !modes.contains(mode)) {
             return;
+        }
+        if (modeVariants != null) {
+            Set<Variant> variants = modeVariants.get(mode);
+            if (variants == null || !variants.contains(variant)) {
+                return;
+            }
         }
 
         Expectation expectation = new Expectation(result, pattern, tags, description, buganizerBug);
@@ -207,10 +222,32 @@ final class ExpectationStore {
     }
 
     private Set<ModeId> readModes(JsonReader reader) throws IOException {
-        Set<ModeId> result = new LinkedHashSet<ModeId>();
+        Set<ModeId> result = EnumSet.noneOf(ModeId.class);
         reader.beginArray();
         while (reader.hasNext()) {
             result.add(ModeId.valueOf(reader.nextString().toUpperCase()));
+        }
+        reader.endArray();
+        return result;
+    }
+
+    /**
+     * Expected format: mode_variants: [["host", "X32"], ["host", "X64"]]
+     */
+    private Map<ModeId, Set<Variant>> readModesAndVariants(JsonReader reader) throws IOException {
+        Map<ModeId, Set<Variant>> result = new EnumMap<ModeId, Set<Variant>>(ModeId.class);
+        reader.beginArray();
+        while (reader.hasNext()) {
+            reader.beginArray();
+            ModeId mode = ModeId.valueOf(reader.nextString().toUpperCase());
+            Set<Variant> set = result.get(mode);
+            if (set == null) {
+                set = EnumSet.noneOf(Variant.class);
+                result.put(mode, set);
+            }
+            set.add(Variant.valueOf(reader.nextString().toUpperCase()));
+            // Note that the following checks that we are at the end of the array.
+            reader.endArray();
         }
         reader.endArray();
         return result;
