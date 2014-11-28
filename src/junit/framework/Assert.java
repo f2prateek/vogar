@@ -102,13 +102,10 @@ public class Assert {
     // assertEquals with delta
     
     public static void assertEquals(String message, double expected, double actual, double delta) {
-        if (expected == actual) {
+        if (Double.compare(expected, actual) == 0) {
             return;
         }
-        if (Double.isNaN(delta)
-                || actual < expected - delta
-                || actual > expected + delta
-                || Double.isNaN(expected) != Double.isNaN(actual)) {
+        if (!(Math.abs(expected-actual) <= delta)) {
             fail(message, "expected " + expected + " but was " + actual + "; delta=" + delta);
         }
     }
@@ -118,13 +115,10 @@ public class Assert {
     }
     
     public static void assertEquals(String message, float expected, float actual, float delta) {
-        if (expected == actual) {
+        if (Float.compare(expected, actual) == 0) {
             return;
         }
-        if (Float.isNaN(delta)
-                || (actual < expected - delta
-                || actual > expected + delta)
-                || Float.isNaN(expected) != Float.isNaN(actual)) {
+        if (!(Math.abs(expected-actual) <= delta)) {
             fail(message, "expected " + expected + " but was " + actual + "; delta=" + delta);
         }
     }
