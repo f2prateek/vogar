@@ -43,9 +43,9 @@ public final class AdbTarget extends Target {
 
     // TODO: pull the methods from androidsdk into here
 
-    @Override public void await(File nonEmptyDirectory) {
+    @Override public void await(File directory) {
         run.androidSdk.waitForDevice();
-        run.androidSdk.waitForNonEmptyDirectory(nonEmptyDirectory, 5 * 60);
+        run.androidSdk.ensureDirectory(directory);
         run.androidSdk.remount();
     }
 
