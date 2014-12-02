@@ -299,14 +299,28 @@ public class AndroidSdk {
     }
 
     /**
-     * Loop until we see a non-empty directory on the device. For
-     * example, wait until /sdcard is mounted.
+     * Make sure the directory exists.
      */
-    public void waitForNonEmptyDirectory(File path, int timeoutSeconds) {
-        waitFor(false, path, timeoutSeconds);
+    public void ensureDirectory(File path) {
+        String pathArgument = path.getPath() + "/";
+        if (pathArgument.equals("/sdcard/")) {
+            // /sdcard is a mount point. If it exists but is empty we do
+            // not want to use it. So we wait until it is not empty.
+            waitForNonEmptyDirectory(pathArgument, 5 * 60);
+        } else {
+            Command command = new Command(log, "adb", "shell", "ls", pathArgument);
+            List<String> output = command.execute();
+            // TODO: We should avoid checking for the error message, and instead have
+            // the Command class understand a non-zero exit code from an adb shell command.
+            if (!output.isEmpty()
+                && output.get(0).equals(pathArgument + ": No such file or directory")) {
+                throw new RuntimeException("'" + pathArgument + "' does not exist on device");
+            }
+            // Otherwise the directory exists.
+        }
     }
 
-    private void waitFor(boolean file, File path, int timeoutSeconds) {
+    private void waitForNonEmptyDirectory(String pathArgument, int timeoutSeconds) {
         final int millisPerSecond = 1000;
         final long start = System.currentTimeMillis();
         final long deadline = start + (millisPerSecond * timeoutSeconds);
@@ -314,34 +328,26 @@ public class AndroidSdk {
         while (true) {
             final int remainingSeconds =
                     (int) ((deadline - System.currentTimeMillis()) / millisPerSecond);
-            String pathArgument = path.getPath();
-            if (!file) {
-                pathArgument += "/";
-            }
             Command command = new Command(log, "adb", "shell", "ls", pathArgument);
             List<String> output;
             try {
                 output = command.executeWithTimeout(remainingSeconds);
             } catch (TimeoutException e) {
                 throw new RuntimeException("Timed out after " + timeoutSeconds
-                                           + " seconds waiting for file " + path, e);
+                                           + " seconds waiting for " + pathArgument, e);
             }
             try {
                 Thread.sleep(millisPerSecond);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
-            if (file) {
-                // for files, we expect one line of output that matches the filename
-                if (output.size() == 1 && output.get(0).equals(path.getPath())) {
-                    return;
-                }
-            } else {
-                // for a non empty directory, we just want any output
-                if (!output.isEmpty()) {
-                    return;
-                }
+
+            // We just want any output.
+            if (!output.isEmpty()) {
+                return;
             }
+
+            log.warn("Waiting on " + pathArgument + " to be mounted ");
         }
     }
 }
