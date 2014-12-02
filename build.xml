@@ -10,6 +10,7 @@
     <property name="installroot" value="build/vogar-${version}"/>
     <property name="javadocroot" value="${installroot}/docs/api"/>
     <property name="caliper" value="lib/caliper.jar"/>
+    <property name="gson" value="lib/gson-1.7.1.jar"/>
     <property name="guava" value="lib/guava.jar"/>
     <property name="kxml2" value="lib/kxml-libcore-20110123.jar"/>
     <property name="android" value="${android.platform.dir}/android.jar"/>
@@ -17,6 +18,7 @@
 
     <path id="dependencies">
         <pathelement location="${caliper}"/>
+        <pathelement location="${gson}"/>
         <pathelement location="${guava}"/>
         <pathelement location="${kxml2}"/>
         <pathelement location="${android}"/>
@@ -45,6 +47,7 @@
         <jar destfile="build/vogar.jar" update="true" index="true">
             <fileset dir="build/classes"/>
             <zipfileset src="${caliper}"/>
+            <zipfileset src="${gson}"/>
             <zipfileset src="${guava}"/>
             <zipfileset src="${kxml2}"/>
             <fileset dir="src">

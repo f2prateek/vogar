@@ -16,8 +16,8 @@
 
 package vogar;
 
-import com.google.caliper.internal.gson.stream.JsonReader;
-import com.google.caliper.internal.gson.stream.JsonWriter;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
