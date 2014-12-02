@@ -16,8 +16,8 @@
 
 package vogar.monitor;
 
-import com.google.caliper.internal.gson.Gson;
-import com.google.caliper.internal.gson.JsonObject;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.ServerSocket;

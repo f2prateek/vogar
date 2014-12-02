@@ -16,10 +16,10 @@
 
 package vogar;
 
-import com.google.caliper.internal.gson.stream.JsonReader;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
+import com.google.gson.stream.JsonReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
