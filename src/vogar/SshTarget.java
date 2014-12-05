@@ -49,7 +49,7 @@ public final class SshTarget extends Target {
     }
 
     @Override public File defaultDeviceDir() {
-        return new File("/sdcard/vogar");
+        return new File("/data/local/tmp/vogar");
     }
 
     @Override public List<String> targetProcessPrefix(File workingDirectory) {
