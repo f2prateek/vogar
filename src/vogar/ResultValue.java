@@ -22,5 +22,6 @@ package vogar;
 public enum ResultValue {
     OK,
     IGNORE,
-    FAIL
+    FAIL,
+    WARNING
 }

@@ -92,11 +92,14 @@ public final class Vogar {
     @Option(names = { "--pass-color" })
     int passColor = 32; // green
 
-    @Option(names = { "--warn-color" })
-    int warnColor = 33; // yellow
+    @Option(names = { "--skip-color" })
+    int skipColor = 33; // yellow
 
     @Option(names = { "--fail-color" })
     int failColor = 31; // red
+
+    @Option(names = { "--warn-color" })
+    int warnColor = 35; // purple
 
     @Option(names = { "--ansi" })
     boolean ansi = !"dumb".equals(System.getenv("TERM"));
@@ -328,8 +331,11 @@ public final class Vogar {
         System.out.println("  --pass-color: ANSI color code to use for passes.");
         System.out.println("      Default: 32 (green)");
         System.out.println();
-        System.out.println("  --warn-color: ANSI color code to use for warnings.");
+        System.out.println("  --skip-color: ANSI color code to use for skips.");
         System.out.println("      Default: 33 (yellow)");
+        System.out.println();
+        System.out.println("  --warn-color: ANSI color code to use for warnings.");
+        System.out.println("      Default: 35 (purple)");
         System.out.println();
         System.out.println("  --fail-color: ANSI color code to use for failures.");
         System.out.println("      Default: 31 (red)");

@@ -56,11 +56,13 @@ public abstract class Console implements Log {
         this.indent = indent;
     }
 
-    public void setUseColor(boolean useColor, int passColor, int warnColor, int failColor) {
+    public void setUseColor(
+      boolean useColor, int passColor, int skipColor, int failColor, int warnColor) {
         this.useColor = useColor;
         Color.PASS.setCode(passColor);
-        Color.WARN.setCode(warnColor);
+        Color.SKIP.setCode(skipColor);
         Color.FAIL.setCode(failColor);
+        Color.WARN.setCode(warnColor);
         Color.COMMENT.setCode(34);
     }
 
@@ -190,6 +192,7 @@ public abstract class Console implements Log {
         List<String> failures = Lists.newArrayList();
         List<String> skips = Lists.newArrayList();
         List<String> successes = Lists.newArrayList();
+        List<String> warnings = Lists.newArrayList();
 
         // figure out whether each outcome is noteworthy, and add a message to the appropriate list
         for (AnnotatedOutcome annotatedOutcome : annotatedOutcomesSorted) {
@@ -206,8 +209,11 @@ public abstract class Console implements Log {
             } else if (resultValue == ResultValue.FAIL) {
                 color = Color.FAIL;
                 list = failures;
-            } else {
+            } else if (resultValue == ResultValue.WARNING) {
                 color = Color.WARN;
+                list = warnings;
+            } else {
+                color = Color.SKIP;
                 list = skips;
             }
 
@@ -267,6 +273,12 @@ public abstract class Console implements Log {
             out.println("Skips summary:");
             for (String skip : skips) {
                 out.println(skip);
+            }
+        }
+        if (!warnings.isEmpty()) {
+            out.println("Warnings summary:");
+            for (String warning : warnings) {
+                out.println(warning);
             }
         }
     }
@@ -406,7 +418,7 @@ public abstract class Console implements Log {
     }
 
     private enum Color {
-        PASS, FAIL, WARN, COMMENT;
+        PASS, FAIL, SKIP, WARN, COMMENT;
 
         int code = 0;
 

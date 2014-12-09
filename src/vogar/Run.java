@@ -100,7 +100,8 @@ public final class Run {
         this.console = vogar.stream
                 ? new Console.StreamingConsole()
                 : new Console.MultiplexingConsole();
-        console.setUseColor(vogar.color, vogar.passColor, vogar.warnColor, vogar.failColor);
+        console.setUseColor(
+            vogar.color, vogar.passColor, vogar.skipColor, vogar.failColor, vogar.warnColor);
         console.setAnsi(vogar.ansi);
         console.setIndent(vogar.indent);
         console.setVerbose(vogar.verbose);

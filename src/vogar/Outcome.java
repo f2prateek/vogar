@@ -135,7 +135,7 @@ public final class Outcome {
 
     public ResultValue getResultValue(Expectation expectation) {
         if (matters()) {
-            return expectation.matches(this) ? ResultValue.OK : ResultValue.FAIL;
+            return expectation.matches(this) ? ResultValue.OK : ResultValue.WARNING;
         }
         return ResultValue.IGNORE;
     }

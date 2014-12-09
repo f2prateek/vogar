@@ -45,6 +45,7 @@ public final class Driver {
     private int successes = 0;
     private int failures = 0;
     private int skipped = 0;
+    private int warnings = 0;
 
     private Task prepareTargetTask;
     private Set<Task> installVogarTasks;
@@ -132,10 +133,10 @@ public final class Driver {
                     jarStringList);
         }
 
-        if (failures > 0 || skipped > 0) {
+        if (failures > 0 || skipped > 0 || warnings > 0) {
             run.console.info(String.format(
-                    "Outcomes: %s. Passed: %d, Failed: %d, Skipped: %d. Took %s.",
-                    (successes + failures + skipped), successes, failures, skipped,
+                    "Outcomes: %s. Passed: %d, Failed: %d, Skipped: %d, Warnings: %d. Took %s.",
+                    (successes + failures + warnings + skipped), successes, failures, skipped, warnings,
                     TimeUtilities.msToString(t1 - t0)));
         } else {
             run.console.info(String.format("Outcomes: %s. All successful. Took %s.",
@@ -224,6 +225,8 @@ public final class Driver {
             successes++;
         } else if (resultValue == ResultValue.FAIL) {
             failures++;
+        } else if (resultValue == ResultValue.WARNING) {
+            warnings++;
         } else { // ResultValue.IGNORE
             skipped++;
         }
