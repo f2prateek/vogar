@@ -204,7 +204,8 @@ final class ExpectationStore {
             }
         }
 
-        Expectation expectation = new Expectation(result, pattern, tags, description, buganizerBug);
+        Expectation expectation =
+              new Expectation(result, pattern, tags, description, buganizerBug, true);
         Map<String, Expectation> map = isFailure ? failures : outcomes;
         for (String name : names) {
             if (map.put(name, expectation) != null) {

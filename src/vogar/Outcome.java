@@ -135,7 +135,14 @@ public final class Outcome {
 
     public ResultValue getResultValue(Expectation expectation) {
         if (matters()) {
-            return expectation.matches(this) ? ResultValue.OK : ResultValue.WARNING;
+            if (expectation.matches(this)) {
+                return ResultValue.OK;
+            } else if (expectation.getIsFromExpectationFile()) {
+                // If the expectation is created from a file, make this a warning, to
+                // mimic CTS's behavior.
+                return ResultValue.WARNING;
+            }
+            return ResultValue.FAIL;
         }
         return ResultValue.IGNORE;
     }

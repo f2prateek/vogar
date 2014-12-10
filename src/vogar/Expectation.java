@@ -43,7 +43,7 @@ final class Expectation {
 
     /** The expectation of a general successful run. */
     static final Expectation SUCCESS = new Expectation(Result.SUCCESS, MATCH_ALL_PATTERN,
-            Collections.<String>emptySet(), "", -1);
+            Collections.<String>emptySet(), "", -1, false);
 
     /** Justification for this expectation */
     private final String description;
@@ -63,7 +63,15 @@ final class Expectation {
     /** True if the identified bug still active. */
     private boolean bugIsOpen = false;
 
-    public Expectation(Result result, Pattern pattern, Set<String> tags, String description, long bug) {
+    /** True if the expectation was read from an expectation file */
+    private boolean isFromExpectationFile = false;
+
+    public Expectation(Result result,
+                       Pattern pattern,
+                       Set<String> tags,
+                       String description,
+                       long bug,
+                       boolean fromExpectationFile) {
         if (result == null || description == null || pattern == null) {
             throw new IllegalArgumentException(
                     "result=" + result + " description=" + description + " pattern=" + pattern);
@@ -74,6 +82,7 @@ final class Expectation {
         this.pattern = pattern;
         this.tags = new LinkedHashSet<String>(tags);
         this.bug = bug;
+        this.isFromExpectationFile = fromExpectationFile;
     }
 
     public String getDescription() {
@@ -90,6 +99,10 @@ final class Expectation {
 
     public Set<String> getTags() {
         return tags;
+    }
+
+    public boolean getIsFromExpectationFile() {
+        return isFromExpectationFile;
     }
 
     /**
